@@ -1,6 +1,7 @@
+// app/workspace/page.tsx
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -24,7 +25,7 @@ import RegenButton from "@/app/components/RegenButton";
 import ZoomViewer from "@/app/components/fullscreen/ZoomViewer";
 import AIGenerateTab from "@/app/components/AIGenerateTab";
 
-import { artThemes, prototypeFaces } from "@/app/config/artThemes";
+import { getArtThemes, prototypeFaces } from "@/app/config/artThemes";
 
 import {
   loadResults,
@@ -83,8 +84,21 @@ export default function WorkspacePage() {
   const [shuffleMap, setShuffleMap] = useState<Record<number, number[]>>({});
   const [generatedImage, setGeneratedImage] = useState<any>(null);
 
+  // ✅ THEMES: FIXED (no artThemes export). We load themes via getArtThemes().
+  const [themes, setThemes] = useState<any[]>([]);
+  const [themesLoading, setThemesLoading] = useState(true);
+
   function shuffleArray(arr: number[]) {
     const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function shuffleAnyArray<T>(arr: T[]) {
+    const a = [...(Array.isArray(arr) ? arr : [])];
     for (let i = a.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [a[i], a[j]] = [a[j], a[i]];
@@ -135,6 +149,35 @@ export default function WorkspacePage() {
     }
     fn();
   };
+
+  /* =========================================================
+   ✅ LOAD THEMES (FIXED) — prevents "themes.find is not a function"
+   ========================================================= */
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const out: any = await (getArtThemes as any)();
+        const next = Array.isArray(out)
+          ? out
+          : Array.isArray(out?.themes)
+          ? out.themes
+          : [];
+        if (!mounted) return;
+        setThemes(next);
+      } catch {
+        if (!mounted) return;
+        setThemes([]);
+      } finally {
+        if (!mounted) return;
+        setThemesLoading(false);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   /* =========================================================
    ✅ RESTORE RESULTS AFTER REFRESH (UNCHANGED)
@@ -242,53 +285,80 @@ export default function WorkspacePage() {
   }
 
   /* ---------------------------------------------------
-   RESTORE SELECTED THEME FROM LOCAL STORAGE (UNCHANGED)
+   ✅ RESTORE SELECTED THEME FROM LOCAL STORAGE (FIXED but same behavior)
+   - Restores preview immediately from localStorage
+   - Builds heroThemes once themes are loaded (prevents crash)
    ---------------------------------------------------- */
   useEffect(() => {
     if (typeof window === "undefined") return;
 
+    // Restore target/selectedThemeId ASAP (works even before themes load)
     try {
       const saved = window.localStorage.getItem("mitux_selected_theme");
-
       if (saved) {
         const parsed = JSON.parse(saved);
-
-        setTarget({
-          file: null,
-          preview: absoluteUrl(parsed.imageUrl),
-          themeId: parsed.id,
-        });
-
-        setSelectedThemeId(parsed.id);
-
-        const selectedTheme = artThemes.find((t) => t.id === parsed.id);
-        const others = artThemes
-          .filter((t) => t.id !== parsed.id)
-          .sort(() => Math.random() - 0.5)
-          .slice(0, 3);
-
-        setHeroThemes([selectedTheme, ...others]);
-      } else {
-        const shuffled = [...artThemes].sort(() => Math.random() - 0.5);
-        setHeroThemes(shuffled.slice(0, 4));
+        if (parsed?.id) setSelectedThemeId(parsed.id);
+        if (parsed?.imageUrl) {
+          setTarget({
+            file: null,
+            preview: absoluteUrl(parsed.imageUrl),
+            themeId: parsed.id,
+          });
+        }
       }
     } catch (e) {
-      console.error("Theme restore error:", e);
+      console.error("Theme restore (target) error:", e);
     }
   }, []);
 
+  useEffect(() => {
+    if (themesLoading) return;
+    if (!Array.isArray(themes)) return;
+
+    try {
+      const saved =
+        typeof window !== "undefined"
+          ? window.localStorage.getItem("mitux_selected_theme")
+          : null;
+
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const selected = themes.find((t: any) => t?.id === parsed?.id) || null;
+
+        const others = themes
+          .filter((t: any) => t?.id !== parsed?.id)
+          .sort(() => Math.random() - 0.5)
+          .slice(0, 3);
+
+        const next = [selected, ...others].filter(Boolean);
+        setHeroThemes(next.length ? next : themes.slice(0, 4));
+        return;
+      }
+
+      const shuffled = shuffleAnyArray(themes);
+      setHeroThemes(shuffled.slice(0, 4));
+    } catch (e) {
+      console.error("Theme restore (heroThemes) error:", e);
+      setHeroThemes(Array.isArray(themes) ? themes.slice(0, 4) : []);
+    }
+  }, [themesLoading, themes]);
+
   /* ---------------------------------------------------
-   SELECT THEME (UNCHANGED)
+   SELECT THEME (UNCHANGED behavior, fixed to use loaded themes)
    ---------------------------------------------------- */
   const handleThemeSelect = (themeId: number) => {
     if (isLocked) return goLogin();
 
-    const theme = artThemes.find((t) => t.id === themeId);
+    const theme = (Array.isArray(themes) ? themes : []).find(
+      (t: any) => t?.id === themeId
+    );
     if (!theme) return;
 
     const raw =
-      theme.imageUrls[Math.floor(Math.random() * theme.imageUrls.length)];
-    const abs = encodeURI(raw);
+      theme.imageUrls?.[
+        Math.floor(Math.random() * (theme.imageUrls?.length || 1))
+      ];
+    const abs = encodeURI(raw || "");
 
     setTarget({ file: null, preview: abs, themeId });
     setSelectedThemeId(themeId);
@@ -308,7 +378,7 @@ export default function WorkspacePage() {
   };
 
   /* ---------------------------------------------------
-   FACE SWAP (UNCHANGED)
+   FACE SWAP (UNCHANGED logic, fixed to use loaded themes)
    ---------------------------------------------------- */
 
   async function toBase64(file: File): Promise<string> {
@@ -369,7 +439,9 @@ export default function WorkspacePage() {
       if (!source) return alert("Upload your face photo.");
       if (!selectedThemeId) return alert("Select a theme.");
 
-      const theme = artThemes.find((t) => t.id === selectedThemeId);
+      const theme = (Array.isArray(themes) ? themes : []).find(
+        (t: any) => t?.id === selectedThemeId
+      );
       if (!theme) return alert("Invalid theme selected.");
       const theme_name = theme.folder;
 
@@ -379,7 +451,7 @@ export default function WorkspacePage() {
       const placeholderId = crypto.randomUUID();
       setResults((prev) => [
         { id: placeholderId, url: null, isLoading: true } as any,
-        ...prev,
+        ...(Array.isArray(prev) ? prev : []),
       ]);
 
       let p = 0;
@@ -455,7 +527,9 @@ export default function WorkspacePage() {
       await saveResult(finalItem);
 
       setResults((prev) =>
-        prev.map((x: any) => (x.id === placeholderId ? finalItem : x))
+        (Array.isArray(prev) ? prev : []).map((x: any) =>
+          x.id === placeholderId ? finalItem : x
+        )
       );
 
       setResultImage(finalDataUrl);
@@ -526,13 +600,17 @@ sharp focus
     return new Promise<void>((resolve) => {
       if (!selectedThemeId) return resolve();
 
-      const theme = artThemes.find((t) => t.id === selectedThemeId);
+      const theme = (Array.isArray(themes) ? themes : []).find(
+        (t: any) => t?.id === selectedThemeId
+      );
       if (!theme) return resolve();
 
       const randomImg =
-        theme.imageUrls[Math.floor(Math.random() * theme.imageUrls.length)];
+        theme.imageUrls?.[
+          Math.floor(Math.random() * (theme.imageUrls?.length || 1))
+        ];
 
-      const encoded = encodeURI(randomImg);
+      const encoded = encodeURI(randomImg || "");
 
       setTarget({
         file: null,
@@ -553,8 +631,6 @@ sharp focus
 
   /* ---------------------------------------------------
    ✅ ADVANCED PAYWALL (new; does not break existing logic)
-   - Scrollable on mobile (no “can’t swipe” issue)
-   - Stores selected pack in localStorage so Billing can show it pre-selected
    ---------------------------------------------------- */
 
   const packs = useMemo(
@@ -567,7 +643,13 @@ sharp focus
         desc: "Best value",
         badge: "Most popular",
       },
-      { c: 30, p: 999, name: "Pro", desc: "For power users", badge: "Best value" },
+      {
+        c: 30,
+        p: 999,
+        name: "Pro",
+        desc: "For power users",
+        badge: "Best value",
+      },
     ],
     []
   );
@@ -622,6 +704,89 @@ sharp focus
     router.push(`/billing?pack=${encodeURIComponent(String(selectedPackCredits))}`);
   };
 
+  // ✅ helper: keep localStorage sync for results (stable, avoids effect loops)
+  const persistResultsToLocal = useCallback((arr: any[]) => {
+    try {
+      const finals = (Array.isArray(arr) ? arr : []).filter(
+        (x) => x?.isLoading !== true
+      );
+      localStorage.setItem("mitux_jobs_results", JSON.stringify(finals));
+    } catch (e) {
+      console.warn("Failed to persist results:", e);
+    }
+  }, []);
+
+  // ✅ prevents "Maximum update depth exceeded" by:
+  // 1) passing a stable callback (useCallback), so AIGenerateTab's useEffect doesn't re-run every render
+  // 2) skipping setState when next results are effectively identical
+  const areResultsSame = (a: any[], b: any[]) => {
+    if (a === b) return true;
+    if (!Array.isArray(a) || !Array.isArray(b)) return false;
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+      const x = a[i];
+      const y = b[i];
+      if ((x?.id ?? "") !== (y?.id ?? "")) return false;
+      if ((x?.url ?? "") !== (y?.url ?? "")) return false;
+      if ((x?.isLoading ?? false) !== (y?.isLoading ?? false)) return false;
+    }
+    return true;
+  };
+
+  const handleResultsChange = useCallback(
+    (updaterOrNext: any) => {
+      setResults((prev) => {
+        const safePrev = Array.isArray(prev) ? prev : [];
+        const maybeNext =
+          typeof updaterOrNext === "function"
+            ? updaterOrNext(safePrev)
+            : updaterOrNext;
+
+        const safeNext = Array.isArray(maybeNext) ? maybeNext : safePrev;
+
+        // ✅ key part: do NOTHING if no real change (avoids update loops)
+        if (areResultsSame(safePrev, safeNext)) return safePrev;
+
+        persistResultsToLocal(safeNext);
+        return safeNext;
+      });
+    },
+    [persistResultsToLocal]
+  );
+
+  const handleResultGenerated = useCallback(
+    (item: any) => {
+      setResults((prev) => {
+        const safePrev = Array.isArray(prev) ? prev : [];
+
+        if (item?.__remove === true) {
+          const next = safePrev.filter((x: any) => x.id !== item.id);
+          persistResultsToLocal(next);
+          return next;
+        }
+
+        const idx = safePrev.findIndex((x: any) => x.id === item.id);
+        let nextArr: any[];
+
+        if (idx !== -1) {
+          const copy = [...safePrev];
+          copy[idx] = item;
+          nextArr = copy;
+        } else {
+          nextArr = [item, ...safePrev];
+        }
+
+        persistResultsToLocal(nextArr);
+        return nextArr;
+      });
+    },
+    [persistResultsToLocal]
+  );
+
+  const registerAIGenerate = useCallback((fn: any) => {
+    aiGenerateRef.current = fn;
+  }, []);
+
   /* ---------------------------------------------------
    UI (UPGRADED LOOK, LOGIC SAME)
    ---------------------------------------------------- */
@@ -639,7 +804,6 @@ sharp focus
         {/* ✅ Single container for navbar + workspace (same width) */}
         <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pt-6">
           {/* Top bar */}
-          {/* ✅ removed nested max-w/mx-auto so navbar width matches workspace */}
           <header className="relative z-10">
             <div className="rounded-3xl border border-white/10 bg-white/[0.05] backdrop-blur-xl shadow-[0_20px_80px_rgba(0,0,0,0.35)]">
               <div className="flex flex-col gap-4 p-4 sm:p-5">
@@ -662,7 +826,7 @@ sharp focus
                         </span>
                       </div>
                       <p className="text-[12px] text-white/55 truncate">
-                      Trending Ai Themes · Private photoshoot
+                        Trending Ai Themes · Private photoshoot
                       </p>
                     </div>
                   </div>
@@ -891,7 +1055,7 @@ sharp focus
                               ].join(" ")}
                             >
                               <img
-                                src={encodeURI(theme.imageUrls[0])}
+                                src={encodeURI(theme.imageUrls?.[0] || "")}
                                 alt={theme.label}
                                 className="w-full h-[240px] object-cover transition-transform duration-500 group-hover:scale-105"
                               />
@@ -991,7 +1155,7 @@ sharp focus
                           </label>
 
                           <div className="flex items-center gap-3">
-                            {prototypeFaces.map((p) => (
+                            {prototypeFaces.map((p: any) => (
                               <button
                                 key={p.id}
                                 type="button"
@@ -1009,7 +1173,9 @@ sharp focus
                                     });
                                   } catch (err) {
                                     console.error("URL -> base64 failed:", err);
-                                    alert("Failed to load prototype face. Try again.");
+                                    alert(
+                                      "Failed to load prototype face. Try again."
+                                    );
                                   }
                                 }}
                                 className="group relative w-20 h-20 rounded-full overflow-hidden border border-white/15 bg-black/25 hover:border-white/40 hover:scale-105 transition"
@@ -1085,45 +1251,12 @@ sharp focus
                         </div>
                       ) : (
                         <AIGenerateTab
-                          onResultGenerated={(item: any) => {
-                            setResults((prev) => {
-                              const safePrev = Array.isArray(prev) ? prev : [];
-
-                              if (item?.__remove === true) {
-                                return safePrev.filter((x) => x.id !== item.id);
-                              }
-
-                              const idx = safePrev.findIndex((x) => x.id === item.id);
-                              let nextArr: any[];
-
-                              if (idx !== -1) {
-                                const copy = [...safePrev];
-                                copy[idx] = item;
-                                nextArr = copy;
-                              } else {
-                                nextArr = [item, ...safePrev];
-                              }
-
-                              try {
-                                const finals = nextArr.filter(
-                                  (x) => x?.isLoading !== true
-                                );
-                                localStorage.setItem(
-                                  "mitux_jobs_results",
-                                  JSON.stringify(finals)
-                                );
-                              } catch (e) {
-                                console.warn("Failed to persist results:", e);
-                              }
-
-                              return nextArr;
-                            });
-                          }}
-                          registerAIGenerate={(fn: any) => {
-                            aiGenerateRef.current = fn;
-                          }}
+                          onResultGenerated={handleResultGenerated}
+                          registerAIGenerate={registerAIGenerate}
                           setProcessing={setProcessing}
                           setProgress={setProgress}
+                          // ✅ FIX: stable callback + no-op if same results => no infinite loop
+                          onResultsChange={handleResultsChange}
                         />
                       )}
                     </div>
@@ -1139,7 +1272,7 @@ sharp focus
                       </p>
                       <h3 className="text-xl font-semibold mt-1">Jobs</h3>
                       <p className="text-[12px] text-white/55 mt-1">
-                        Playground history 
+                        Playground history
                       </p>
                     </div>
 
@@ -1177,10 +1310,10 @@ sharp focus
 
                   {results.length > 0 && (
                     <div className="mt-8 grid gap-6 grid-cols-[repeat(auto-fit,minmax(260px,1fr))]">
-                      {results.slice(0, visibleCount).map((item: any) =>
+                      {results.slice(0, visibleCount).map((item: any, index: number) =>
                         item.isLoading ? (
                           <div
-                            key={item.id}
+                            key={`${item.id || "loading"}-${index}`}
                             className="animate-pulse bg-black/25 rounded-3xl border border-white/10 p-5 shadow-xl"
                           >
                             <div className="w-full flex justify-center mb-4">
@@ -1195,7 +1328,7 @@ sharp focus
                           </div>
                         ) : (
                           <div
-                            key={item.id}
+                            key={`${item.id}-${index}`} // ✅ avoids duplicate-key warnings if backend ever repeats ids
                             id={`card-${item.id}`}
                             className="bg-black/25 border border-white/10 rounded-3xl p-5 shadow-xl flex flex-col transition-all duration-300"
                           >
@@ -1404,9 +1537,9 @@ sharp focus
                 </div>
 
                 <div className="mt-4 rounded-2xl border border-white/10 bg-black/25 p-4 text-[12px] text-white/60">
-                  <span className="text-white/80 font-semibold">Tip:</span> For the
-                  smoothest flow, continue to the Billing page where your balance &
-                  history update instantly.
+                  <span className="text-white/80 font-semibold">Tip:</span> For
+                  the smoothest flow, continue to the Billing page where your
+                  balance & history update instantly.
                 </div>
 
                 <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">

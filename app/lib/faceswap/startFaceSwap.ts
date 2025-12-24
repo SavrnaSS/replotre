@@ -1,5 +1,4 @@
 // app/lib/faceswap/startFaceSwap.ts
-
 import { dataURLtoFile } from "./helpers";
 import { slugify } from "../slugify";
 
@@ -22,7 +21,6 @@ export async function startFaceSwap({
 }) {
   console.log("🚀 startFaceSwap() CALLED");
 
-  // VALIDATION
   if (!source) {
     alert("Please upload your face photo.");
     return;
@@ -33,12 +31,11 @@ export async function startFaceSwap({
     return;
   }
 
-  const theme_name = slugify(selectedTheme.folder); // or selectedTheme.folder if you prefer exact folder names
+  const theme_name = slugify(selectedTheme.folder);
 
   setProcessing(true);
   setProgress(0);
 
-  // PLACEHOLDER
   const placeholderId = "loading-" + crypto.randomUUID();
   const placeholder = {
     id: placeholderId,
@@ -49,7 +46,6 @@ export async function startFaceSwap({
 
   setResults((prev: any) => [placeholder, ...prev]);
 
-  // PROGRESS
   let p = 0;
   const interval = setInterval(() => {
     p += Math.random() * 6;
@@ -71,12 +67,18 @@ export async function startFaceSwap({
     return;
   }
 
-  // BUILD FORM
+  // ✅ TS GUARANTEE (File, not null)
+  if (!sourceFile) {
+    alert("Invalid source image.");
+    clearInterval(interval);
+    setProcessing(false);
+    return;
+  }
+
   const form = new FormData();
-  form.append("source_img", sourceFile);
+  form.append("source_img", sourceFile); // ✅ now OK
   form.append("theme_name", theme_name);
 
-  // SEND REQUEST TO BACKEND
   try {
     const res = await fetch("/api/faceswap", {
       method: "POST",
@@ -85,14 +87,12 @@ export async function startFaceSwap({
 
     const raw = await res.text();
     let data: any = {};
-
     try {
       data = JSON.parse(raw);
     } catch {
       console.warn("⚠ Backend returned non-JSON");
     }
 
-    // Handle error
     if (!res.ok) {
       alert("Swap failed: " + (data.error || "Unknown backend error"));
       setResults((prev: any) => prev.filter((x: any) => x.id !== placeholderId));
@@ -101,19 +101,12 @@ export async function startFaceSwap({
       return;
     }
 
-    // Extract BASE64 image
     let finalImage: string | null = null;
 
     if (data.image) {
       finalImage = `data:image/png;base64,${data.image}`;
     } else {
-      // fallback formats
-      finalImage =
-        data.result ||
-        data.output ||
-        data.img ||
-        data.image_url ||
-        raw;
+      finalImage = data.result || data.output || data.img || data.image_url || raw;
     }
 
     if (!finalImage) {
@@ -124,7 +117,6 @@ export async function startFaceSwap({
       return;
     }
 
-    // FINISH
     setProgress(100);
     clearInterval(interval);
 
@@ -139,20 +131,7 @@ export async function startFaceSwap({
       },
     };
 
-    // Save into history
     await saveResult(finalItem);
-
-    setJobs(prev =>
-      prev.map(job =>
-        job.id === jobId
-          ? {
-              ...job,
-              progress: 100,
-              resultUrl: finalDataUrl,
-            }
-          : job
-      )
-    );    
 
     setResultImage(finalImage);
   } catch (err) {

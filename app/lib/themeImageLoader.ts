@@ -1,20 +1,75 @@
 // app/lib/themeImageLoader.ts
+//
+// ✅ Next.js (Turbopack) safe: no `require.context`, no `__WebpackModuleApi`.
+// Instead, we read theme image URLs from your canonical theme source.
+//
+// NOTE: Your build error indicates `artThemes` is NOT exported and you should use `getArtThemes`.
 
-function importAll(r: __WebpackModuleApi.RequireContext) {
-    return r.keys().map((file) => file.replace("./", ""));
+import { getArtThemes } from "@/app/config/artThemes";
+
+type Theme = {
+  id: number;
+  label: string;
+  folder?: string;
+  tag?: string;
+  imageUrls: string[];
+};
+
+function safeThemes(): Theme[] {
+  try {
+    const t = getArtThemes?.();
+    return Array.isArray(t) ? (t as Theme[]) : [];
+  } catch {
+    return [];
   }
-  
-  // Register all theme folders statically
-  export const themeImages: Record<number, string[]> = {
-    1: importAll(require.context("../../public/themes/1", false, /\.(png|jpe?g|webp)$/)),
-    2: importAll(require.context("../../public/themes/2", false, /\.(png|jpe?g|webp)$/)),
-    3: importAll(require.context("../../public/themes/3", false, /\.(png|jpe?g|webp)$/)),
-    4: importAll(require.context("../../public/themes/4", false, /\.(png|jpe?g|webp)$/)),
-  };
-  
-  // Convert filenames to public URLs
-  export const getThemeImages = (id: number) => {
-    if (!themeImages[id]) return [];
-    return themeImages[id].map((file) => `/themes/${id}/${file}`);
-  };
-  
+}
+
+function toPublicUrlMaybe(p: string) {
+  if (!p) return "";
+  // Keep absolute/data URLs as-is
+  if (
+    p.startsWith("data:") ||
+    p.startsWith("http://") ||
+    p.startsWith("https://") ||
+    p.startsWith("file://")
+  ) {
+    return p;
+  }
+  // Ensure leading slash for public paths
+  return p.startsWith("/") ? p : `/${p}`;
+}
+
+/**
+ * Returns ALL images for a given theme id.
+ * This is what the rest of the app should use instead of bundler-specific imports.
+ */
+export function getThemeImages(id: number): string[] {
+  const themes = safeThemes();
+  const theme = themes.find((t) => Number(t?.id) === Number(id));
+  const urls = Array.isArray(theme?.imageUrls) ? theme!.imageUrls : [];
+  return urls.map((u) => toPublicUrlMaybe(String(u))).filter(Boolean);
+}
+
+/**
+ * Optional helper: get a random image for a theme id.
+ */
+export function getRandomThemeImage(id: number): string | null {
+  const imgs = getThemeImages(id);
+  if (!imgs.length) return null;
+  return imgs[Math.floor(Math.random() * imgs.length)];
+}
+
+/**
+ * Optional helper: precomputed map for quick lookup (safe at module load).
+ */
+export const themeImages: Record<number, string[]> = (() => {
+  const out: Record<number, string[]> = {};
+  for (const t of safeThemes()) {
+    const tid = Number(t?.id);
+    if (!Number.isFinite(tid)) continue;
+    out[tid] = (Array.isArray(t.imageUrls) ? t.imageUrls : [])
+      .map((u) => toPublicUrlMaybe(String(u)))
+      .filter(Boolean);
+  }
+  return out;
+})();

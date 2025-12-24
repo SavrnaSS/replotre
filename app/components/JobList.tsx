@@ -11,17 +11,13 @@ export default function JobList({
   onOpen: (url: string) => void;
 }) {
   if (!jobs.length)
-    return (
-      <p className="text-sm text-white/50 text-center py-6">
-        No jobs running.
-      </p>
-    );
+    return <p className="text-sm text-white/50 text-center py-6">No jobs running.</p>;
 
   return (
     <div className="space-y-4">
-      {jobs.map(job => {
-        const isDone = job.progress === 100 && job.resultUrl;
-        const isError = job.error;
+      {jobs.map((job) => {
+        const isDone = job.progress === 100 && !!job.resultUrl;
+        const isError = !!job.error;
 
         return (
           <div
@@ -31,10 +27,7 @@ export default function JobList({
             {/* Thumbnail */}
             <div className="w-16 h-16 bg-white/5 rounded-lg overflow-hidden flex items-center justify-center">
               {job.resultUrl ? (
-                <img
-                  src={job.resultUrl}
-                  className="w-full h-full object-cover"
-                />
+                <img src={job.resultUrl} className="w-full h-full object-cover" alt="Result" />
               ) : (
                 <span className="text-xs text-white/40">AI</span>
               )}
@@ -42,7 +35,7 @@ export default function JobList({
 
             {/* Info */}
             <div className="flex-1">
-              <p className="font-semibold">Face Swap</p>
+              <p className="font-semibold">{job.type || "Face Swap"}</p>
 
               <div className="flex items-center gap-2 mt-1 text-xs">
                 {!isDone && !isError && (
@@ -67,21 +60,19 @@ export default function JobList({
               <div className="w-full bg-white/10 h-2 rounded-full mt-2 overflow-hidden">
                 <div
                   className={`h-full transition-all ${
-                    isError
-                      ? "bg-red-500"
-                      : isDone
-                      ? "bg-green-400"
-                      : "bg-purple-400"
+                    isError ? "bg-red-500" : isDone ? "bg-green-400" : "bg-purple-400"
                   }`}
-                  style={{ width: `${job.progress}%` }}
+                  style={{ width: `${Math.max(0, Math.min(100, job.progress ?? 0))}%` }}
                 />
               </div>
             </div>
 
             <button
               disabled={!job.resultUrl}
-              onClick={() => onOpen(job.resultUrl!)}
-              className="p-2 bg-white rounded-xl text-black disabled:opacity-40"
+              onClick={() => job.resultUrl && onOpen(job.resultUrl)}
+              className="p-2 bg-white rounded-xl text-black disabled:opacity-40 disabled:cursor-not-allowed"
+              type="button"
+              aria-label="Open result"
             >
               <ExternalLink size={16} />
             </button>

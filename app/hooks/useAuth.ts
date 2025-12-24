@@ -8,17 +8,19 @@ const AUTH_EVENT = "auth:user-updated";
 export default function useAuth() {
   const isClient = typeof window !== "undefined";
 
-  const [user, setUserState] = useState<any>(
-    isClient ? window.__auth_user__ ?? null : null
-  );
+  const [user, setUserState] = useState<any>(() => {
+    if (!isClient) return null;
+    return window.__auth_user__ ?? null;
+  });
+
   const [loading, setLoading] = useState(true);
 
   /** 🔄 Internal unified setter (single source of truth) */
   function updateUser(value: any) {
     if (!isClient) return;
 
-    const newValue =
-      typeof value === "function" ? value(window.__auth_user__) : value;
+    const prev = window.__auth_user__;
+    const newValue = typeof value === "function" ? value(prev) : value;
 
     // update global cache
     window.__auth_user__ = newValue;
@@ -27,25 +29,24 @@ export default function useAuth() {
     setUserState(newValue);
 
     // 🔥 notify ALL other hook instances
-    window.dispatchEvent(
-      new CustomEvent(AUTH_EVENT, { detail: newValue })
-    );
+    window.dispatchEvent(new CustomEvent(AUTH_EVENT, { detail: newValue }));
   }
 
   /** 🌍 Expose global setter (for legacy usage if any) */
   useEffect(() => {
     if (!isClient) return;
-
     window.__auth_setUser__ = updateUser;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isClient]);
 
   /** 🔔 Listen for auth updates from OTHER components */
   useEffect(() => {
     if (!isClient) return;
 
-    function onAuthUpdate(e: any) {
-      setUserState(e.detail);
-    }
+    const onAuthUpdate = (e: Event) => {
+      const ce = e as CustomEvent<any>;
+      setUserState(ce.detail);
+    };
 
     window.addEventListener(AUTH_EVENT, onAuthUpdate);
     return () => window.removeEventListener(AUTH_EVENT, onAuthUpdate);
@@ -55,8 +56,8 @@ export default function useAuth() {
   async function loadUser() {
     try {
       const res = await fetch("/api/me", { cache: "no-store" });
-      const data = await res.json();
-      updateUser(data.user ?? null);
+      const data = await res.json().catch(() => ({}));
+      updateUser(data?.user ?? null);
     } catch {
       updateUser(null);
     } finally {
@@ -67,6 +68,7 @@ export default function useAuth() {
   /** 🚀 Initial load */
   useEffect(() => {
     if (isClient) loadUser();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isClient]);
 
   return {

@@ -1,7 +1,8 @@
+// app/billing/page.tsx
 "use client";
 
 import useAuth from "@/app/hooks/useAuth";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import AnimatedButton from "@/app/components/AnimatedButton";
 import {
@@ -42,6 +43,7 @@ function formatINR(n: number) {
 
 function safeSetSelectedPack(pack: Pack) {
   try {
+    if (typeof window === "undefined") return;
     localStorage.setItem(
       "mitux_selected_pack",
       JSON.stringify({ c: pack.c, p: pack.p })
@@ -51,6 +53,7 @@ function safeSetSelectedPack(pack: Pack) {
 
 function safeGetSelectedPack(): { c?: number; p?: number } | null {
   try {
+    if (typeof window === "undefined") return null;
     const raw = localStorage.getItem("mitux_selected_pack");
     if (!raw) return null;
     const parsed = JSON.parse(raw);
@@ -60,7 +63,32 @@ function safeGetSelectedPack(): { c?: number; p?: number } | null {
   }
 }
 
+/**
+ * ✅ IMPORTANT FIX:
+ * Next.js requires useSearchParams() to be wrapped in a <Suspense> boundary.
+ * So we split the page into:
+ * - BillingPage (Suspense wrapper)
+ * - BillingPageInner (contains useSearchParams + all existing logic)
+ */
 export default function BillingPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#0D0D0F] text-white px-4 sm:px-6 py-10">
+          <div className="max-w-5xl mx-auto">
+            <div className="rounded-[26px] border border-white/10 bg-white/[0.05] backdrop-blur-xl p-6">
+              <p className="text-white/60 text-sm">Loading billing...</p>
+            </div>
+          </div>
+        </div>
+      }
+    >
+      <BillingPageInner />
+    </Suspense>
+  );
+}
+
+function BillingPageInner() {
   const { user, refresh } = useAuth();
   const credits = user?.credits ?? 0;
 
@@ -97,6 +125,11 @@ export default function BillingPage() {
       return;
     }
 
+    // (Optional) if someone passes only price, we ignore it safely
+    if (qpPrice) {
+      // no-op
+    }
+
     // 2) Then localStorage
     const saved = safeGetSelectedPack();
     if (saved?.c && packs.some((x) => x.c === saved.c)) {
@@ -107,8 +140,7 @@ export default function BillingPage() {
     // 3) Default
     setSelectedCredits(10);
     safeSetSelectedPack(packs.find((x) => x.c === 10) || packs[0]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [packs]);
+  }, [packs, searchParams]);
 
   const selectedPack = useMemo(() => {
     return packs.find((p) => p.c === selectedCredits) ?? packs[1] ?? packs[0];
@@ -312,9 +344,12 @@ export default function BillingPage() {
                       </div>
 
                       <div className="mt-6">
-                        {/* No nested button issue: AnimatedButton is the only button */}
                         <AnimatedButton
-                          onClick={() => buyCredits(pack.c, pack.p)}
+                          onClick={(e: any) => {
+                            // keep selection behavior, but prevent any odd focus/keyboard bubbling
+                            e?.stopPropagation?.();
+                            buyCredits(pack.c, pack.p);
+                          }}
                           disabled={isBuying !== null}
                           className={[
                             "w-full py-3 rounded-2xl font-semibold text-sm transition border shadow",
@@ -344,7 +379,7 @@ export default function BillingPage() {
                 </span>
               </div>
 
-              {/* ✅ Continue to Purchase button INSIDE the Purchase block */}
+              {/* Continue to Purchase */}
               <div className="mt-4">
                 <AnimatedButton
                   onClick={() => buyCredits(selectedPack.c, selectedPack.p)}
@@ -385,9 +420,7 @@ export default function BillingPage() {
                   <p className="text-[11px] uppercase tracking-[0.22em] text-white/45">
                     History
                   </p>
-                  <h3 className="text-lg font-semibold mt-0.5">
-                    Billing history
-                  </h3>
+                  <h3 className="text-lg font-semibold mt-0.5">Billing history</h3>
                   <p className="text-xs text-white/55 mt-0.5">
                     Track past purchases and credit additions.
                   </p>
@@ -404,9 +437,7 @@ export default function BillingPage() {
                 <p className="text-white/40 text-sm">Loading history...</p>
               ) : billingHistory.length === 0 ? (
                 <div className="rounded-2xl border border-white/10 bg-black/25 p-5 text-center">
-                  <p className="text-white/80 font-semibold">
-                    No billing history yet
-                  </p>
+                  <p className="text-white/80 font-semibold">No billing history yet</p>
                   <p className="text-xs text-white/50 mt-1">
                     Your purchases will appear here after you buy credits.
                   </p>
@@ -419,17 +450,13 @@ export default function BillingPage() {
                       className="flex items-start sm:items-center justify-between gap-3 bg-black/25 p-4 rounded-2xl border border-white/10"
                     >
                       <div className="min-w-0">
-                        <p className="font-semibold truncate">
-                          {item.credits} Credits
-                        </p>
+                        <p className="font-semibold truncate">{item.credits} Credits</p>
                         <p className="text-xs text-white/45 mt-1">
                           {new Date(item.createdAt).toLocaleString()}
                         </p>
                       </div>
                       <div className="shrink-0 text-right">
-                        <p className="font-bold">
-                          ₹{formatINR(item.amount)}
-                        </p>
+                        <p className="font-bold">₹{formatINR(item.amount)}</p>
                         <p className="text-[11px] text-white/45">Paid</p>
                       </div>
                     </div>
@@ -441,9 +468,7 @@ export default function BillingPage() {
             <div className="mt-4 flex items-center justify-between gap-3 flex-wrap text-xs text-white/45">
               <p>
                 Need help?{" "}
-                <span className="text-white/70 font-semibold">
-                  Contact support
-                </span>{" "}
+                <span className="text-white/70 font-semibold">Contact support</span>{" "}
                 if something looks off.
               </p>
               <p>Amounts shown in INR (₹)</p>

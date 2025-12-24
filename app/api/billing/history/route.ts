@@ -5,7 +5,6 @@ import { getUserFromCookie } from "@/app/lib/auth";
 export async function GET(req: Request) {
   const user = await getUserFromCookie(req);
 
-  // not logged in -> just return empty history
   if (!user) {
     return NextResponse.json({ history: [] }, { status: 200 });
   }

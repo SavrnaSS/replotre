@@ -1,8 +1,12 @@
-// lib/theme/themeAutoLoader.ts
+// app/lib/themeAutoLoader.ts
+import "server-only";
+
+import fs from "fs";
+import path from "path";
 import { slugify } from "./slugify";
 
 /* -----------------------------
-   Helpers
+ Helpers
 ----------------------------- */
 
 /** Human-friendly label */
@@ -14,12 +18,8 @@ const toLabel = (str: string) =>
 
 /** Optional aesthetic tag */
 const toTag = (labelOrSlug: string) => {
-  const cleaned = labelOrSlug
-    .replace(/[-_]+/g, " ")
-    .trim()
-    .toLowerCase();
+  const cleaned = labelOrSlug.replace(/[-_]+/g, " ").trim().toLowerCase();
 
-  // Pick the core subject word
   if (cleaned.includes("hoodie")) return "Hoodie Imagination";
   if (cleaned.includes("portrait")) return "Portrait Imagination";
   if (cleaned.includes("street")) return "Street Imagination";
@@ -28,94 +28,106 @@ const toTag = (labelOrSlug: string) => {
   if (cleaned.includes("anime")) return "Anime Imagination";
   if (cleaned.includes("fashion")) return "Fashion Imagination";
 
-  // Safe, UI-friendly fallback
-  const firstWord =
-    cleaned.split(" ").find(w => w.length > 2) ?? "Creative";
-
+  const firstWord = cleaned.split(" ").find((w) => w.length > 2) ?? "Creative";
   return `${firstWord.charAt(0).toUpperCase() + firstWord.slice(1)} Imagination`;
 };
 
 /* -----------------------------
-   Types
+ Types
 ----------------------------- */
 
+export type Theme = {
+  id: number;
+  folder: string; // backend-safe slug
+  label: string; // UI name
+  tag: string; // UI tag
+  imageUrls: string[]; // public urls
+};
+
 type ThemeBucket = {
-  slug: string;          // backend-safe
-  rawFolder: string;     // REAL folder on disk
-  files: string[];       // sub-paths
+  slug: string;
+  rawFolder: string;
+  files: string[];
 };
 
 /* -----------------------------
-   Auto Loader
+ Disk scan helpers
 ----------------------------- */
 
-export const loadAllThemes = () => {
-  /**
-   * Scans /public/themes recursively
-   * Webpack statically analyzes this
-   */
-  const ctx = require.context(
-    "../../public/themes",
-    true,
-    /\.(png|jpe?g|webp|gif)$/i
-  );
+const isImage = (name: string) => /\.(png|jpe?g|webp|gif)$/i.test(name);
 
+function walkImages(dirAbs: string, relFromThemesRoot: string, out: string[]) {
+  const entries = fs.readdirSync(dirAbs, { withFileTypes: true });
+  for (const e of entries) {
+    const abs = path.join(dirAbs, e.name);
+    const rel = path.posix.join(relFromThemesRoot, e.name);
+
+    if (e.isDirectory()) {
+      walkImages(abs, rel, out);
+    } else if (e.isFile() && isImage(e.name)) {
+      out.push(rel);
+    }
+  }
+}
+
+/* -----------------------------
+ Auto Loader (SERVER ONLY)
+----------------------------- */
+
+export const loadAllThemes = (): Theme[] => {
+  // /public/themes
+  const themesRootAbs = path.join(process.cwd(), "public", "themes");
+
+  if (!fs.existsSync(themesRootAbs)) return [];
+
+  const folderEntries = fs.readdirSync(themesRootAbs, { withFileTypes: true });
   const map: Record<string, ThemeBucket> = {};
 
-  ctx.keys().forEach((key: string) => {
-    // "./Cinematic Portrait/men/black/01.jpg"
-    const cleaned = key.replace(/^\.\//, "");
-    const parts = cleaned.split("/");
+  for (const entry of folderEntries) {
+    if (!entry.isDirectory()) continue;
 
-    const rawFolder = parts[0];
+    const rawFolder = entry.name; // real folder name in /public/themes/<rawFolder>
     const slug = slugify(rawFolder);
-    const subPath = parts.slice(1).join("/");
+
+    const files: string[] = [];
+    const folderAbs = path.join(themesRootAbs, rawFolder);
+
+    // collect nested image paths relative to /public/themes/<rawFolder>
+    walkImages(folderAbs, rawFolder, files);
 
     if (!map[slug]) {
-      map[slug] = {
-        slug,
-        rawFolder,
-        files: [],
-      };
+      map[slug] = { slug, rawFolder, files: [] };
     }
 
-    map[slug].files.push(subPath);
-  });
-
-  /* -----------------------------
-     Final Theme Objects
-  ----------------------------- */
+    map[slug].files.push(...files.map((f) => f.replace(`${rawFolder}/`, "")));
+  }
 
   let id = 1;
 
-  return Object.values(map).map((t) => ({
-    id: id++,
+  return Object.values(map)
+    .map((t) => {
+      const imageUrls = t.files
+        .map((file) => `/themes/${t.rawFolder}/${file}`)
+        .filter(Boolean);
 
-    /** Backend identifier */
-    folder: t.slug,
-
-    /** UI display */
-    label: toLabel(t.rawFolder),
-
-    /** Optional UI tag */
-    tag: toTag(t.slug),
-
-    /** ✅ REAL PUBLIC PATH (NO 404 EVER) */
-    imageUrls: t.files.map(
-      (file) => `/themes/${t.rawFolder}/${file}`
-    ),
-  }));
+      return {
+        id: id++,
+        folder: t.slug,
+        label: toLabel(t.rawFolder),
+        tag: toTag(t.slug),
+        imageUrls,
+      } satisfies Theme;
+    })
+    // optional: stable ordering
+    .sort((a, b) => a.label.localeCompare(b.label));
 };
 
 /* -----------------------------
-   Lookup Helper
+ Lookup Helper
 ----------------------------- */
 
-export const getThemeByName = (name: string, themes: any[]) => {
+export const getThemeByName = (name: string, themes: Theme[]) => {
   if (!name) return null;
   const slug = slugify(name);
-  return (
-    themes.find((t) => t.folder === slug) ||
-    themes.find((t) => t.folder === name)
-  );
+  return themes.find((t) => t.folder === slug) || themes.find((t) => t.folder === name) || null;
 };

@@ -4,9 +4,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import AuthWall from "../components/AuthWall";
 import useAuth from "../hooks/useAuth";
-import { artThemes } from "../config/artThemes";
 import ThemeCard from "../components/ThemeCard";
 import { Search, Sparkles, Filter, Check, ArrowRight, User } from "lucide-react";
+
+// ✅ FIX: artThemes export doesn't exist in your module
+// Use getArtThemes (as your error message suggested)
+import { getArtThemes } from "../config/artThemes";
 
 function UserAvatar({ name }: { name?: string | null }) {
   const letter = name?.[0]?.toUpperCase() || "U";
@@ -29,8 +32,28 @@ function clampTag(tag?: string) {
   return String(tag).trim().slice(0, 32);
 }
 
+function absoluteUrl(path: string) {
+  if (!path) return "";
+  if (
+    path.startsWith("data:") ||
+    path.startsWith("http://") ||
+    path.startsWith("https://") ||
+    path.startsWith("file://")
+  ) {
+    return path;
+  }
+  if (typeof window !== "undefined") {
+    return `${window.location.origin}${path}`;
+  }
+  return path;
+}
+
 export default function ThemesPage() {
   const { user } = useAuth();
+
+  // ✅ themes now come from getArtThemes()
+  const [themes, setThemes] = useState<any[]>([]);
+  const [themesLoading, setThemesLoading] = useState(true);
 
   const [selectedThemeId, setSelectedThemeId] = useState<number | null>(null);
   const [copiedThemeId, setCopiedThemeId] = useState<number | null>(null);
@@ -46,6 +69,30 @@ export default function ThemesPage() {
   // Bottom-right toast
   const [showToast, setShowToast] = useState(false);
   const toastTimer = useRef<number | null>(null);
+
+  // ✅ Load themes safely (handles sync OR async getArtThemes)
+  useEffect(() => {
+    let mounted = true;
+
+    (async () => {
+      try {
+        const maybe = (getArtThemes as any)?.();
+        const list = await Promise.resolve(maybe);
+        if (!mounted) return;
+        setThemes(Array.isArray(list) ? list : []);
+      } catch {
+        if (!mounted) return;
+        setThemes([]);
+      } finally {
+        if (!mounted) return;
+        setThemesLoading(false);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     let lastY = window.scrollY;
@@ -81,27 +128,27 @@ export default function ThemesPage() {
 
   const tags = useMemo(() => {
     const s = new Set<string>();
-    for (const t of artThemes as any[]) {
+    for (const t of themes as any[]) {
       const tag = clampTag(t?.tag);
       if (tag) s.add(tag);
     }
     const list = Array.from(s).sort((a, b) => a.localeCompare(b));
     return ["All", ...list].slice(0, 12);
-  }, []);
+  }, [themes]);
 
   const filteredThemes = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    return (artThemes as any[]).filter((theme) => {
+    return (themes as any[]).filter((theme) => {
       const labelOk = (theme?.label || "").toLowerCase().includes(q);
       const tagOk = activeTag === "All" ? true : clampTag(theme?.tag) === activeTag;
       return labelOk && tagOk;
     });
-  }, [searchQuery, activeTag]);
+  }, [themes, searchQuery, activeTag]);
 
   const selectedTheme = useMemo(() => {
     if (!selectedThemeId) return null;
-    return (artThemes as any[]).find((t) => t.id === selectedThemeId) || null;
-  }, [selectedThemeId]);
+    return (themes as any[]).find((t) => t.id === selectedThemeId) || null;
+  }, [themes, selectedThemeId]);
 
   const handleThemeClick = (theme: any) => {
     setSelectedThemeId(theme.id);
@@ -109,9 +156,16 @@ export default function ThemesPage() {
 
     if (typeof window !== "undefined") {
       try {
+        // ✅ keep same storage key + shape Workspace expects
+        const rawImg = theme.imageUrls?.[0] || "";
+        const encoded =
+          rawImg && !rawImg.startsWith("data:")
+            ? encodeURI(rawImg.startsWith("/") ? absoluteUrl(rawImg) : rawImg)
+            : rawImg;
+
         window.localStorage.setItem(
           "mitux_selected_theme",
-          JSON.stringify({ id: theme.id, imageUrl: theme.imageUrls?.[0] })
+          JSON.stringify({ id: theme.id, imageUrl: encoded })
         );
       } catch {}
     }
@@ -194,7 +248,7 @@ export default function ThemesPage() {
 
                 <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-[11px] text-white/70">
                   <Sparkles size={14} />
-                  {filteredThemes.length} themes
+                  {themesLoading ? "Loading…" : `${filteredThemes.length} themes`}
                 </span>
               </div>
 
@@ -218,7 +272,11 @@ export default function ThemesPage() {
               </div>
             </div>
 
-            <div className={[isHeaderShrunk ? "scale-90" : "scale-100", "transition-all duration-300"].join(" ")}>
+            <div
+              className={[isHeaderShrunk ? "scale-90" : "scale-100", "transition-all duration-300"].join(
+                " "
+              )}
+            >
               {user && <UserAvatar name={user.name || user.email} />}
             </div>
           </header>
@@ -298,7 +356,9 @@ export default function ThemesPage() {
 
             {/* Grid */}
             <div className="px-5 sm:px-6 py-6">
-              {filteredThemes.length === 0 ? (
+              {themesLoading ? (
+                <div className="py-10 text-center text-sm text-white/55">Loading themes…</div>
+              ) : filteredThemes.length === 0 ? (
                 <div className="py-14 text-center">
                   <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs text-white/60">
                     <Sparkles size={14} />

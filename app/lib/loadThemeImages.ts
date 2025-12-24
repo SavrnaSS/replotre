@@ -1,12 +1,22 @@
-export const loadThemeImages = (id: number) => {
-  const context = require.context(
-    `../../public/themes/${id}`,
-    false,
-    /\.(png|jpe?g|webp)$/
-  );
+// app/lib/loadThemeImages.ts
+import fs from "fs";
+import path from "path";
 
-  // Convert imported modules to usable public URLs
-  return context.keys().map((file: string) =>
-    `/themes/${id}/${file.replace("./", "")}`
-  );
+/**
+ * ✅ Turbopack-safe loader
+ * - Server: reads /public/themes/<id> and returns public URLs
+ * - Client: returns []
+ */
+export const loadThemeImages = (id: number) => {
+  if (typeof window !== "undefined") return [];
+
+  const dir = path.join(process.cwd(), "public", "themes", String(id));
+  if (!fs.existsSync(dir)) return [];
+
+  const files = fs
+    .readdirSync(dir)
+    .filter((f) => /\.(png|jpe?g|webp|gif)$/i.test(f))
+    .sort((a, b) => a.localeCompare(b));
+
+  return files.map((f) => `/themes/${id}/${encodeURIComponent(f)}`);
 };

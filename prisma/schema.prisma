@@ -4,8 +4,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  // ✅ no url/directUrl in Prisma v7
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -16,13 +17,15 @@ model User {
   image         String?
   createdAt     DateTime @default(now())
   credits       Int      @default(5)
-
   passwordHash  String?
   authProvider  String?
 
   accounts      Account[]
   sessions      Session[]
   jobs          Job[]
+
+  billingHistory BillingHistory[]
+  history        History[]
 }
 
 model Account {
@@ -69,4 +72,30 @@ model Job {
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id])
+}
+
+model BillingHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  credits   Int
+  amount    Int
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model History {
+  id        String   @id @default(cuid())
+  userId    String
+  createdAt DateTime @default(now())
+
+  type      String?
+  resultUrl String?
+  prompt    String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }

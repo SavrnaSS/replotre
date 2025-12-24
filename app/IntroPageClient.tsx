@@ -18,7 +18,6 @@ import {
 
 import CreditsBar from "@/app/components/CreditsBar";
 import ProfileAvatar from "@/app/components/ProfileAvatar";
-import { artThemes } from "@/app/config/artThemes";
 
 type Theme = {
   id: number;
@@ -265,8 +264,8 @@ function PaywallModal({
               </div>
 
               <div className="mt-4 rounded-2xl border border-white/10 bg-black/25 p-4 text-sm text-white/60 leading-snug">
-                <span className="text-white/85 font-semibold">Tip:</span> For the
-                smoothest flow, continue to the{" "}
+                <span className="text-white/85 font-semibold">Tip:</span> For
+                the smoothest flow, continue to the{" "}
                 <span className="text-white/90 underline underline-offset-4">
                   Billing
                 </span>{" "}
@@ -327,6 +326,10 @@ function PaywallModal({
 export default function IntroPageClient() {
   const router = useRouter();
 
+  // ✅ THEMES (client-safe): fetch from /api/themes instead of importing server-only module
+  const [themes, setThemes] = useState<Theme[]>([]);
+  const [themesLoading, setThemesLoading] = useState(true);
+
   const [authChecked, setAuthChecked] = useState(false);
   const [authUser, setAuthUser] = useState<any>(null);
   const isLocked = authChecked && !authUser;
@@ -352,6 +355,29 @@ export default function IntroPageClient() {
     return getDefaultPack(packs)?.c ?? null;
   });
 
+  // ✅ fetch themes (client-safe)
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await fetch("/api/themes", { cache: "no-store" });
+        const data = await res.json().catch(() => ({}));
+        if (!mounted) return;
+        setThemes(Array.isArray(data?.themes) ? data.themes : []);
+      } catch {
+        if (!mounted) return;
+        setThemes([]);
+      } finally {
+        if (!mounted) return;
+        setThemesLoading(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // auth (unchanged logic)
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -374,8 +400,14 @@ export default function IntroPageClient() {
     };
   }, []);
 
+  // restore selected theme + build hero themes (same logic, but uses fetched themes)
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (!themes.length) {
+      // prevent "not iterable" issues and avoid heroThemes being built from empty
+      setHeroThemes([]);
+      return;
+    }
 
     try {
       const saved = window.localStorage.getItem("mitux_selected_theme");
@@ -383,8 +415,8 @@ export default function IntroPageClient() {
         const parsed = JSON.parse(saved);
         setSelectedThemeId(parsed?.id ?? null);
 
-        const selected = (artThemes as Theme[]).find((t) => t.id === parsed.id);
-        const others = (artThemes as Theme[])
+        const selected = themes.find((t) => t.id === parsed.id);
+        const others = themes
           .filter((t) => t.id !== parsed.id)
           .sort(() => Math.random() - 0.5)
           .slice(0, 3);
@@ -395,17 +427,17 @@ export default function IntroPageClient() {
       }
     } catch {}
 
-    const shuffled = [...(artThemes as Theme[])].sort(() => Math.random() - 0.5);
+    const shuffled = [...themes].sort(() => Math.random() - 0.5);
     setHeroThemes(shuffled.slice(0, 4));
-  }, []);
+  }, [themes]);
 
   const selectedTheme = useMemo(() => {
     if (!selectedThemeId) return null;
-    return (artThemes as Theme[]).find((t) => t.id === selectedThemeId) || null;
-  }, [selectedThemeId]);
+    return themes.find((t) => t.id === selectedThemeId) || null;
+  }, [selectedThemeId, themes]);
 
   const handleThemeSelect = (themeId: number) => {
-    const theme = (artThemes as Theme[]).find((t) => t.id === themeId);
+    const theme = themes.find((t) => t.id === themeId);
     if (!theme) return;
 
     const raw =
@@ -487,7 +519,7 @@ export default function IntroPageClient() {
                     </span>
                   </div>
                   <p className="text-[12px] text-white/55 truncate">
-                  Trending Ai Themes · Private photoshoot
+                    Trending Ai Themes · Private photoshoot
                   </p>
                 </div>
               </div>
@@ -593,7 +625,10 @@ export default function IntroPageClient() {
               <div className="mt-6 flex flex-wrap items-center gap-3 sm:gap-4 text-[12px] text-white/70">
                 {["Fast generation", "Saved history", "Download anytime"].map(
                   (txt) => (
-                    <span key={txt} className="inline-flex items-center gap-2">
+                    <span
+                      key={txt}
+                      className="inline-flex items-center gap-2"
+                    >
                       <span className="h-5 w-5 rounded-full bg-emerald-500/15 border border-emerald-400/25 flex items-center justify-center">
                         <Check size={12} className="text-emerald-300" />
                       </span>
@@ -638,7 +673,9 @@ export default function IntroPageClient() {
                   <Link href="/themes" className="hover:text-white/80 transition">
                     Browse full library →
                   </Link>
-                  <span className="text-white/45">Tip: use centered face photo</span>
+                  <span className="text-white/45">
+                    Tip: use centered face photo
+                  </span>
                 </div>
               </div>
             </div>
@@ -663,51 +700,63 @@ export default function IntroPageClient() {
                 </Link>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                {heroThemes.map((t) => {
-                  const active = selectedThemeId === t.id;
-                  const img = t.imageUrls?.[0] ? encodeURI(t.imageUrls[0]) : "";
+              {themesLoading ? (
+                <div className="py-10 text-center text-sm text-white/55">
+                  Loading themes…
+                </div>
+              ) : heroThemes.length === 0 ? (
+                <div className="py-10 text-center text-sm text-white/55">
+                  No themes available.
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  {heroThemes.map((t) => {
+                    const active = selectedThemeId === t.id;
+                    const img = t.imageUrls?.[0]
+                      ? encodeURI(t.imageUrls[0])
+                      : "";
 
-                  return (
-                    <button
-                      key={t.id}
-                      type="button"
-                      onClick={() => handleThemeSelect(t.id)}
-                      className={[
-                        "relative overflow-hidden rounded-3xl border bg-black/30 transition group text-left",
-                        active
-                          ? "border-purple-400/60 ring-2 ring-purple-500/40"
-                          : "border-white/10 hover:border-white/20",
-                      ].join(" ")}
-                    >
-                      <div className="aspect-[4/3] w-full overflow-hidden">
-                        <img
-                          src={img}
-                          alt={t.label}
-                          className="h-full w-full object-cover group-hover:scale-[1.03] transition-transform duration-500"
-                        />
-                      </div>
-
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
-
-                      {active && (
-                        <div className="absolute top-3 left-3 h-8 w-8 rounded-full bg-purple-500/90 text-white flex items-center justify-center shadow">
-                          <Check size={16} />
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => handleThemeSelect(t.id)}
+                        className={[
+                          "relative overflow-hidden rounded-3xl border bg-black/30 transition group text-left",
+                          active
+                            ? "border-purple-400/60 ring-2 ring-purple-500/40"
+                            : "border-white/10 hover:border-white/20",
+                        ].join(" ")}
+                      >
+                        <div className="aspect-[4/3] w-full overflow-hidden">
+                          <img
+                            src={img}
+                            alt={t.label}
+                            className="h-full w-full object-cover group-hover:scale-[1.03] transition-transform duration-500"
+                          />
                         </div>
-                      )}
 
-                      <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4">
-                        <p className="text-sm font-semibold leading-tight">
-                          {t.label}
-                        </p>
-                        <p className="text-[12px] text-white/60 mt-0.5">
-                          {t.tag || "Portrait imagination"}
-                        </p>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
+
+                        {active && (
+                          <div className="absolute top-3 left-3 h-8 w-8 rounded-full bg-purple-500/90 text-white flex items-center justify-center shadow">
+                            <Check size={16} />
+                          </div>
+                        )}
+
+                        <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4">
+                          <p className="text-sm font-semibold leading-tight">
+                            {t.label}
+                          </p>
+                          <p className="text-[12px] text-white/60 mt-0.5">
+                            {t.tag || "Portrait imagination"}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
 
               <div className="mt-4 rounded-2xl border border-white/10 bg-black/25 p-4 text-[12px] text-white/60">
                 <span className="text-white/80 font-semibold">Pro tip:</span>{" "}
@@ -731,8 +780,8 @@ export default function IntroPageClient() {
                     Generate a private photoshoot in 3 steps
                   </h2>
                   <p className="mt-2 text-sm text-white/60 max-w-2xl">
-                    fast, simple, and repeatable.
-                    Your theme selection carries into Workspace.
+                    fast, simple, and repeatable. Your theme selection carries
+                    into Workspace.
                   </p>
                 </div>
 

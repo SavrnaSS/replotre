@@ -1,97 +1,137 @@
+// ./app/components/FaceSwapUI.tsx
 "use client";
 
-import { useState } from "react";
-import ImageUploader from "./ImageUploader";
-import ThemePicker from "./ThemePicker";
-import ResultViewer from "./ResultViewer";
-import Loader from "./Loader";
-import { dataURLtoFile } from "@/app/lib/utils";
+import { useEffect, useMemo, useState } from "react";
+import ThemePicker from "@/app/components/ThemePicker";
+import DropzoneUploader from "@/app/components/DropzoneUploader";
+import { startFaceSwap } from "@/app/lib/faceswap/startFaceSwap";
+import { getArtThemes } from "@/app/config/artThemes";
+
+type Theme = {
+  id: number;
+  label: string;
+  folder?: string;
+  tag?: string;
+  imageUrls: string[];
+};
+
+export type TargetState = {
+  file: File | null;
+  preview: string | null;
+  themeId: number | null;
+};
 
 export default function FaceSwapUI() {
-  const [source, setSource] = useState<any>(null);
-  const [target, setTarget] = useState<any>(null);
-  const [result, setResult] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [target, setTarget] = useState<TargetState>({
+    file: null,
+    preview: null,
+    themeId: null,
+  });
 
-  const startSwap = async () => {
-    if (!source || !target) {
-      alert("Upload source + select theme");
-      return;
-    }
+  const [selectedThemeId, setSelectedThemeId] = useState<number | null>(null);
 
-    setLoading(true);
-    setResult(null);
-
-    const fd = new FormData();
-
-    // SOURCE
-    if (source.file) {
-      fd.append("source_img", source.file);
-    } else if (source.preview.startsWith("data:")) {
-      fd.append("source_img", dataURLtoFile(source.preview, "source.jpg"));
-    }
-
-    // THEME
-    fd.append("theme_name", target.folder); // ← CORRECT
-
-    const res = await fetch("/api/faceswap", {
-      method: "POST",
-      body: fd,
-    });
-
-    const text = await res.text();
-    let data;
-
+  // ✅ FIX: artThemes is not exported anymore — use getArtThemes()
+  const themes = useMemo<Theme[]>(() => {
     try {
-      data = JSON.parse(text);
+      const t = typeof getArtThemes === "function" ? (getArtThemes() as any) : [];
+      return Array.isArray(t) ? (t as Theme[]) : [];
     } catch {
-      alert("Backend returned invalid JSON");
-      setLoading(false);
-      return;
+      return [];
     }
+  }, []);
 
-    if (!res.ok) {
-      alert(data.error || "Swap failed");
-      setLoading(false);
-      return;
-    }
+  const selectedTheme = useMemo(() => {
+    if (!selectedThemeId) return null;
+    return themes.find((t) => t.id === selectedThemeId) ?? null;
+  }, [selectedThemeId, themes]);
 
-    if (!data.image) {
-      alert("No image returned");
-      setLoading(false);
-      return;
-    }
+  const [processing, setProcessing] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [results, setResults] = useState<any[]>([]);
+  const [resultImage, setResultImage] = useState<string | null>(null);
 
-    const finalUrl = `data:image/png;base64,${data.image}`;
+  // keep your existing save logic (placeholder)
+  async function saveResult(item: any) {
+    // keep your existing working logic here (API call / local state etc.)
+    return item;
+  }
 
-    setResult(finalUrl);
-    setLoading(false);
-  };
+  // (optional) clean up blob preview URLs to avoid memory leaks
+  useEffect(() => {
+    return () => {
+      if (target?.preview && target.preview.startsWith("blob:")) {
+        try {
+          URL.revokeObjectURL(target.preview);
+        } catch {}
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
-    <div className="space-y-8">
-
+    <div className="w-full">
       <div>
-        <h2 className="font-semibold mb-2">Your Photo</h2>
-        <ImageUploader image={source} setImage={setSource} />
+        <h2 className="font-semibold mb-2">Upload Face Photo</h2>
+
+        <DropzoneUploader
+          onDrop={(files: File[]) => {
+            const f = files?.[0];
+            if (!f) return;
+
+            // revoke previous blob (if any)
+            if (target?.preview && target.preview.startsWith("blob:")) {
+              try {
+                URL.revokeObjectURL(target.preview);
+              } catch {}
+            }
+
+            const preview = URL.createObjectURL(f);
+            setTarget((prev) => ({
+              ...prev,
+              file: f,
+              preview,
+            }));
+          }}
+          // ✅ FIX: null -> undefined (TS wants string | undefined)
+          preview={target.preview ?? undefined}
+        />
       </div>
 
-      <div>
+      <div className="mt-6">
         <h2 className="font-semibold mb-2">Select AI Theme</h2>
-        <ThemePicker target={target} setTarget={setTarget} />
+
+        <ThemePicker
+          target={target}
+          setTarget={setTarget}
+          artThemes={themes}
+          selectedThemeId={selectedThemeId}
+          setSelectedThemeId={setSelectedThemeId}
+        />
       </div>
 
       <button
-        onClick={startSwap}
-        disabled={loading}
-        className="w-full py-3 bg-white text-black rounded-xl font-semibold text-lg disabled:opacity-40"
+        className="mt-6 w-full py-3 rounded-xl bg-white text-black font-semibold disabled:opacity-50"
+        disabled={processing}
+        onClick={() =>
+          startFaceSwap({
+            source: target, // keeping your existing logic
+            selectedTheme,
+            setProcessing,
+            setProgress,
+            setResults,
+            setResultImage,
+            saveResult,
+          })
+        }
       >
-        {loading ? "Processing..." : "Start Face Swap"}
+        {processing ? `Processing… ${progress}%` : "Start Face Swap"}
       </button>
 
-      {loading && <Loader />}
-
-      <ResultViewer result={result} />
+      {resultImage && (
+        <div className="mt-6">
+          <img src={resultImage} alt="Result" className="w-full rounded-2xl" />
+        </div>
+      )}
     </div>
   );
 }
