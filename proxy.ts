@@ -1,6 +1,12 @@
 // proxy.ts
 import { NextRequest, NextResponse } from "next/server";
 
+function getBackendBase() {
+  const raw = process.env.NEXT_PUBLIC_BACKEND_URL || "";
+  // remove all trailing slashes to prevent "//route"
+  return raw.replace(/\/+$/, "");
+}
+
 export async function proxy(req: NextRequest) {
   // protect dashboard routes only
   const pathname = req.nextUrl.pathname;
@@ -23,7 +29,7 @@ export async function proxy(req: NextRequest) {
   if (!token) return NextResponse.redirect(new URL("/", req.url));
 
   try {
-    const backend = process.env.NEXT_PUBLIC_BACKEND_URL;
+    const backend = getBackendBase();
     if (!backend) return NextResponse.redirect(new URL("/", req.url));
 
     const res = await fetch(`${backend}/api/profile`, {

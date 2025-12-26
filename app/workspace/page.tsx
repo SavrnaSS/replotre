@@ -431,10 +431,27 @@ export default function WorkspacePage() {
     return new File([u8arr], filename, { type: mime });
   }
 
+  // ✅ NEW: accept either imageUrl OR image(base64)
+  function pickFinalImageSrcFromBackend(data: any): string | null {
+    const url = data?.imageUrl || data?.image_url || data?.url;
+    if (url && typeof url === "string") return url;
+
+    const b64 = data?.image;
+    if (b64 && typeof b64 === "string") {
+      let cleanBase64 = b64.replace(/^"|"$/g, "").replace(/\n/g, "").trim();
+      const mime = data?.mime || "image/png";
+      return `data:${mime};base64,${cleanBase64}`;
+    }
+
+    return null;
+  }
+
   async function startFaceSwap() {
     if (isLocked) return goLogin();
 
     console.log("🚀 startFaceSwap CALLED");
+    let interval: any = null;
+
     try {
       if (!source) return alert("Upload your face photo.");
       if (!selectedThemeId) return alert("Select a theme.");
@@ -455,7 +472,7 @@ export default function WorkspacePage() {
       ]);
 
       let p = 0;
-      const interval = setInterval(() => {
+      interval = setInterval(() => {
         p += Math.random() * 6;
         if (p >= 90) p = 90;
         setProgress(Math.floor(p));
@@ -476,7 +493,7 @@ export default function WorkspacePage() {
       }
 
       if (!sourceFile) {
-        clearInterval(interval);
+        if (interval) clearInterval(interval);
         setProcessing(false);
         return alert("Invalid source image.");
       }
@@ -501,26 +518,31 @@ export default function WorkspacePage() {
         throw new Error("Invalid JSON from backend");
       }
 
-      if (!res.ok) throw new Error(data.error || "Backend error");
-      if (!data.image) throw new Error("Backend returned no image");
+      if (!res.ok) {
+        console.error("Faceswap failed:", data);
+        throw new Error(data?.error || data?.detail || "Backend error");
+      }
 
-      let cleanBase64 = data.image;
-      cleanBase64 = cleanBase64.replace(/^"|"$/g, "").replace(/\n/g, "").trim();
-
-      const mime = data.mime || "image/png";
-      const finalDataUrl = `data:${mime};base64,${cleanBase64}`;
+      // ✅ accept URL or base64
+      const finalSrc = pickFinalImageSrcFromBackend(data);
+      if (!finalSrc) {
+        console.error("Faceswap response missing image:", data);
+        throw new Error("Backend returned no image");
+      }
 
       const finalItem: any = {
         id: crypto.randomUUID(),
-        url: finalDataUrl,
+        url: finalSrc,
         createdAt: Date.now(),
         meta: {
           type: "Theme-gen",
-          gender: data.gender,
-          hair: data.hair,
-          target_used: data.used_target,
-          theme: data.resolved_theme,
-          size: data.result_size,
+          gender: data?.gender,
+          hair: data?.hair,
+          target_used: data?.used_target ?? data?.target_used,
+          theme: data?.theme ?? data?.resolved_theme ?? theme_name,
+          size: data?.result_size,
+          similarity: data?.similarity,
+          mime: data?.mime,
         },
       };
 
@@ -532,13 +554,21 @@ export default function WorkspacePage() {
         )
       );
 
-      setResultImage(finalDataUrl);
+      setResultImage(finalSrc);
       setProgress(100);
-      clearInterval(interval);
+
+      if (interval) clearInterval(interval);
       setProcessing(false);
     } catch (err: any) {
       console.error("🔥 FACE SWAP ERROR:", err);
-      alert(err.message || "Unknown error");
+      alert(err?.message || "Unknown error");
+
+      if (interval) clearInterval(interval);
+
+      // ✅ remove only THIS run's loading placeholder(s), keep everything else
+      setResults((prev) =>
+        (Array.isArray(prev) ? prev : []).filter((x: any) => x?.isLoading !== true)
+      );
       setProcessing(false);
     }
   }
@@ -701,7 +731,9 @@ sharp focus
     persistSelectedPack(selectedPackCredits);
     setPaywallOpen(false);
     // add query param too (optional but helpful)
-    router.push(`/billing?pack=${encodeURIComponent(String(selectedPackCredits))}`);
+    router.push(
+      `/billing?pack=${encodeURIComponent(String(selectedPackCredits))}`
+    );
   };
 
   // ✅ helper: keep localStorage sync for results (stable, avoids effect loops)
@@ -733,22 +765,57 @@ sharp focus
     return true;
   };
 
+  // ✅ FIX (your request):
+  // AIGenerateTab sometimes calls onResultsChange with ONLY ai-generate jobs.
+  // That was overwriting the shared Jobs list, causing each tab to "lose" the other tab's outputs.
+  // We merge AI results into the unified `results` instead of replacing it.
   const handleResultsChange = useCallback(
     (updaterOrNext: any) => {
-      setResults((prev) => {
-        const safePrev = Array.isArray(prev) ? prev : [];
-        const maybeNext =
-          typeof updaterOrNext === "function"
-            ? updaterOrNext(safePrev)
-            : updaterOrNext;
+      setResults((prevAll) => {
+        const safePrev = Array.isArray(prevAll) ? prevAll : [];
 
-        const safeNext = Array.isArray(maybeNext) ? maybeNext : safePrev;
+        // If AIGenerateTab passes a function, keep original behavior (operate on unified list)
+        if (typeof updaterOrNext === "function") {
+          const maybeNext = updaterOrNext(safePrev);
+          const safeNext = Array.isArray(maybeNext) ? maybeNext : safePrev;
 
-        // ✅ key part: do NOTHING if no real change (avoids update loops)
-        if (areResultsSame(safePrev, safeNext)) return safePrev;
+          if (areResultsSame(safePrev, safeNext)) return safePrev;
+          persistResultsToLocal(safeNext);
+          return safeNext;
+        }
 
-        persistResultsToLocal(safeNext);
-        return safeNext;
+        // If it passes an array, treat it as the AI tab's current list and MERGE into the unified list.
+        const incoming = Array.isArray(updaterOrNext) ? updaterOrNext : [];
+        const incomingIds = new Set(
+          incoming.map((x: any) => x?.id).filter(Boolean)
+        );
+
+        // 1) Keep all non-AI results from previous list
+        // 2) For AI results previously present, keep only those still in incoming (so AI deletions reflect)
+        const kept = safePrev.filter((x: any) => {
+          if (x?.isLoading === true) return true; // keep any placeholders
+          const t = x?.meta?.type;
+          if (t === "ai-generate") return incomingIds.has(x?.id);
+          return true; // keep Theme-gen and any other types
+        });
+
+        // Merge by id (incoming wins)
+        const map = new Map<string, any>();
+        for (const item of kept) {
+          if (item?.id) map.set(item.id, item);
+        }
+        for (const item of incoming) {
+          if (item?.id) map.set(item.id, item);
+        }
+
+        const merged = Array.from(map.values()).sort(
+          (a: any, b: any) => (b?.createdAt ?? 0) - (a?.createdAt ?? 0)
+        );
+
+        if (areResultsSame(safePrev, merged)) return safePrev;
+
+        persistResultsToLocal(merged);
+        return merged;
       });
     },
     [persistResultsToLocal]
@@ -1256,6 +1323,7 @@ sharp focus
                           setProcessing={setProcessing}
                           setProgress={setProgress}
                           // ✅ FIX: stable callback + no-op if same results => no infinite loop
+                          // ✅ AND merge AI list into unified Jobs list (so both tabs show same Jobs)
                           onResultsChange={handleResultsChange}
                         />
                       )}

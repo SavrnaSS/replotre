@@ -10,7 +10,7 @@ function baseUrl() {
   const env =
     process.env.NEXT_PUBLIC_BASE_URL ||
     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "") ||
-    "http://localhost:3001";
+    "https://www.gerox.in";
   return env.replace(/\/+$/, "");
 }
 

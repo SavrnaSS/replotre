@@ -100,7 +100,7 @@ export default function useAIGenerate({
           formData.append("faceUrl", faceUrl);
         }
 
-        const res = await fetch("http://localhost:8000/generate", {
+        const res = await fetch("https://web-production-85c19.up.railway.app/generate", {
           method: "POST",
           body: formData,
         });
