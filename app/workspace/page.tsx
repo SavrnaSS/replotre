@@ -107,7 +107,6 @@ function dataURLtoFile(dataurl: string, filename = "file.jpg") {
 function pickFinalImageSrcFromBackend(data: any): string | null {
   const url = data?.imageUrl || data?.image_url || data?.url;
   if (url && typeof url === "string") return url;
-
   const b64 = data?.image;
   if (b64 && typeof b64 === "string") {
     let cleanBase64 = b64.replace(/^"|"$/g, "").replace(/\n/g, "").trim();
@@ -146,117 +145,31 @@ function formatEta(seconds: number) {
   return `${mm}m ${ss}s`;
 }
 
-/** ✅ Robust file extension guesser (works for signed URLs) */
-function guessExtFromUrlOrMime(url: string, mime?: string) {
-  const m = (mime || "").toLowerCase();
-  if (m.includes("jpeg") || m.includes("jpg")) return "jpg";
-  if (m.includes("webp")) return "webp";
-  if (m.includes("png")) return "png";
-
+/** ✅ Robust ext detection for signed URLs like .../file.png?X-Amz-... */
+function guessExtFromUrl(url: string) {
   try {
-    const clean = url.split("?")[0] || url;
-    const lower = clean.toLowerCase();
-    if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "jpg";
-    if (lower.endsWith(".webp")) return "webp";
-    if (lower.endsWith(".png")) return "png";
-  } catch {}
-  return "png";
-}
-
-/**
- * ✅ THE FIX:
- * - Never navigate the current tab on download click.
- * - For cross-origin signed URLs (Cloudflare R2 / S3 presigned), try to fetch as blob and save.
- * - If CORS blocks blob fetch, we fall back to opening a *new tab* (no redirect of current page).
- *   (True forced download is impossible without CORS headers OR a server-side proxy/content-disposition.)
- */
-async function downloadFileFromUrl(url: string, filename: string) {
-  // 1) Data URL => direct download
-  if (url.startsWith("data:")) {
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    a.rel = "noopener noreferrer";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    return;
-  }
-
-  // 2) Same-origin => direct link download (usually works)
-  const isSameOrigin = (() => {
-    try {
-      const u = new URL(url, window.location.href);
-      return u.origin === window.location.origin;
-    } catch {
-      return false;
+    if (url.startsWith("data:")) {
+      if (url.startsWith("data:image/jpeg")) return "jpg";
+      if (url.startsWith("data:image/webp")) return "webp";
+      if (url.startsWith("data:image/png")) return "png";
+      return "png";
     }
-  })();
-
-  if (isSameOrigin) {
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    a.rel = "noopener noreferrer";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    return;
-  }
-
-  // 3) Cross-origin => try fetch blob (works only if CORS allows it)
-  try {
-    const res = await fetch(url, {
-      method: "GET",
-      mode: "cors",
-      credentials: "omit",
-      cache: "no-store",
-      redirect: "follow",
-    });
-
-    if (!res.ok) throw new Error(`fetch failed (${res.status})`);
-
-    const blob = await res.blob();
-    if (!blob || blob.size <= 0) throw new Error("empty blob");
-
-    const blobUrl = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = blobUrl;
-    a.download = filename;
-    a.rel = "noopener noreferrer";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-
-    // 🔥 Important: revoke AFTER a short delay (Safari/Chrome sometimes needs time)
-    setTimeout(() => {
-      try {
-        URL.revokeObjectURL(blobUrl);
-      } catch {}
-    }, 1500);
-
-    return;
-  } catch (e) {
-    // 4) CORS blocked => DO NOT redirect this page. Open in new tab.
-    console.warn("Download blocked by CORS/browser restrictions:", e);
-
-    const a = document.createElement("a");
-    a.href = url;
-    a.target = "_blank";
-    a.rel = "noopener noreferrer";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-
-    alert(
-      "Your storage URL is blocking direct downloads (CORS). I opened the image in a new tab.\n\nTo enable 1-click download: either allow CORS on the bucket for your site origin OR add a server API route that proxies the file with Content-Disposition: attachment."
-    );
+    const u = new URL(url);
+    const pathname = u.pathname || "";
+    const m = pathname.match(/\.([a-zA-Z0-9]+)$/);
+    const ext = (m?.[1] || "").toLowerCase();
+    if (ext) return ext;
+    return "png";
+  } catch {
+    // fallback (non-standard string)
+    const clean = url.split("?")[0] || url;
+    const m = clean.match(/\.([a-zA-Z0-9]+)$/);
+    return (m?.[1] || "png").toLowerCase();
   }
 }
 
 export default function WorkspacePage() {
   const router = useRouter();
-
   const [tab, setTab] = useState<"face-swap" | "ai-generate">("face-swap");
   const [fullscreen, setFullscreen] = useState(false);
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
@@ -269,26 +182,21 @@ export default function WorkspacePage() {
 
   const aiGenerateRef = useRef<any>(null);
   const [resultImage, setResultImage] = useState<string | null>(null);
-
   const [selectedThemeId, setSelectedThemeId] = useState<number | null>(null);
   const [copiedThemeId, setCopiedThemeId] = useState<number | null>(null);
   const [heroThemes, setHeroThemes] = useState<any[]>([]);
-
   const [webcamOpen, setWebcamOpen] = useState(false);
   const [prompt, setPrompt] = useState(
     "A cinematic neon portrait with dramatic lighting"
   );
-
   const [isProcessing, setProcessing] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
   const [jobs, setJobs] = useState<any[]>([]);
   const [isPaywallOpen, setPaywallOpen] = useState(false);
-
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [results, setResults] = useState<ResultItem[]>([]);
   const [visibleCount, setVisibleCount] = useState(12);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
-
   const [lastThemeImageIndex, setLastThemeImageIndex] = useState<
     Record<number, number>
   >({});
@@ -329,11 +237,9 @@ export default function WorkspacePage() {
   }, []);
 
   const isLocked = authChecked && !authUser;
-
   const goLogin = () => {
     window.location.href = "/login";
   };
-
   const requireAuth = (fn: () => void) => {
     if (isLocked) {
       goLogin();
@@ -422,19 +328,60 @@ export default function WorkspacePage() {
     });
   }
 
-  // ✅ FIXED download logic (no redirect of current page)
+  /**
+   * ✅ FIXED DOWNLOAD:
+   * - For cross-origin signed URLs (Cloudflare R2), browser won't allow forced download.
+   * - So we download via SAME-ORIGIN proxy: /api/download?url=...
+   * - That route sets Content-Disposition: attachment.
+   */
   async function downloadResult(item: any) {
     if (isLocked) return goLogin();
     const url = item?.url;
     if (!url) return;
 
-    const ext = guessExtFromUrlOrMime(url, item?.meta?.mime);
+    const ext = guessExtFromUrl(url);
     const filename =
       item?.meta?.type === "ai-generate"
         ? `ai-${item.id}.${ext}`
         : `theme-${item.id}.${ext}`;
 
-    await downloadFileFromUrl(url, filename);
+    try {
+      // If it's a data URL, we can directly force download (same as before)
+      if (url.startsWith("data:")) {
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        return;
+      }
+
+      // ✅ Always go through our proxy for http(s) urls to avoid CORS redirects/new-tab behavior
+      const proxyUrl = `/api/download?url=${encodeURIComponent(
+        url
+      )}&filename=${encodeURIComponent(filename)}`;
+
+      const res = await fetch(proxyUrl, { cache: "no-store" });
+      if (!res.ok) throw new Error("proxy fetch failed");
+
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = filename; // browser will download from blob
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      // cleanup
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1500);
+    } catch (e) {
+      console.warn("Download failed. Opening image instead.", e);
+      // last resort: open
+      window.open(url, "_blank", "noopener,noreferrer");
+    }
   }
 
   /* ---------------------------------------------------
@@ -496,7 +443,6 @@ export default function WorkspacePage() {
       (t: any) => t?.id === themeId
     );
     if (!theme) return;
-
     const raw =
       theme.imageUrls?.[
         Math.floor(Math.random() * (theme.imageUrls?.length || 1))
@@ -505,12 +451,10 @@ export default function WorkspacePage() {
     setTarget({ file: null, preview: abs, themeId });
     setSelectedThemeId(themeId);
     setCopiedThemeId(themeId);
-
     window.localStorage.setItem(
       "mitux_selected_theme",
       JSON.stringify({ id: themeId, imageUrl: abs })
     );
-
     const label = theme.label || "Mitux AI Theme";
     navigator.clipboard?.writeText(label).catch(() => {});
     setTimeout(() => {
@@ -567,16 +511,13 @@ export default function WorkspacePage() {
     if (isLocked) return goLogin();
     console.log("🚀 startFaceSwap CALLED");
     let interval: any = null;
-
     try {
       if (!source) return alert("Upload your face photo.");
       if (!selectedThemeId) return alert("Select a theme.");
-
       const theme = (Array.isArray(themes) ? themes : []).find(
         (t: any) => t?.id === selectedThemeId
       );
       if (!theme) return alert("Invalid theme selected.");
-
       const theme_name = theme.folder;
 
       setProcessing(true);
@@ -672,6 +613,7 @@ export default function WorkspacePage() {
 
       setResultImage(finalSrc);
       setProgress(100);
+
       if (interval) clearInterval(interval);
       setProcessing(false);
     } catch (err: any) {
@@ -873,7 +815,6 @@ sharp focus
           persistResultsToLocal(next);
           return next;
         }
-
         const idx = safePrev.findIndex((x: any) => x.id === item.id);
         let nextArr: any[];
         if (idx !== -1) {
@@ -910,6 +851,7 @@ sharp focus
       setStartedAt(null);
       return;
     }
+    // processing started
     if (!startedAt) setStartedAt(Date.now());
     setQueuePhase("queued");
     setQueuePos(3);
@@ -917,6 +859,7 @@ sharp focus
 
   useEffect(() => {
     if (!isProcessing) return;
+    // Phase switching: once progress moves, switch to generating
     if (progress >= 10) setQueuePhase("generating");
     if (progress >= 100) setQueuePhase("idle");
   }, [isProcessing, progress]);
@@ -924,6 +867,7 @@ sharp focus
   useEffect(() => {
     if (!isProcessing) return;
     if (queuePhase !== "queued") return;
+    // Countdown 3 -> 2 -> 1 (visual only)
     const t = setInterval(() => {
       setQueuePos((p) => (p > 1 ? p - 1 : 1));
     }, 2200);
@@ -932,6 +876,7 @@ sharp focus
 
   const etaSeconds = useMemo(() => {
     if (!isProcessing || !startedAt) return 0;
+    // lightweight “ETA” feel: increases if stuck near 90, reduces as progress rises
     const elapsed = (Date.now() - startedAt) / 1000;
     const base = Math.max(8, 30 - Math.floor(progress / 4));
     const sticky = progress >= 85 && progress < 100 ? 18 : 0;
@@ -1050,7 +995,6 @@ sharp focus
                   )}
                 </div>
               </div>
-
               <div className="h-px bg-white/10" />
             </MotionCard>
           </header>
@@ -1067,7 +1011,6 @@ sharp focus
                   <p className="text-[11px] uppercase tracking-[0.22em] text-white/45 mb-4">
                     Workspace
                   </p>
-
                   <div className="flex gap-3 mb-6">
                     <motion.button
                       whileTap={{ scale: 0.98 }}
@@ -1080,7 +1023,6 @@ sharp focus
                     >
                       Trending Art
                     </motion.button>
-
                     <motion.button
                       whileTap={{ scale: 0.98 }}
                       onClick={() => setTab("ai-generate")}
@@ -1434,7 +1376,6 @@ sharp focus
                         Playground history
                       </p>
                     </div>
-
                     <motion.button
                       whileTap={{ scale: 0.98 }}
                       onClick={async () => {
@@ -1557,11 +1498,8 @@ sharp focus
                               />
 
                               <motion.button
-                                type="button"
                                 whileTap={{ scale: 0.98 }}
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
+                                onClick={() => {
                                   setFullscreenImage(item.url);
                                   setFullscreen(true);
                                 }}
@@ -1571,26 +1509,16 @@ sharp focus
                               </motion.button>
 
                               <motion.button
-                                type="button"
                                 whileTap={{ scale: 0.98 }}
-                                onClick={(e) => {
-                                  // ✅ prevent any accidental navigation
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  downloadResult(item);
-                                }}
+                                onClick={() => downloadResult(item)}
                                 className="p-2.5 rounded-2xl bg-emerald-500 text-black shadow hover:bg-emerald-400 transition"
-                                aria-label="Download"
                               >
                                 <Download size={16} />
                               </motion.button>
 
                               <motion.button
-                                type="button"
                                 whileTap={{ scale: 0.98 }}
-                                onClick={async (e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
+                                onClick={async () => {
                                   if (isLocked) return goLogin();
                                   const el = document.getElementById(
                                     `card-${item.id}`
@@ -1606,7 +1534,6 @@ sharp focus
                                   }, 200);
                                 }}
                                 className="p-2.5 rounded-2xl bg-red-500/80 text-white shadow hover:bg-red-500 transition"
-                                aria-label="Delete"
                               >
                                 <Trash2 size={16} />
                               </motion.button>
@@ -1766,7 +1693,6 @@ sharp focus
                     Continue to Billing <ArrowRight size={18} />
                   </button>
                 </div>
-
                 <div className="h-6" />
               </div>
             </div>
