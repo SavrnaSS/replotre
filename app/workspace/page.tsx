@@ -1,6 +1,5 @@
 // app/workspace/page.tsx
 "use client";
-
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -202,7 +201,6 @@ export default function WorkspacePage() {
   const [isPaywallOpen, setPaywallOpen] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-
   const [results, setResults] = useState<ResultItem[]>([]);
   const [visibleCount, setVisibleCount] = useState(12);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
@@ -371,7 +369,6 @@ export default function WorkspacePage() {
       const proxyUrl = `/api/download?url=${encodeURIComponent(
         url
       )}&filename=${encodeURIComponent(filename)}`;
-
       const res = await fetch(proxyUrl, { cache: "no-store" });
       if (!res.ok) throw new Error("proxy fetch failed");
 
@@ -423,7 +420,6 @@ export default function WorkspacePage() {
         typeof window !== "undefined"
           ? window.localStorage.getItem("mitux_selected_theme")
           : null;
-
       if (saved) {
         const parsed = JSON.parse(saved);
         const selected = themes.find((t: any) => t?.id === parsed?.id) || null;
@@ -435,7 +431,6 @@ export default function WorkspacePage() {
         setHeroThemes(next.length ? next : themes.slice(0, 4));
         return;
       }
-
       const shuffled = shuffleAnyArray(themes);
       setHeroThemes(shuffled.slice(0, 4));
     } catch (e) {
@@ -501,20 +496,24 @@ export default function WorkspacePage() {
         (t: any) => t?.id === selectedThemeId
       );
       if (!theme) return resolve();
+
       const randomImg =
         theme.imageUrls?.[
           Math.floor(Math.random() * (theme.imageUrls?.length || 1))
         ];
       const encoded = encodeURI(randomImg || "");
+
       setTarget({
         file: null,
         preview: encoded,
         themeId: selectedThemeId,
       });
+
       window.localStorage.setItem(
         "mitux_selected_theme",
         JSON.stringify({ id: selectedThemeId, imageUrl: encoded })
       );
+
       requestAnimationFrame(() => {
         requestAnimationFrame(() => resolve());
       });
@@ -534,6 +533,7 @@ export default function WorkspacePage() {
         (t: any) => t?.id === selectedThemeId
       );
       if (!theme) return alert("Invalid theme selected.");
+
       const theme_name = theme.folder;
 
       setProcessing(true);
@@ -620,7 +620,6 @@ export default function WorkspacePage() {
       };
 
       await saveResult(finalItem);
-
       setResults((prev) =>
         (Array.isArray(prev) ? prev : []).map((x: any) =>
           x.id === placeholderId ? finalItem : x
@@ -637,9 +636,7 @@ export default function WorkspacePage() {
       alert(err?.message || "Unknown error");
       if (interval) clearInterval(interval);
       setResults((prev) =>
-        (Array.isArray(prev) ? prev : []).filter(
-          (x: any) => x?.isLoading !== true
-        )
+        (Array.isArray(prev) ? prev : []).filter((x: any) => x?.isLoading !== true)
       );
       setProcessing(false);
     }
@@ -688,20 +685,8 @@ sharp focus
   const packs = useMemo(
     () => [
       { c: 3, p: 199, name: "Starter", desc: "Try it out", badge: "" },
-      {
-        c: 10,
-        p: 499,
-        name: "Most popular",
-        desc: "Best value",
-        badge: "Most popular",
-      },
-      {
-        c: 30,
-        p: 999,
-        name: "Pro",
-        desc: "For power users",
-        badge: "Best value",
-      },
+      { c: 10, p: 499, name: "Most popular", desc: "Best value", badge: "Most popular" },
+      { c: 30, p: 999, name: "Pro", desc: "For power users", badge: "Best value" },
     ],
     []
   );
@@ -750,17 +735,13 @@ sharp focus
     if (isLocked) return goLogin();
     persistSelectedPack(selectedPackCredits);
     setPaywallOpen(false);
-    router.push(
-      `/billing?pack=${encodeURIComponent(String(selectedPackCredits))}`
-    );
+    router.push(`/billing?pack=${encodeURIComponent(String(selectedPackCredits))}`);
   };
 
   // ✅ helper: keep localStorage sync for results (stable)
   const persistResultsToLocal = useCallback((arr: any[]) => {
     try {
-      const finals = (Array.isArray(arr) ? arr : []).filter(
-        (x) => x?.isLoading !== true
-      );
+      const finals = (Array.isArray(arr) ? arr : []).filter((x) => x?.isLoading !== true);
       localStorage.setItem("mitux_jobs_results", JSON.stringify(finals));
     } catch (e) {
       console.warn("Failed to persist results:", e);
@@ -795,9 +776,7 @@ sharp focus
         }
 
         const incoming = Array.isArray(updaterOrNext) ? updaterOrNext : [];
-        const incomingIds = new Set(
-          incoming.map((x: any) => x?.id).filter(Boolean)
-        );
+        const incomingIds = new Set(incoming.map((x: any) => x?.id).filter(Boolean));
 
         const kept = safePrev.filter((x: any) => {
           if (x?.isLoading === true) return true;
@@ -831,6 +810,7 @@ sharp focus
           persistResultsToLocal(next);
           return next;
         }
+
         const idx = safePrev.findIndex((x: any) => x.id === item.id);
         let nextArr: any[];
         if (idx !== -1) {
@@ -840,6 +820,7 @@ sharp focus
         } else {
           nextArr = [item, ...safePrev];
         }
+
         persistResultsToLocal(nextArr);
         return nextArr;
       });
@@ -1023,7 +1004,6 @@ sharp focus
                   <p className="text-[11px] uppercase tracking-[0.22em] text-white/45 mb-4">
                     Workspace
                   </p>
-
                   <div className="flex gap-3 mb-6">
                     <motion.button
                       whileTap={{ scale: 0.98 }}
@@ -1148,7 +1128,6 @@ sharp focus
                             Tap a theme or browse the full library.
                           </p>
                         </div>
-
                         <Link
                           href="/themes"
                           className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/15 text-[12px] text-white/85 hover:bg-white/10 transition whitespace-nowrap"
@@ -1187,7 +1166,6 @@ sharp focus
                                   ✓
                                 </div>
                               )}
-
                               {isActive && isCopied && (
                                 <div className="absolute top-3 right-3 z-20 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/90 text-black font-semibold animate-pulse">
                                   Selected
@@ -1226,10 +1204,10 @@ sharp focus
                           Upload a face photo or pick a prototype.
                         </p>
 
-                        {/* ✅ Wrap-friendly for small screens */}
-                        <div className="mt-5 flex flex-col sm:flex-row sm:items-center gap-4">
+                        {/* ✅ FIX: keep Step 2 in FLEX ROW even on mobile (smaller sizes, wrap safely) */}
+                        <div className="mt-5 flex items-center gap-3 flex-wrap">
                           <label
-                            className="relative w-20 h-20 rounded-full border border-white/18 bg-black/25 flex items-center justify-center overflow-hidden cursor-pointer group shrink-0"
+                            className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-full border border-white/18 bg-black/25 flex items-center justify-center overflow-hidden cursor-pointer group shrink-0"
                             onClick={(e) => {
                               if (isLocked) {
                                 e.preventDefault();
@@ -1274,9 +1252,7 @@ sharp focus
                                   });
                                 } catch (err) {
                                   console.error("File -> base64 error:", err);
-                                  alert(
-                                    "Failed to read file. Try another photo."
-                                  );
+                                  alert("Failed to read file. Try another photo.");
                                 } finally {
                                   if (fileInputRef.current)
                                     fileInputRef.current.value = "";
@@ -1303,16 +1279,13 @@ sharp focus
                                       type: "base64",
                                     });
                                   } catch (err) {
-                                    console.error(
-                                      "URL -> base64 failed:",
-                                      err
-                                    );
+                                    console.error("URL -> base64 failed:", err);
                                     alert(
                                       "Failed to load prototype face. Try again."
                                     );
                                   }
                                 }}
-                                className="group relative w-20 h-20 rounded-full overflow-hidden border border-white/15 bg-black/25 hover:border-white/40 hover:scale-105 transition"
+                                className="group relative w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border border-white/15 bg-black/25 hover:border-white/40 hover:scale-105 transition"
                               >
                                 <img
                                   src={p.imageUrl}
@@ -1413,7 +1386,6 @@ sharp focus
                         Playground history
                       </p>
                     </div>
-
                     <motion.button
                       whileTap={{ scale: 0.98 }}
                       onClick={async () => {
@@ -1467,6 +1439,7 @@ sharp focus
                             {Math.min(99, Math.max(0, progress))}%
                           </div>
                         </div>
+
                         <div className="mt-3">
                           <div className="w-full h-2.5 bg-white/10 rounded-full overflow-hidden">
                             <div
@@ -1491,98 +1464,94 @@ sharp focus
 
                   {results.length > 0 && (
                     <div className="mt-4 grid gap-6 grid-cols-[repeat(auto-fit,minmax(260px,1fr))]">
-                      {results
-                        .slice(0, visibleCount)
-                        .map((item: any, index: number) =>
-                          item.isLoading ? (
-                            <div
-                              key={`${item.id || "loading"}-${index}`}
-                              className="animate-pulse bg-black/25 rounded-3xl border border-white/10 p-5 shadow-xl"
-                            >
-                              <div className="w-full flex justify-center mb-4">
-                                <div className="w-full max-w-[340px] aspect-[4/5] rounded-2xl border border-white/10 bg-white/5" />
-                              </div>
-                              <div className="flex items-center justify-center gap-3 mt-auto">
-                                <div className="h-9 w-24 rounded-2xl bg-white/5 border border-white/10" />
-                                <div className="h-9 w-24 rounded-2xl bg-white/5 border border-white/10" />
-                                <div className="h-9 w-10 rounded-2xl bg-white/5 border border-white/10" />
+                      {results.slice(0, visibleCount).map((item: any, index: number) =>
+                        item.isLoading ? (
+                          <div
+                            key={`${item.id || "loading"}-${index}`}
+                            className="animate-pulse bg-black/25 rounded-3xl border border-white/10 p-5 shadow-xl"
+                          >
+                            <div className="w-full flex justify-center mb-4">
+                              <div className="w-full max-w-[340px] aspect-[4/5] rounded-2xl border border-white/10 bg-white/5" />
+                            </div>
+                            <div className="flex items-center justify-center gap-3 mt-auto">
+                              <div className="h-9 w-24 rounded-2xl bg-white/5 border border-white/10" />
+                              <div className="h-9 w-24 rounded-2xl bg-white/5 border border-white/10" />
+                              <div className="h-9 w-10 rounded-2xl bg-white/5 border border-white/10" />
+                            </div>
+                          </div>
+                        ) : (
+                          <motion.div
+                            key={`${item.id}-${index}`}
+                            id={`card-${item.id}`}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.25, ease: "easeOut" }}
+                            className="bg-black/25 border border-white/10 rounded-3xl p-5 shadow-xl flex flex-col transition-all duration-300"
+                          >
+                            <div className="w-full flex justify-center mb-5">
+                              <div className="w-full max-w-[340px] aspect-[4/5] rounded-2xl overflow-hidden border border-white/10 shadow-md">
+                                <img
+                                  loading="lazy"
+                                  src={item.url}
+                                  alt="Result"
+                                  className="w-full h-full object-cover"
+                                />
                               </div>
                             </div>
-                          ) : (
-                            <motion.div
-                              key={`${item.id}-${index}`}
-                              id={`card-${item.id}`}
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ duration: 0.25, ease: "easeOut" }}
-                              className="bg-black/25 border border-white/10 rounded-3xl p-5 shadow-xl flex flex-col transition-all duration-300"
-                            >
-                              <div className="w-full flex justify-center mb-5">
-                                <div className="w-full max-w-[340px] aspect-[4/5] rounded-2xl overflow-hidden border border-white/10 shadow-md">
-                                  <img
-                                    loading="lazy"
-                                    src={item.url}
-                                    alt="Result"
-                                    className="w-full h-full object-cover"
-                                  />
-                                </div>
-                              </div>
 
-                              <div className="flex justify-center gap-3 pt-4 border-t border-white/10 flex-wrap">
-                                <RegenButton
-                                  item={item}
-                                  handleRegen={(x: any) => {
-                                    if (isLocked) return goLogin();
-                                    handleRegen(x);
-                                  }}
-                                />
+                            <div className="flex justify-center gap-3 pt-4 border-t border-white/10 flex-wrap">
+                              <RegenButton
+                                item={item}
+                                handleRegen={(x: any) => {
+                                  if (isLocked) return goLogin();
+                                  handleRegen(x);
+                                }}
+                              />
 
-                                <motion.button
-                                  whileTap={{ scale: 0.98 }}
-                                  onClick={() => {
-                                    setFullscreenImage(item.url);
-                                    setFullscreen(true);
-                                  }}
-                                  className="px-4 py-2 text-xs sm:text-sm bg-white/5 text-white rounded-2xl border border-white/10 shadow hover:bg-white/10 transition flex items-center gap-2"
-                                >
-                                  <Maximize2 size={16} /> Full
-                                </motion.button>
+                              <motion.button
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => {
+                                  setFullscreenImage(item.url);
+                                  setFullscreen(true);
+                                }}
+                                className="px-4 py-2 text-xs sm:text-sm bg-white/5 text-white rounded-2xl border border-white/10 shadow hover:bg-white/10 transition flex items-center gap-2"
+                              >
+                                <Maximize2 size={16} /> Full
+                              </motion.button>
 
-                                <motion.button
-                                  whileTap={{ scale: 0.98 }}
-                                  onClick={() => downloadResult(item)}
-                                  className="p-2.5 rounded-2xl bg-emerald-500 text-black shadow hover:bg-emerald-400 transition"
-                                  aria-label="Download"
-                                >
-                                  <Download size={16} />
-                                </motion.button>
+                              <motion.button
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => downloadResult(item)}
+                                className="p-2.5 rounded-2xl bg-emerald-500 text-black shadow hover:bg-emerald-400 transition"
+                                aria-label="Download"
+                              >
+                                <Download size={16} />
+                              </motion.button>
 
-                                <motion.button
-                                  whileTap={{ scale: 0.98 }}
-                                  onClick={async () => {
-                                    if (isLocked) return goLogin();
-                                    const el = document.getElementById(
-                                      `card-${item.id}`
+                              <motion.button
+                                whileTap={{ scale: 0.98 }}
+                                onClick={async () => {
+                                  if (isLocked) return goLogin();
+                                  const el = document.getElementById(`card-${item.id}`);
+                                  if (el) el.classList.add("opacity-50");
+                                  setTimeout(async () => {
+                                    await deleteResult(item.id);
+                                    setResults((prev) =>
+                                      (Array.isArray(prev) ? prev : []).filter(
+                                        (r: any) => r.id !== item.id
+                                      )
                                     );
-                                    if (el) el.classList.add("opacity-50");
-                                    setTimeout(async () => {
-                                      await deleteResult(item.id);
-                                      setResults((prev) =>
-                                        (Array.isArray(prev) ? prev : []).filter(
-                                          (r: any) => r.id !== item.id
-                                        )
-                                      );
-                                    }, 200);
-                                  }}
-                                  className="p-2.5 rounded-2xl bg-red-500/80 text-white shadow hover:bg-red-500 transition"
-                                  aria-label="Delete"
-                                >
-                                  <Trash2 size={16} />
-                                </motion.button>
-                              </div>
-                            </motion.div>
-                          )
-                        )}
+                                  }, 200);
+                                }}
+                                className="p-2.5 rounded-2xl bg-red-500/80 text-white shadow hover:bg-red-500 transition"
+                                aria-label="Delete"
+                              >
+                                <Trash2 size={16} />
+                              </motion.button>
+                            </div>
+                          </motion.div>
+                        )
+                      )}
                     </div>
                   )}
 
