@@ -97,10 +97,7 @@ const saveSavedFaces = (faces) => {
     // 🔥 QUOTA FIX: evict aggressively and retry once
     console.warn("Quota hit while saving faces. Evicting old faces...", e);
     try {
-      const trimmed = normalized.slice(
-        0,
-        Math.max(4, Math.floor(MAX_SAVED_FACES / 2))
-      );
+      const trimmed = normalized.slice(0, Math.max(4, Math.floor(MAX_SAVED_FACES / 2)));
       localStorage.setItem(SAVED_FACES_KEY, JSON.stringify(trimmed));
     } catch (e2) {
       console.warn("Still quota after eviction. Clearing saved faces.", e2);
@@ -139,11 +136,7 @@ export function getResultsFromStorage() {
 /* ==================================================
  SAMPLE FACES (ONBOARDING)
 ================================================== */
-const SAMPLE_FACES = [
-  "/faces/sample1.jpg",
-  "/faces/sample2.jpg",
-  "/faces/sample3.jpg",
-];
+const SAMPLE_FACES = ["/faces/sample1.jpg", "/faces/sample2.jpg", "/faces/sample3.jpg"];
 
 /* ==================================================
  FILE HASH (IDENTITY SAFE)
@@ -155,6 +148,7 @@ async function getFileHash(file) {
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
 }
+
 
 /* ==================================================
  THUMBNAIL COMPRESSOR (CRITICAL QUOTA FIX)
@@ -209,10 +203,7 @@ function Prompt3DPlaceholder({ visible }) {
 
   useEffect(() => {
     if (!visible) return;
-    const t = setInterval(
-      () => setIndex((i) => (i + 1) % EXAMPLE_PROMPTS.length),
-      3200
-    );
+    const t = setInterval(() => setIndex((i) => (i + 1) % EXAMPLE_PROMPTS.length), 3200);
     return () => clearInterval(t);
   }, [visible]);
 
@@ -238,11 +229,7 @@ function Prompt3DPlaceholder({ visible }) {
 ================================================== */
 const CollapseCard = ({ title, value, isOpen, onToggle, children }) => (
   <div className="bg-[#111]/60 border border-white/10 rounded-xl overflow-hidden">
-    <button
-      onClick={onToggle}
-      className="w-full flex justify-between items-center px-4 py-3"
-      type="button"
-    >
+    <button onClick={onToggle} className="w-full flex justify-between items-center px-4 py-3">
       <div className="flex gap-2 text-sm text-white/80">
         {title}
         {value && <span className="text-[#a78bfa]">• {value}</span>}
@@ -262,7 +249,6 @@ const CollapseCard = ({ title, value, isOpen, onToggle, children }) => (
 const OptionChip = ({ active, onClick, children }) => (
   <button
     onClick={onClick}
-    type="button"
     className={`px-3 py-1.5 rounded-lg text-xs ${
       active
         ? "bg-white/20 border border-white/40"
@@ -361,8 +347,7 @@ export default function AIGenerateTab({
 
   /* ---------- FACE UPLOAD (FIXED: store THUMBNAIL, not blob) ---------- */
   const handleFaceUpload = async (eOrFile) => {
-    const file =
-      eOrFile instanceof File ? eOrFile : eOrFile?.target?.files?.[0];
+    const file = eOrFile instanceof File ? eOrFile : eOrFile?.target?.files?.[0];
     if (!file) return;
 
     markHasUploadedFace();
@@ -382,10 +367,7 @@ export default function AIGenerateTab({
 
     setSavedFaces((prev) => {
       const prevArr = Array.isArray(prev) ? prev : [];
-      const next = [
-        { id: hash, preview: thumb },
-        ...prevArr.filter((x) => x?.id !== hash),
-      ];
+      const next = [{ id: hash, preview: thumb }, ...prevArr.filter((x) => x?.id !== hash)];
       return next.slice(0, MAX_SAVED_FACES);
     });
 
@@ -455,8 +437,7 @@ export default function AIGenerateTab({
   /* ---------- REGISTER (RE-GEN SUPPORT) ---------- */
   useEffect(() => {
     registerAIGenerate?.(handleGenerate);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [registerAIGenerate, selectedFace, prompt, position, camera, shot, lighting, aperture, shutter]);
+  }, [registerAIGenerate, handleGenerate]);
 
   /* ---------- FACES TO RENDER ---------- */
   const facesToRender = !hasUploadedFaceOnce()
@@ -465,27 +446,19 @@ export default function AIGenerateTab({
 
   /* ==================================================
    UI
-   ================================================== */
+  ================================================== */
   return (
-    // ✅ Mobile: 95% width, no side padding. Desktop: full width + px-4
-    <div className="mt-6 space-y-6 mx-auto w-[95%] sm:w-full px-0 sm:px-4">
+    <div className="mt-6 space-y-6 px-4">
       {/* FACE OPTIONS */}
-      {/* ✅ Mobile: remove background + border; Desktop stays same */}
-      <div className="rounded-2xl border p-4 space-y-4 bg-transparent border-transparent sm:bg-white/5 sm:border-white/10">
+      <div className="bg-white/5 rounded-2xl border border-white/10 p-4 space-y-4">
         {selectedFace ? (
           <div className="flex justify-between items-center p-3 rounded-xl bg-[#6b4bff]/30 border border-[#a78bfa]/40">
             <div className="flex gap-3">
-              <img
-                src={selectedFace}
-                className="w-11 h-11 rounded-full"
-                alt="Selected face"
-              />
+              <img src={selectedFace} className="w-11 h-11 rounded-full" alt="Selected face" />
               <div>
                 <p className="text-sm">Face selected</p>
                 <p className="text-xs text-white/60">
-                  {faceSessionExpired
-                    ? "Session expired — re-upload for best quality"
-                    : "Face ready"}
+                  {faceSessionExpired ? "Session expired — re-upload for best quality" : "Face ready"}
                 </p>
               </div>
             </div>
@@ -498,7 +471,6 @@ export default function AIGenerateTab({
                 saveFaceToStorage(null);
               }}
               className="px-3 py-1.5 text-xs bg-white/10 rounded-lg"
-              type="button"
             >
               Change
             </button>
@@ -522,7 +494,6 @@ export default function AIGenerateTab({
             <button
               onClick={() => setShowSavedFaces(true)}
               className="w-full rounded-2xl p-5 bg-white/5 border border-white/15"
-              type="button"
             >
               Choose Saved Face
             </button>
@@ -553,12 +524,12 @@ export default function AIGenerateTab({
                 >
                   <button
                     onClick={async () => {
+                      // sample face is URL; saved face is thumbnail dataURL (usable)
                       setSelectedFace(f.preview);
                       saveFaceToStorage(f.preview);
                       setShowSavedFaces(false);
                       setFaceSessionExpired(false);
                     }}
-                    type="button"
                     className={`
                       relative w-full aspect-square rounded-xl overflow-hidden
                       border transform transition-all duration-300
@@ -569,11 +540,7 @@ export default function AIGenerateTab({
                       }
                     `}
                   >
-                    <img
-                      src={f.preview}
-                      className="w-full h-full object-cover"
-                      alt="Face"
-                    />
+                    <img src={f.preview} className="w-full h-full object-cover" alt="Face" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   </button>
 
@@ -584,39 +551,34 @@ export default function AIGenerateTab({
                         setDeletingFace(f.id);
 
                         setTimeout(() => {
-                          setSavedFaces((prev) =>
-                            (Array.isArray(prev) ? prev : []).filter(
-                              (x) => x.id !== f.id
-                            )
-                          );
+                          setSavedFaces((prev) => (Array.isArray(prev) ? prev : []).filter((x) => x.id !== f.id));
                           setDeletingFace(null);
                         }, 300);
                       }}
-                      type="button"
                       className="
-                        absolute top-2 right-2 w-8 h-8
-                        rounded-full bg-black/40 backdrop-blur-md
-                        border border-white/20
-                        flex items-center justify-center
-                        opacity-0 group-hover:opacity-100
-                        transition-all duration-200
-                        hover:border-[#a78bfa]/60 hover:bg-[#6b4bff]/20
-                        hover:scale-105 active:scale-95
-                      "
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        className="w-4 h-4"
-                      >
-                        <path
-                          d="M3 6h18M8 6V5A2 2 0 0 1 10 3h4a2 2 0 0 1 2 2v1M6.5 6l1 12.5A2 2 0 0 0 9.5 20h5a2 2 0 0 0 2-1.5L17.5 6M10 11v5M14 11v5"
-                          stroke="rgba(255,255,255,0.9)"
-                          strokeWidth="1.6"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
+                absolute top-2 right-2 w-8 h-8
+                rounded-full bg-black/40 backdrop-blur-md
+                border border-white/20
+                flex items-center justify-center
+                opacity-0 group-hover:opacity-100
+                transition-all duration-200
+                hover:border-[#a78bfa]/60 hover:bg-[#6b4bff]/20
+                hover:scale-105 active:scale-95
+              "
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                className="w-4 h-4"
+              >
+                <path
+                  d="M3 6h18M8 6V5A2 2 0 0 1 10 3h4a2 2 0 0 1 2 2v1M6.5 6l1 12.5A2 2 0 0 0 9.5 20h5a2 2 0 0 0 2-1.5L17.5 6M10 11v5M14 11v5"
+                  stroke="rgba(255,255,255,0.9)"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
                     </button>
                   )}
                 </div>
@@ -645,17 +607,11 @@ export default function AIGenerateTab({
           isOpen={openPosition}
           onToggle={() => setOpenPosition(!openPosition)}
         >
-          {["front facing", "left side", "right side", "profile view"].map(
-            (p) => (
-              <OptionChip
-                key={p}
-                active={position === p}
-                onClick={() => setPosition(p)}
-              >
-                {p}
-              </OptionChip>
-            )
-          )}
+          {["front facing", "left side", "right side", "profile view"].map((p) => (
+            <OptionChip key={p} active={position === p} onClick={() => setPosition(p)}>
+              {p}
+            </OptionChip>
+          ))}
         </CollapseCard>
 
         <CollapseCard
@@ -682,17 +638,11 @@ export default function AIGenerateTab({
           isOpen={openLighting}
           onToggle={() => setOpenLighting(!openLighting)}
         >
-          {["soft studio", "cinematic", "dramatic shadows", "natural light"].map(
-            (l) => (
-              <OptionChip
-                key={l}
-                active={lighting === l}
-                onClick={() => setLighting(l)}
-              >
-                {l}
-              </OptionChip>
-            )
-          )}
+          {["soft studio", "cinematic", "dramatic shadows", "natural light"].map((l) => (
+            <OptionChip key={l} active={lighting === l} onClick={() => setLighting(l)}>
+              {l}
+            </OptionChip>
+          ))}
         </CollapseCard>
 
         <CollapseCard
@@ -718,7 +668,6 @@ export default function AIGenerateTab({
       <button
         onClick={handleGenerate}
         className="w-full py-4 rounded-2xl font-semibold bg-gradient-to-r from-[#6b4bff] to-[#a66bff]"
-        type="button"
       >
         Generate
       </button>
