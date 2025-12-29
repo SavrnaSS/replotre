@@ -1,9 +1,19 @@
 // app/workspace/page.tsx
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  memo,
+} from "react";
+
+import { motion, AnimatePresence } from "framer-motion";
 
 import {
   Trash2,
@@ -22,8 +32,6 @@ import CreditsBar from "@/app/components/CreditsBar";
 import ProfileAvatar from "@/app/components/ProfileAvatar";
 import StartGenerationButton from "@/app/components/StartGenerationButton";
 import RegenButton from "@/app/components/RegenButton";
-import ZoomViewer from "@/app/components/fullscreen/ZoomViewer";
-import AIGenerateTab from "@/app/components/AIGenerateTab";
 
 import { getArtThemes, prototypeFaces } from "@/app/config/artThemes";
 
@@ -35,9 +43,117 @@ import {
   deleteResult,
 } from "@/app/lib/db";
 
+/**
+ * ✅ Component splitting (faster initial load)
+ * - AIGenerateTab is heavy => load only when tab is opened
+ * - ZoomViewer only when fullscreen is used
+ */
+const AIGenerateTab = dynamic(() => import("@/app/components/AIGenerateTab"), {
+  ssr: false,
+  loading: () => (
+    <div className="rounded-3xl border border-white/10 bg-black/25 p-6 text-sm text-white/60">
+      Loading generator…
+    </div>
+  ),
+});
+
+const ZoomViewer = dynamic(
+  () => import("@/app/components/fullscreen/ZoomViewer"),
+  {
+    ssr: false,
+    loading: () => null,
+  }
+);
+
 /* ---------------------------------------------------
  WORKSPACE PAGE (your existing logic preserved)
 ---------------------------------------------------- */
+
+type QueuePhase = "idle" | "queued" | "generating";
+
+function absoluteUrl(path: string) {
+  if (!path) return "";
+  if (
+    path.startsWith("data:") ||
+    path.startsWith("http://") ||
+    path.startsWith("https://") ||
+    path.startsWith("file://")
+  ) {
+    return path;
+  }
+  if (typeof window !== "undefined") {
+    return `${window.location.origin}${path}`;
+  }
+  return path;
+}
+
+function shuffleAnyArray<T>(arr: T[]) {
+  const a = [...(Array.isArray(arr) ? arr : [])];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function stripDataPrefix(b64: string) {
+  if (!b64) return b64;
+  return b64.replace(/^data:image\/[a-zA-Z0-9+.-]+;base64,/, "");
+}
+
+function dataURLtoFile(dataurl: string, filename = "file.jpg") {
+  const arr = dataurl.split(",");
+  const mime = arr[0].match(/:(.*?);/)?.[1] || "image/jpeg";
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  while (n--) u8arr[n] = bstr.charCodeAt(n);
+  return new File([u8arr], filename, { type: mime });
+}
+
+// ✅ NEW: accept either imageUrl OR image(base64)
+function pickFinalImageSrcFromBackend(data: any): string | null {
+  const url = data?.imageUrl || data?.image_url || data?.url;
+  if (url && typeof url === "string") return url;
+
+  const b64 = data?.image;
+  if (b64 && typeof b64 === "string") {
+    let cleanBase64 = b64.replace(/^"|"$/g, "").replace(/\n/g, "").trim();
+    const mime = data?.mime || "image/png";
+    return `data:${mime};base64,${cleanBase64}`;
+  }
+
+  return null;
+}
+
+const MotionCard = memo(function MotionCard({
+  children,
+  className,
+  delay = 0,
+}: {
+  children: React.ReactNode;
+  className: string;
+  delay?: number;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10, filter: "blur(6px)" }}
+      animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+      transition={{ duration: 0.35, ease: "easeOut", delay }}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+});
+
+function formatEta(seconds: number) {
+  const s = Math.max(0, Math.floor(seconds));
+  const mm = Math.floor(s / 60);
+  const ss = s % 60;
+  if (mm <= 0) return `${ss}s`;
+  return `${mm}m ${ss}s`;
+}
 
 export default function WorkspacePage() {
   const router = useRouter();
@@ -88,24 +204,6 @@ export default function WorkspacePage() {
   const [themes, setThemes] = useState<any[]>([]);
   const [themesLoading, setThemesLoading] = useState(true);
 
-  function shuffleArray(arr: number[]) {
-    const a = [...arr];
-    for (let i = a.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [a[i], a[j]] = [a[j], a[i]];
-    }
-    return a;
-  }
-
-  function shuffleAnyArray<T>(arr: T[]) {
-    const a = [...(Array.isArray(arr) ? arr : [])];
-    for (let i = a.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [a[i], a[j]] = [a[j], a[i]];
-    }
-    return a;
-  }
-
   /* =========================================================
    ✅ AUTH SOFT-LOCK (UNCHANGED)
    ========================================================= */
@@ -151,7 +249,7 @@ export default function WorkspacePage() {
   };
 
   /* =========================================================
-   ✅ LOAD THEMES (FIXED) — prevents "themes.find is not a function"
+   ✅ LOAD THEMES (FIXED)
    ========================================================= */
   useEffect(() => {
     let mounted = true;
@@ -223,20 +321,17 @@ export default function WorkspacePage() {
     return () => observer.disconnect();
   }, []);
 
-  function absoluteUrl(path: string) {
-    if (!path) return "";
-    if (
-      path.startsWith("data:") ||
-      path.startsWith("http://") ||
-      path.startsWith("https://") ||
-      path.startsWith("file://")
-    ) {
-      return path;
-    }
-    if (typeof window !== "undefined") {
-      return `${window.location.origin}${path}`;
-    }
-    return path;
+  async function toBase64(file: File): Promise<string> {
+    return await new Promise((resolve, reject) => {
+      try {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      } catch (e) {
+        reject(e);
+      }
+    });
   }
 
   async function downloadResult(item: any) {
@@ -279,20 +374,20 @@ export default function WorkspacePage() {
       a.remove();
       URL.revokeObjectURL(blobUrl);
     } catch (e) {
-      console.warn("Download blocked (likely CORS). Opening image instead.", e);
+      console.warn(
+        "Download blocked (likely CORS). Opening image instead.",
+        e
+      );
       window.open(url, "_blank");
     }
   }
 
   /* ---------------------------------------------------
-   ✅ RESTORE SELECTED THEME FROM LOCAL STORAGE (FIXED but same behavior)
-   - Restores preview immediately from localStorage
-   - Builds heroThemes once themes are loaded (prevents crash)
+   ✅ RESTORE SELECTED THEME FROM LOCAL STORAGE (UNCHANGED behavior)
    ---------------------------------------------------- */
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    // Restore target/selectedThemeId ASAP (works even before themes load)
     try {
       const saved = window.localStorage.getItem("mitux_selected_theme");
       if (saved) {
@@ -344,7 +439,7 @@ export default function WorkspacePage() {
   }, [themesLoading, themes]);
 
   /* ---------------------------------------------------
-   SELECT THEME (UNCHANGED behavior, fixed to use loaded themes)
+   SELECT THEME (UNCHANGED behavior)
    ---------------------------------------------------- */
   const handleThemeSelect = (themeId: number) => {
     if (isLocked) return goLogin();
@@ -378,72 +473,56 @@ export default function WorkspacePage() {
   };
 
   /* ---------------------------------------------------
-   FACE SWAP (UNCHANGED logic, fixed to use loaded themes)
+   FACE SWAP (UNCHANGED logic)
    ---------------------------------------------------- */
 
-  async function toBase64(file: File): Promise<string> {
-    return await new Promise((resolve, reject) => {
-      try {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      } catch (e) {
-        reject(e);
-      }
+  const urlToBase64 = async (url: string) => {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
     });
-  }
+  };
 
-  function stripDataPrefix(b64: string) {
-    if (!b64) return b64;
-    return b64.replace(/^data:image\/[a-zA-Z0-9+.-]+;base64,/, "");
-  }
-
-  function normalizeFrontendImageInput(input: any) {
-    if (!input?.preview) return null;
-
-    const preview = input.preview;
-
-    if (preview.startsWith("data:"))
-      return { type: "raw-base64", value: stripDataPrefix(preview) };
-
-    if (preview.startsWith("/mnt/") || preview.startsWith("/tmp/"))
-      return { type: "local-path", value: preview };
-
-    if (preview.startsWith("http://") || preview.startsWith("https://"))
-      return { type: "url", value: preview };
-
-    if (preview.startsWith("/"))
-      return { type: "url", value: absoluteUrl(preview) };
-
-    return { type: "url", value: preview };
-  }
-
-  function dataURLtoFile(dataurl: string, filename = "file.jpg") {
-    const arr = dataurl.split(",");
-    const mime = arr[0].match(/:(.*?);/)?.[1] || "image/jpeg";
-    const bstr = atob(arr[1]);
-    let n = bstr.length;
-    const u8arr = new Uint8Array(n);
-    while (n--) {
-      u8arr[n] = bstr.charCodeAt(n);
-    }
-    return new File([u8arr], filename, { type: mime });
-  }
-
-  // ✅ NEW: accept either imageUrl OR image(base64)
-  function pickFinalImageSrcFromBackend(data: any): string | null {
-    const url = data?.imageUrl || data?.image_url || data?.url;
-    if (url && typeof url === "string") return url;
-
-    const b64 = data?.image;
-    if (b64 && typeof b64 === "string") {
-      let cleanBase64 = b64.replace(/^"|"$/g, "").replace(/\n/g, "").trim();
-      const mime = data?.mime || "image/png";
-      return `data:${mime};base64,${cleanBase64}`;
+  function randomizeThemeTargetSafe() {
+    if (isLocked) {
+      goLogin();
+      return Promise.resolve();
     }
 
-    return null;
+    return new Promise<void>((resolve) => {
+      if (!selectedThemeId) return resolve();
+
+      const theme = (Array.isArray(themes) ? themes : []).find(
+        (t: any) => t?.id === selectedThemeId
+      );
+      if (!theme) return resolve();
+
+      const randomImg =
+        theme.imageUrls?.[
+          Math.floor(Math.random() * (theme.imageUrls?.length || 1))
+        ];
+
+      const encoded = encodeURI(randomImg || "");
+
+      setTarget({
+        file: null,
+        preview: encoded,
+        themeId: selectedThemeId,
+      });
+
+      window.localStorage.setItem(
+        "mitux_selected_theme",
+        JSON.stringify({ id: selectedThemeId, imageUrl: encoded })
+      );
+
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => resolve());
+      });
+    });
   }
 
   async function startFaceSwap() {
@@ -523,7 +602,6 @@ export default function WorkspacePage() {
         throw new Error(data?.error || data?.detail || "Backend error");
       }
 
-      // ✅ accept URL or base64
       const finalSrc = pickFinalImageSrcFromBackend(data);
       if (!finalSrc) {
         console.error("Faceswap response missing image:", data);
@@ -565,7 +643,6 @@ export default function WorkspacePage() {
 
       if (interval) clearInterval(interval);
 
-      // ✅ remove only THIS run's loading placeholder(s), keep everything else
       setResults((prev) =>
         (Array.isArray(prev) ? prev : []).filter((x: any) => x?.isLoading !== true)
       );
@@ -610,57 +687,8 @@ sharp focus
     }
   }
 
-  const urlToBase64 = async (url: string) => {
-    const res = await fetch(url);
-    const blob = await res.blob();
-    return await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-  };
-
-  function randomizeThemeTargetSafe() {
-    if (isLocked) {
-      goLogin();
-      return Promise.resolve();
-    }
-
-    return new Promise<void>((resolve) => {
-      if (!selectedThemeId) return resolve();
-
-      const theme = (Array.isArray(themes) ? themes : []).find(
-        (t: any) => t?.id === selectedThemeId
-      );
-      if (!theme) return resolve();
-
-      const randomImg =
-        theme.imageUrls?.[
-          Math.floor(Math.random() * (theme.imageUrls?.length || 1))
-        ];
-
-      const encoded = encodeURI(randomImg || "");
-
-      setTarget({
-        file: null,
-        preview: encoded,
-        themeId: selectedThemeId,
-      });
-
-      window.localStorage.setItem(
-        "mitux_selected_theme",
-        JSON.stringify({ id: selectedThemeId, imageUrl: encoded })
-      );
-
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => resolve());
-      });
-    });
-  }
-
   /* ---------------------------------------------------
-   ✅ ADVANCED PAYWALL (new; does not break existing logic)
+   ✅ ADVANCED PAYWALL (unchanged logic)
    ---------------------------------------------------- */
 
   const packs = useMemo(
@@ -698,8 +726,6 @@ sharp focus
 
   useEffect(() => {
     if (!isPaywallOpen) return;
-
-    // lock body scroll behind modal (modal remains scrollable)
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
@@ -730,13 +756,10 @@ sharp focus
     if (isLocked) return goLogin();
     persistSelectedPack(selectedPackCredits);
     setPaywallOpen(false);
-    // add query param too (optional but helpful)
-    router.push(
-      `/billing?pack=${encodeURIComponent(String(selectedPackCredits))}`
-    );
+    router.push(`/billing?pack=${encodeURIComponent(String(selectedPackCredits))}`);
   };
 
-  // ✅ helper: keep localStorage sync for results (stable, avoids effect loops)
+  // ✅ helper: keep localStorage sync for results (stable)
   const persistResultsToLocal = useCallback((arr: any[]) => {
     try {
       const finals = (Array.isArray(arr) ? arr : []).filter(
@@ -748,9 +771,7 @@ sharp focus
     }
   }, []);
 
-  // ✅ prevents "Maximum update depth exceeded" by:
-  // 1) passing a stable callback (useCallback), so AIGenerateTab's useEffect doesn't re-run every render
-  // 2) skipping setState when next results are effectively identical
+  // ✅ prevent infinite loop + merge AI results into unified list
   const areResultsSame = (a: any[], b: any[]) => {
     if (a === b) return true;
     if (!Array.isArray(a) || !Array.isArray(b)) return false;
@@ -765,16 +786,11 @@ sharp focus
     return true;
   };
 
-  // ✅ FIX (your request):
-  // AIGenerateTab sometimes calls onResultsChange with ONLY ai-generate jobs.
-  // That was overwriting the shared Jobs list, causing each tab to "lose" the other tab's outputs.
-  // We merge AI results into the unified `results` instead of replacing it.
   const handleResultsChange = useCallback(
     (updaterOrNext: any) => {
       setResults((prevAll) => {
         const safePrev = Array.isArray(prevAll) ? prevAll : [];
 
-        // If AIGenerateTab passes a function, keep original behavior (operate on unified list)
         if (typeof updaterOrNext === "function") {
           const maybeNext = updaterOrNext(safePrev);
           const safeNext = Array.isArray(maybeNext) ? maybeNext : safePrev;
@@ -784,29 +800,21 @@ sharp focus
           return safeNext;
         }
 
-        // If it passes an array, treat it as the AI tab's current list and MERGE into the unified list.
         const incoming = Array.isArray(updaterOrNext) ? updaterOrNext : [];
         const incomingIds = new Set(
           incoming.map((x: any) => x?.id).filter(Boolean)
         );
 
-        // 1) Keep all non-AI results from previous list
-        // 2) For AI results previously present, keep only those still in incoming (so AI deletions reflect)
         const kept = safePrev.filter((x: any) => {
-          if (x?.isLoading === true) return true; // keep any placeholders
+          if (x?.isLoading === true) return true;
           const t = x?.meta?.type;
           if (t === "ai-generate") return incomingIds.has(x?.id);
-          return true; // keep Theme-gen and any other types
+          return true;
         });
 
-        // Merge by id (incoming wins)
         const map = new Map<string, any>();
-        for (const item of kept) {
-          if (item?.id) map.set(item.id, item);
-        }
-        for (const item of incoming) {
-          if (item?.id) map.set(item.id, item);
-        }
+        for (const item of kept) if (item?.id) map.set(item.id, item);
+        for (const item of incoming) if (item?.id) map.set(item.id, item);
 
         const merged = Array.from(map.values()).sort(
           (a: any, b: any) => (b?.createdAt ?? 0) - (a?.createdAt ?? 0)
@@ -855,6 +863,60 @@ sharp focus
   }, []);
 
   /* ---------------------------------------------------
+   ✅ NEW: Jobs-only processing UI + “Queue 3→2→1”
+   - NO whole-page overlay
+   - Only shows inside Jobs card
+   ---------------------------------------------------- */
+
+  const [queuePhase, setQueuePhase] = useState<QueuePhase>("idle");
+  const [queuePos, setQueuePos] = useState<number>(3);
+  const [startedAt, setStartedAt] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!isProcessing) {
+      setQueuePhase("idle");
+      setQueuePos(3);
+      setStartedAt(null);
+      return;
+    }
+
+    // processing started
+    if (!startedAt) setStartedAt(Date.now());
+    setQueuePhase("queued");
+    setQueuePos(3);
+  }, [isProcessing, startedAt]);
+
+  useEffect(() => {
+    if (!isProcessing) return;
+
+    // Phase switching: once progress moves, switch to generating
+    if (progress >= 10) setQueuePhase("generating");
+    if (progress >= 100) setQueuePhase("idle");
+  }, [isProcessing, progress]);
+
+  useEffect(() => {
+    if (!isProcessing) return;
+    if (queuePhase !== "queued") return;
+
+    // Countdown 3 -> 2 -> 1 (visual only)
+    const t = setInterval(() => {
+      setQueuePos((p) => (p > 1 ? p - 1 : 1));
+    }, 2200);
+
+    return () => clearInterval(t);
+  }, [isProcessing, queuePhase]);
+
+  const etaSeconds = useMemo(() => {
+    if (!isProcessing || !startedAt) return 0;
+
+    // lightweight “ETA” feel: increases if stuck near 90, reduces as progress rises
+    const elapsed = (Date.now() - startedAt) / 1000;
+    const base = Math.max(8, 30 - Math.floor(progress / 4));
+    const sticky = progress >= 85 && progress < 100 ? 18 : 0;
+    return Math.max(3, Math.floor(base + sticky - elapsed / 2));
+  }, [isProcessing, startedAt, progress]);
+
+  /* ---------------------------------------------------
    UI (UPGRADED LOOK, LOGIC SAME)
    ---------------------------------------------------- */
   return (
@@ -868,11 +930,14 @@ sharp focus
           <div className="absolute inset-0 bg-gradient-to-b from-white/[0.04] via-transparent to-black/50" />
         </div>
 
-        {/* ✅ Single container for navbar + workspace (same width) */}
+        {/* ✅ Single container for navbar + workspace */}
         <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pt-6">
           {/* Top bar */}
           <header className="relative z-10">
-            <div className="rounded-3xl border border-white/10 bg-white/[0.05] backdrop-blur-xl shadow-[0_20px_80px_rgba(0,0,0,0.35)]">
+            <MotionCard
+              className="rounded-3xl border border-white/10 bg-white/[0.05] backdrop-blur-xl shadow-[0_20px_80px_rgba(0,0,0,0.35)]"
+              delay={0.02}
+            >
               <div className="flex flex-col gap-4 p-4 sm:p-5">
                 {/* Row 1 */}
                 <div className="flex items-center justify-between gap-3">
@@ -905,23 +970,27 @@ sharp focus
                         <div className="hidden lg:block">
                           <CreditsBar />
                         </div>
-                        <button
+
+                        <motion.button
+                          whileTap={{ scale: 0.98 }}
+                          whileHover={{ scale: 1.01 }}
                           onClick={() => setPaywallOpen(true)}
                           className="px-4 py-2 rounded-2xl bg-white text-black font-semibold shadow hover:bg-gray-200 transition"
                         >
                           Buy Credits
-                        </button>
+                        </motion.button>
+
                         <ProfileAvatar />
                       </>
                     ) : (
-                      <>
-                        <button
-                          onClick={goLogin}
-                          className="px-4 py-2 rounded-2xl bg-white/10 border border-white/15 text-white font-semibold hover:bg-white/15 transition"
-                        >
-                          Login
-                        </button>
-                      </>
+                      <motion.button
+                        whileTap={{ scale: 0.98 }}
+                        whileHover={{ scale: 1.01 }}
+                        onClick={goLogin}
+                        className="px-4 py-2 rounded-2xl bg-white/10 border border-white/15 text-white font-semibold hover:bg-white/15 transition"
+                      >
+                        Login
+                      </motion.button>
                     )}
                   </div>
 
@@ -930,29 +999,31 @@ sharp focus
                     {isAuthed ? (
                       <ProfileAvatar />
                     ) : (
-                      <button
+                      <motion.button
+                        whileTap={{ scale: 0.98 }}
                         onClick={goLogin}
                         className="px-4 py-2 rounded-2xl bg-white/10 border border-white/15 text-white font-semibold hover:bg-white/15 transition"
                       >
                         Login
-                      </button>
+                      </motion.button>
                     )}
                   </div>
                 </div>
 
-                {/* Row 2: Mobile actions (no overflow) */}
+                {/* Row 2: Mobile actions */}
                 <div className="md:hidden w-full">
                   {isAuthed ? (
                     <div className="grid grid-cols-1 gap-3">
                       <div className="w-full">
                         <CreditsBar />
                       </div>
-                      <button
+                      <motion.button
+                        whileTap={{ scale: 0.98 }}
                         onClick={() => setPaywallOpen(true)}
                         className="w-full py-3 rounded-2xl bg-white text-black font-semibold shadow hover:bg-gray-200 transition"
                       >
                         Buy Credits
-                      </button>
+                      </motion.button>
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 gap-3"></div>
@@ -960,22 +1031,25 @@ sharp focus
                 </div>
               </div>
               <div className="h-px bg-white/10" />
-            </div>
+            </MotionCard>
           </header>
 
-          {/* ✅ added margin between navbar and workspace hero section */}
+          {/* content */}
           <div className="mt-8">
-            {/* Main grid */}
             <div className="grid grid-cols-12 gap-6">
               {/* Sidebar */}
               <aside className="col-span-12 md:col-span-4 space-y-6">
-                <div className="rounded-[28px] border border-white/10 bg-white/[0.05] backdrop-blur-xl p-6 shadow-[0_30px_120px_rgba(0,0,0,0.45)]">
+                <MotionCard
+                  className="rounded-[28px] border border-white/10 bg-white/[0.05] backdrop-blur-xl p-6 shadow-[0_30px_120px_rgba(0,0,0,0.45)]"
+                  delay={0.06}
+                >
                   <p className="text-[11px] uppercase tracking-[0.22em] text-white/45 mb-4">
                     Workspace
                   </p>
 
                   <div className="flex gap-3 mb-6">
-                    <button
+                    <motion.button
+                      whileTap={{ scale: 0.98 }}
                       onClick={() => setTab("face-swap")}
                       className={`flex-1 py-2.5 text-sm rounded-2xl font-semibold transition border ${
                         tab === "face-swap"
@@ -984,9 +1058,10 @@ sharp focus
                       }`}
                     >
                       Trending Art
-                    </button>
+                    </motion.button>
 
-                    <button
+                    <motion.button
+                      whileTap={{ scale: 0.98 }}
                       onClick={() => setTab("ai-generate")}
                       className={`flex-1 py-2.5 text-sm rounded-2xl font-semibold transition border ${
                         tab === "ai-generate"
@@ -995,7 +1070,7 @@ sharp focus
                       }`}
                     >
                       Private Photoshoot
-                    </button>
+                    </motion.button>
                   </div>
 
                   {isLocked && (
@@ -1016,13 +1091,16 @@ sharp focus
                       </button>
                     </div>
                   )}
-                </div>
+                </MotionCard>
               </aside>
 
               {/* Main panel */}
               <section className="col-span-12 md:col-span-8 space-y-6">
-                {/* Generator Card */}
-                <div className="relative rounded-[28px] border border-white/10 bg-white/[0.05] backdrop-blur-xl p-6 shadow-[0_30px_120px_rgba(0,0,0,0.45)]">
+                {/* Generator card */}
+                <MotionCard
+                  className="relative rounded-[28px] border border-white/10 bg-white/[0.05] backdrop-blur-xl p-6 shadow-[0_30px_120px_rgba(0,0,0,0.45)]"
+                  delay={0.09}
+                >
                   {isLocked && (
                     <div className="absolute inset-0 z-20 rounded-[28px] bg-black/55 backdrop-blur-[2px] flex items-center justify-center p-6">
                       <div className="max-w-md w-full rounded-[24px] border border-white/10 bg-black/40 p-6 shadow-2xl">
@@ -1103,16 +1181,17 @@ sharp focus
                       </div>
 
                       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                        {heroThemes.map((theme, index) => {
+                        {heroThemes.map((theme) => {
                           if (!theme) return null;
 
                           const isActive = selectedThemeId === theme.id;
                           const isCopied = copiedThemeId === theme.id;
 
                           return (
-                            <button
+                            <motion.button
                               key={theme.id}
                               type="button"
+                              whileTap={{ scale: 0.98 }}
                               onClick={() => handleThemeSelect(theme.id)}
                               className={[
                                 "relative overflow-hidden rounded-3xl cursor-pointer bg-black/25 border transition-all duration-300 group text-left",
@@ -1149,7 +1228,7 @@ sharp focus
                                   {theme.tag || "Creative imagination"}
                                 </p>
                               </div>
-                            </button>
+                            </motion.button>
                           );
                         })}
                       </div>
@@ -1223,9 +1302,10 @@ sharp focus
 
                           <div className="flex items-center gap-3">
                             {prototypeFaces.map((p: any) => (
-                              <button
+                              <motion.button
                                 key={p.id}
                                 type="button"
+                                whileTap={{ scale: 0.98 }}
                                 onClick={async () => {
                                   if (isLocked) return goLogin();
 
@@ -1255,7 +1335,7 @@ sharp focus
                                 <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-[9px] text-white/85">
                                   {p.label}
                                 </div>
-                              </button>
+                              </motion.button>
                             ))}
                           </div>
                         </div>
@@ -1322,17 +1402,18 @@ sharp focus
                           registerAIGenerate={registerAIGenerate}
                           setProcessing={setProcessing}
                           setProgress={setProgress}
-                          // ✅ FIX: stable callback + no-op if same results => no infinite loop
-                          // ✅ AND merge AI list into unified Jobs list (so both tabs show same Jobs)
                           onResultsChange={handleResultsChange}
                         />
                       )}
                     </div>
                   )}
-                </div>
+                </MotionCard>
 
                 {/* Jobs */}
-                <div className="rounded-[28px] border border-white/10 bg-white/[0.05] backdrop-blur-xl p-6 shadow-[0_30px_120px_rgba(0,0,0,0.45)]">
+                <MotionCard
+                  className="rounded-[28px] border border-white/10 bg-white/[0.05] backdrop-blur-xl p-6 shadow-[0_30px_120px_rgba(0,0,0,0.45)]"
+                  delay={0.12}
+                >
                   <div className="flex items-center justify-between mb-4">
                     <div>
                       <p className="text-[11px] uppercase tracking-[0.22em] text-white/45">
@@ -1344,7 +1425,8 @@ sharp focus
                       </p>
                     </div>
 
-                    <button
+                    <motion.button
+                      whileTap={{ scale: 0.98 }}
                       onClick={async () => {
                         if (isLocked) return goLogin();
 
@@ -1357,27 +1439,73 @@ sharp focus
                       className="px-4 py-2 text-sm font-semibold rounded-2xl bg-red-600 text-white hover:bg-red-500 transition shadow"
                     >
                       Clear History
-                    </button>
+                    </motion.button>
                   </div>
 
-                  {isProcessing && (
-                    <div className="mt-4">
-                      <div className="flex justify-between text-xs text-white/60 mb-1">
-                        <span>Processing…</span>
-                        <span>{progress}%</span>
-                      </div>
+                  {/* ✅ Jobs-only processing UI (no whole page) */}
+                  <AnimatePresence>
+                    {isProcessing && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -8, filter: "blur(6px)" }}
+                        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                        exit={{ opacity: 0, y: -8, filter: "blur(6px)" }}
+                        transition={{ duration: 0.25, ease: "easeOut" }}
+                        className="mb-5 rounded-3xl border border-white/10 bg-black/25 p-4 sm:p-5"
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div>
+                            <p className="text-[11px] uppercase tracking-[0.22em] text-white/55">
+                              Processing
+                            </p>
+                            <p className="text-base sm:text-lg font-semibold mt-1">
+                              {queuePhase === "queued"
+                                ? `Queued • position ${queuePos}`
+                                : "Generating… please keep this tab open"}
+                            </p>
+                            <p className="text-xs text-white/55 mt-1">
+                              You can continue browsing — results will appear in
+                              Jobs.
+                              {etaSeconds > 0 ? (
+                                <>
+                                  {" "}
+                                  <span className="text-white/75 font-semibold">
+                                    ETA ~ {formatEta(etaSeconds)}
+                                  </span>
+                                </>
+                              ) : null}
+                            </p>
+                          </div>
 
-                      <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
-                        <div
-                          style={{ width: `${progress}%` }}
-                          className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 transition-all duration-200 shadow-[0_0_10px_rgba(168,85,247,0.6)]"
-                        />
-                      </div>
-                    </div>
-                  )}
+                          <div className="text-white/70 text-sm font-semibold">
+                            {Math.min(99, Math.max(0, progress))}%
+                          </div>
+                        </div>
+
+                        <div className="mt-3">
+                          <div className="w-full h-2.5 bg-white/10 rounded-full overflow-hidden">
+                            <div
+                              style={{ width: `${progress}%` }}
+                              className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 transition-all duration-200 shadow-[0_0_10px_rgba(168,85,247,0.55)]"
+                            />
+                          </div>
+
+                          <div className="mt-2 flex items-center justify-between text-[11px] text-white/55">
+                            <span>
+                              {queuePhase === "queued"
+                                ? "Waiting for a worker…"
+                                : "Running model…"}
+                            </span>
+                            <span className="text-white/45">
+                              Don’t refresh to avoid losing progress.
+                            </span>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
 
                   {results.length > 0 && (
-                    <div className="mt-8 grid gap-6 grid-cols-[repeat(auto-fit,minmax(260px,1fr))]">
+                    <div className="mt-4 grid gap-6 grid-cols-[repeat(auto-fit,minmax(260px,1fr))]">
                       {results.slice(0, visibleCount).map((item: any, index: number) =>
                         item.isLoading ? (
                           <div
@@ -1395,9 +1523,12 @@ sharp focus
                             </div>
                           </div>
                         ) : (
-                          <div
-                            key={`${item.id}-${index}`} // ✅ avoids duplicate-key warnings if backend ever repeats ids
+                          <motion.div
+                            key={`${item.id}-${index}`}
                             id={`card-${item.id}`}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.25, ease: "easeOut" }}
                             className="bg-black/25 border border-white/10 rounded-3xl p-5 shadow-xl flex flex-col transition-all duration-300"
                           >
                             <div className="w-full flex justify-center mb-5">
@@ -1420,7 +1551,8 @@ sharp focus
                                 }}
                               />
 
-                              <button
+                              <motion.button
+                                whileTap={{ scale: 0.98 }}
                                 onClick={() => {
                                   setFullscreenImage(item.url);
                                   setFullscreen(true);
@@ -1428,16 +1560,18 @@ sharp focus
                                 className="px-4 py-2 text-xs sm:text-sm bg-white/5 text-white rounded-2xl border border-white/10 shadow hover:bg-white/10 transition flex items-center gap-2"
                               >
                                 <Maximize2 size={16} /> Full
-                              </button>
+                              </motion.button>
 
-                              <button
+                              <motion.button
+                                whileTap={{ scale: 0.98 }}
                                 onClick={() => downloadResult(item)}
                                 className="p-2.5 rounded-2xl bg-emerald-500 text-black shadow hover:bg-emerald-400 transition"
                               >
                                 <Download size={16} />
-                              </button>
+                              </motion.button>
 
-                              <button
+                              <motion.button
+                                whileTap={{ scale: 0.98 }}
                                 onClick={async () => {
                                   if (isLocked) return goLogin();
 
@@ -1458,17 +1592,18 @@ sharp focus
                                 className="p-2.5 rounded-2xl bg-red-500/80 text-white shadow hover:bg-red-500 transition"
                               >
                                 <Trash2 size={16} />
-                              </button>
+                              </motion.button>
                             </div>
-                          </div>
+                          </motion.div>
                         )
                       )}
                     </div>
                   )}
 
                   <div ref={loadMoreRef} className="w-full h-10" />
-                </div>
+                </MotionCard>
 
+                {/* Fullscreen viewer */}
                 {fullscreen && fullscreenImage && (
                   <ZoomViewer
                     image={fullscreenImage}
@@ -1483,20 +1618,18 @@ sharp focus
           </div>
         </main>
 
-        {/* ✅ ADVANCED PAYWALL MODAL (scrollable on mobile) */}
+        {/* ✅ ADVANCED PAYWALL MODAL (unchanged, kept) */}
         {isPaywallOpen && (
           <div
             className="fixed inset-0 z-[999] flex items-end sm:items-center justify-center"
             role="dialog"
             aria-modal="true"
           >
-            {/* backdrop */}
             <div
               className="absolute inset-0 bg-black/70 backdrop-blur-[2px]"
               onClick={() => setPaywallOpen(false)}
             />
 
-            {/* sheet */}
             <div
               className={[
                 "relative w-full sm:max-w-3xl",
@@ -1508,7 +1641,6 @@ sharp focus
                 "touch-pan-y",
               ].join(" ")}
             >
-              {/* header */}
               <div className="sticky top-0 z-10 bg-[#0B0B10]/85 backdrop-blur-xl border-b border-white/10">
                 <div className="p-4 sm:p-6 flex items-start justify-between gap-4">
                   <div className="min-w-0">
@@ -1534,7 +1666,6 @@ sharp focus
                 </div>
               </div>
 
-              {/* content */}
               <div className="p-4 sm:p-6">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {packs.map((pk) => {

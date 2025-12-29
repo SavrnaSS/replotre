@@ -1,7 +1,9 @@
+// app/(wherever)/IntroPageClient.tsx  (or your current file path)
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
   Check,
@@ -83,6 +85,58 @@ function safeGetSelectedPack(): { c?: number; p?: number } | null {
   } catch {
     return null;
   }
+}
+
+/* ------------------------------------------
+   Fancy loader bits (shimmer + spinner)
+------------------------------------------- */
+function SpinnerSparkle() {
+  return (
+    <div className="relative h-12 w-12">
+      <div className="absolute inset-0 rounded-full border border-white/15" />
+      <div className="absolute inset-0 rounded-full loader-ring" />
+      <div className="absolute inset-0 flex items-center justify-center">
+        <Sparkles className="h-5 w-5 text-white/75" />
+      </div>
+    </div>
+  );
+}
+
+function ThemeCardSkeleton() {
+  return (
+    <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-black/30">
+      <div className="aspect-[4/3] w-full skeleton" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
+      <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4">
+        <div className="h-4 w-3/4 rounded-lg skeleton" />
+        <div className="mt-2 h-3 w-1/2 rounded-lg skeleton" />
+      </div>
+    </div>
+  );
+}
+
+function TrendingLoader() {
+  return (
+    <div className="py-8">
+      <div className="flex flex-col items-center justify-center gap-3 text-center">
+        <SpinnerSparkle />
+        <div>
+          <p className="text-sm font-semibold text-white/85">
+            Loading trending themes
+          </p>
+          <p className="text-xs text-white/55 mt-0.5">
+            Preparing previews for the best experience…
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-6 grid grid-cols-2 gap-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <ThemeCardSkeleton key={i} />
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function PaywallModal({
@@ -280,9 +334,7 @@ function PaywallModal({
                 Selected:{" "}
                 <span className="text-white/85 font-semibold">
                   {selectedPack
-                    ? `${selectedPack.c} credits (₹${formatINR(
-                        selectedPack.p
-                      )})`
+                    ? `${selectedPack.c} credits (₹${formatINR(selectedPack.p)})`
                     : "None"}
                 </span>
               </div>
@@ -296,7 +348,6 @@ function PaywallModal({
                   Not now
                 </button>
 
-                {/* ✅ If not logged in, do NOT show continue-to-billing */}
                 {isAuthed ? (
                   <button
                     onClick={onContinue}
@@ -319,6 +370,44 @@ function PaywallModal({
           </div>
         </div>
       </div>
+
+      {/* styled-jsx for a smoother loader */}
+      <style jsx>{`
+        .loader-ring {
+          border-radius: 9999px;
+          border: 2px solid rgba(255, 255, 255, 0.12);
+          border-top-color: rgba(255, 255, 255, 0.8);
+          animation: spin 0.9s linear infinite;
+        }
+        .skeleton {
+          position: relative;
+          background: rgba(255, 255, 255, 0.06);
+          overflow: hidden;
+        }
+        .skeleton::after {
+          content: "";
+          position: absolute;
+          inset: 0;
+          transform: translateX(-100%);
+          background: linear-gradient(
+            90deg,
+            transparent,
+            rgba(255, 255, 255, 0.16),
+            transparent
+          );
+          animation: shimmer 1.2s ease-in-out infinite;
+        }
+        @keyframes spin {
+          to {
+            transform: rotate(360deg);
+          }
+        }
+        @keyframes shimmer {
+          100% {
+            transform: translateX(100%);
+          }
+        }
+      `}</style>
     </div>
   );
 }
@@ -326,7 +415,7 @@ function PaywallModal({
 export default function IntroPageClient() {
   const router = useRouter();
 
-  // ✅ THEMES (client-safe): fetch from /api/themes instead of importing server-only module
+  // ✅ THEMES: keep payload light to reduce lag (store only what we need on landing)
   const [themes, setThemes] = useState<Theme[]>([]);
   const [themesLoading, setThemesLoading] = useState(true);
 
@@ -355,15 +444,36 @@ export default function IntroPageClient() {
     return getDefaultPack(packs)?.c ?? null;
   });
 
-  // ✅ fetch themes (client-safe)
+  // ✅ fetch themes with abort + minimal mapping for performance
   useEffect(() => {
+    const ac = new AbortController();
     let mounted = true;
+
     (async () => {
+      setThemesLoading(true);
       try {
-        const res = await fetch("/api/themes", { cache: "no-store" });
+        const res = await fetch("/api/themes", {
+          cache: "no-store",
+          signal: ac.signal,
+        });
+
         const data = await res.json().catch(() => ({}));
         if (!mounted) return;
-        setThemes(Array.isArray(data?.themes) ? data.themes : []);
+
+        const raw = Array.isArray(data?.themes) ? data.themes : [];
+
+        // keep only minimal fields + only first image to reduce memory & re-render cost
+        const slim: Theme[] = raw
+          .map((t: any) => ({
+            id: Number(t?.id),
+            label: String(t?.label || "Theme"),
+            tag: t?.tag ? String(t.tag) : undefined,
+            folder: t?.folder ? String(t.folder) : undefined,
+            imageUrls: Array.isArray(t?.imageUrls) ? t.imageUrls.slice(0, 1) : [],
+          }))
+          .filter((t: Theme) => Number.isFinite(t.id) && t.imageUrls.length > 0);
+
+        setThemes(slim);
       } catch {
         if (!mounted) return;
         setThemes([]);
@@ -372,17 +482,24 @@ export default function IntroPageClient() {
         setThemesLoading(false);
       }
     })();
+
     return () => {
       mounted = false;
+      ac.abort();
     };
   }, []);
 
   // auth (unchanged logic)
   useEffect(() => {
+    const ac = new AbortController();
     let mounted = true;
+
     (async () => {
       try {
-        const res = await fetch("/api/me", { cache: "no-store" });
+        const res = await fetch("/api/me", {
+          cache: "no-store",
+          signal: ac.signal,
+        });
         const data = await res.json().catch(() => ({}));
         if (!mounted) return;
         setAuthUser(data?.user || null);
@@ -397,14 +514,15 @@ export default function IntroPageClient() {
 
     return () => {
       mounted = false;
+      ac.abort();
     };
   }, []);
 
-  // restore selected theme + build hero themes (same logic, but uses fetched themes)
+  // restore selected theme + build hero themes (same behavior, now lightweight)
   useEffect(() => {
     if (typeof window === "undefined") return;
+
     if (!themes.length) {
-      // prevent "not iterable" issues and avoid heroThemes being built from empty
       setHeroThemes([]);
       return;
     }
@@ -422,7 +540,7 @@ export default function IntroPageClient() {
           .slice(0, 3);
 
         const next = [selected, ...others].filter(Boolean) as Theme[];
-        setHeroThemes(next);
+        setHeroThemes(next.length ? next : themes.slice(0, 4));
         return;
       }
     } catch {}
@@ -456,7 +574,6 @@ export default function IntroPageClient() {
   const goLogin = () => (window.location.href = "/login");
 
   const continueToBilling = () => {
-    // ✅ hard gate: never navigate to billing from here unless authed
     if (!isAuthed) {
       goLogin();
       return;
@@ -504,9 +621,12 @@ export default function IntroPageClient() {
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="h-11 w-11 shrink-0 rounded-2xl overflow-hidden bg-white/10 border border-white/10 flex items-center justify-center">
-                  <img
+                  <Image
                     src="/logo.jpeg"
                     alt="Gerox"
+                    width={44}
+                    height={44}
+                    priority
                     className="h-full w-full object-cover"
                   />
                 </div>
@@ -532,7 +652,6 @@ export default function IntroPageClient() {
                       <CreditsBar />
                     </div>
 
-                    {/* ✅ hidden when logged out (already), and hard-gated on click */}
                     <button
                       onClick={() => setPaywallOpen(true)}
                       className="px-4 py-2 rounded-2xl bg-white text-black font-semibold shadow hover:bg-gray-200 transition"
@@ -578,7 +697,6 @@ export default function IntroPageClient() {
                     <CreditsBar />
                   </div>
 
-                  {/* ✅ hidden when logged out */}
                   <button
                     onClick={() => setPaywallOpen(true)}
                     className="w-full py-3 rounded-2xl bg-white text-black font-semibold shadow hover:bg-gray-200 transition"
@@ -625,10 +743,7 @@ export default function IntroPageClient() {
               <div className="mt-6 flex flex-wrap items-center gap-3 sm:gap-4 text-[12px] text-white/70">
                 {["Fast generation", "Saved history", "Download anytime"].map(
                   (txt) => (
-                    <span
-                      key={txt}
-                      className="inline-flex items-center gap-2"
-                    >
+                    <span key={txt} className="inline-flex items-center gap-2">
                       <span className="h-5 w-5 rounded-full bg-emerald-500/15 border border-emerald-400/25 flex items-center justify-center">
                         <Check size={12} className="text-emerald-300" />
                       </span>
@@ -670,12 +785,13 @@ export default function IntroPageClient() {
                 )}
 
                 <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-[12px] text-white/55">
-                  <Link href="/themes" className="hover:text-white/80 transition">
+                  <Link
+                    href="/themes"
+                    className="hover:text-white/80 transition"
+                  >
                     Browse full library →
                   </Link>
-                  <span className="text-white/45">
-                    Tip: use centered face photo
-                  </span>
+                  <span className="text-white/45">Tip: use centered face photo</span>
                 </div>
               </div>
             </div>
@@ -701,16 +817,14 @@ export default function IntroPageClient() {
               </div>
 
               {themesLoading ? (
-                <div className="py-10 text-center text-sm text-white/55">
-                  Loading themes…
-                </div>
+                <TrendingLoader />
               ) : heroThemes.length === 0 ? (
                 <div className="py-10 text-center text-sm text-white/55">
                   No themes available.
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-3">
-                  {heroThemes.map((t) => {
+                  {heroThemes.map((t, idx) => {
                     const active = selectedThemeId === t.id;
                     const img = t.imageUrls?.[0]
                       ? encodeURI(t.imageUrls[0])
@@ -723,15 +837,21 @@ export default function IntroPageClient() {
                         onClick={() => handleThemeSelect(t.id)}
                         className={[
                           "relative overflow-hidden rounded-3xl border bg-black/30 transition group text-left",
+                          "will-change-transform",
                           active
                             ? "border-purple-400/60 ring-2 ring-purple-500/40"
                             : "border-white/10 hover:border-white/20",
                         ].join(" ")}
                       >
                         <div className="aspect-[4/3] w-full overflow-hidden">
-                          <img
+                          {/* Next/Image = much smoother on production */}
+                          <Image
                             src={img}
                             alt={t.label}
+                            width={640}
+                            height={480}
+                            sizes="(max-width: 1024px) 50vw, 25vw"
+                            priority={idx < 2} // first 2 load quickly; rest lazy
                             className="h-full w-full object-cover group-hover:scale-[1.03] transition-transform duration-500"
                           />
                         </div>
@@ -767,7 +887,7 @@ export default function IntroPageClient() {
           </section>
         </div>
 
-        {/* ✅ NEW: Responsive “How private photoshoot works” section (LIVE-ready) */}
+        {/* How it works */}
         <section className="mt-8 sm:mt-10">
           <div className="rounded-[28px] border border-white/10 bg-white/[0.05] backdrop-blur-xl shadow-[0_30px_120px_rgba(0,0,0,0.35)] overflow-hidden">
             <div className="px-5 sm:px-8 py-6 sm:py-7 border-b border-white/10">
@@ -800,7 +920,6 @@ export default function IntroPageClient() {
 
             <div className="px-5 sm:px-8 py-6 sm:py-8">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5">
-                {/* Step 1 */}
                 <div className="rounded-3xl border border-white/10 bg-black/25 p-5 sm:p-6">
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-[11px] px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-white/70">
@@ -810,9 +929,7 @@ export default function IntroPageClient() {
                       <Sparkles size={18} className="text-white/80" />
                     </span>
                   </div>
-                  <h3 className="mt-4 text-base font-semibold">
-                    Choose a theme
-                  </h3>
+                  <h3 className="mt-4 text-base font-semibold">Choose a theme</h3>
                   <p className="mt-2 text-sm text-white/60 leading-snug">
                     Browse trending styles and select one. We’ll remember it for
                     Workspace so you don’t repeat steps.
@@ -824,7 +941,6 @@ export default function IntroPageClient() {
                   </div>
                 </div>
 
-                {/* Step 2 */}
                 <div className="rounded-3xl border border-white/10 bg-black/25 p-5 sm:p-6">
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-[11px] px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-white/70">
@@ -858,7 +974,6 @@ export default function IntroPageClient() {
                   </div>
                 </div>
 
-                {/* Step 3 */}
                 <div className="rounded-3xl border border-white/10 bg-black/25 p-5 sm:p-6">
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-[11px] px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-white/70">
@@ -924,6 +1039,44 @@ export default function IntroPageClient() {
         isAuthed={isAuthed}
         onLogin={goLogin}
       />
+
+      {/* loader css (shared) */}
+      <style jsx>{`
+        .loader-ring {
+          border-radius: 9999px;
+          border: 2px solid rgba(255, 255, 255, 0.12);
+          border-top-color: rgba(255, 255, 255, 0.8);
+          animation: spin 0.9s linear infinite;
+        }
+        .skeleton {
+          position: relative;
+          background: rgba(255, 255, 255, 0.06);
+          overflow: hidden;
+        }
+        .skeleton::after {
+          content: "";
+          position: absolute;
+          inset: 0;
+          transform: translateX(-100%);
+          background: linear-gradient(
+            90deg,
+            transparent,
+            rgba(255, 255, 255, 0.16),
+            transparent
+          );
+          animation: shimmer 1.2s ease-in-out infinite;
+        }
+        @keyframes spin {
+          to {
+            transform: rotate(360deg);
+          }
+        }
+        @keyframes shimmer {
+          100% {
+            transform: translateX(100%);
+          }
+        }
+      `}</style>
     </div>
   );
 }
