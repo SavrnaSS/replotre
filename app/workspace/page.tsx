@@ -1,5 +1,6 @@
 // app/workspace/page.tsx
 "use client";
+
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -11,7 +12,9 @@ import {
   useState,
   memo,
 } from "react";
+
 import { motion, AnimatePresence } from "framer-motion";
+
 import {
   Trash2,
   Maximize2,
@@ -23,12 +26,15 @@ import {
   CreditCard,
   ShieldCheck,
 } from "lucide-react";
+
 import AuthWall from "@/app/components/AuthWall";
 import CreditsBar from "@/app/components/CreditsBar";
 import ProfileAvatar from "@/app/components/ProfileAvatar";
 import StartGenerationButton from "@/app/components/StartGenerationButton";
 import RegenButton from "@/app/components/RegenButton";
+
 import { getArtThemes, prototypeFaces } from "@/app/config/artThemes";
+
 import {
   loadResults,
   saveResult,
@@ -62,6 +68,7 @@ const ZoomViewer = dynamic(
 /* ---------------------------------------------------
  WORKSPACE PAGE (your existing logic preserved)
 ---------------------------------------------------- */
+
 type QueuePhase = "idle" | "queued" | "generating";
 
 function absoluteUrl(path: string) {
@@ -148,105 +155,18 @@ function formatEta(seconds: number) {
   return `${mm}m ${ss}s`;
 }
 
-/* ---------------------------------------------------
- ✅ DOWNLOAD HELPERS (FIX: prevent redirect / new tab)
----------------------------------------------------- */
-function guessExtFromUrlOrMime(url: string, mime?: string) {
-  const u = (url || "").toLowerCase();
-  const m = (mime || "").toLowerCase();
-
-  if (m.includes("jpeg") || m.includes("jpg")) return "jpg";
-  if (m.includes("webp")) return "webp";
-  if (m.includes("png")) return "png";
-
-  if (u.startsWith("data:image/jpeg")) return "jpg";
-  if (u.startsWith("data:image/webp")) return "webp";
-  if (u.startsWith("data:image/png")) return "png";
-
-  if (u.includes(".jpeg")) return "jpg";
-  if (u.includes(".jpg")) return "jpg";
-  if (u.includes(".webp")) return "webp";
-  if (u.includes(".png")) return "png";
-
-  return "png";
-}
-
-function dataUrlToBlob(dataUrl: string): Blob {
-  const [head, tail] = dataUrl.split(",");
-  const mime = head?.match(/:(.*?);/)?.[1] || "application/octet-stream";
-  const binStr = atob(tail || "");
-  const len = binStr.length;
-  const bytes = new Uint8Array(len);
-  for (let i = 0; i < len; i++) bytes[i] = binStr.charCodeAt(i);
-  return new Blob([bytes], { type: mime });
-}
-
-function triggerBlobDownload(blob: Blob, filename: string) {
-  const blobUrl = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = blobUrl;
-  a.download = filename;
-  a.style.display = "none";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  // give browser time to start download before revoking
-  setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
-}
-
-async function fetchAsBlob(url: string) {
-  const res = await fetch(url, {
-    method: "GET",
-    mode: "cors",
-    credentials: "omit",
-    cache: "no-store",
-  });
-  if (!res.ok) throw new Error(`fetch failed: ${res.status}`);
-  return await res.blob();
-}
-
-/**
- * Optional: if you have /api/download (or /api/proxy) that returns the remote file
- * with proper CORS + Content-Disposition, this will make cross-origin downloads work
- * without redirecting.
- */
-async function fetchViaProxyAsBlob(url: string) {
-  const proxyUrl = `/api/download?url=${encodeURIComponent(url)}`;
-  const res = await fetch(proxyUrl, {
-    method: "GET",
-    cache: "no-store",
-  });
-  if (!res.ok) throw new Error(`proxy fetch failed: ${res.status}`);
-  return await res.blob();
-}
-
-/**
- * Last resort (NO redirect): load into hidden iframe.
- * - If server sends Content-Disposition: attachment -> browser downloads
- * - If server only serves an image -> it loads in iframe (still no redirect)
- */
-function iframeAttemptDownload(url: string) {
-  const iframe = document.createElement("iframe");
-  iframe.style.display = "none";
-  iframe.src = url;
-  document.body.appendChild(iframe);
-  setTimeout(() => {
-    try {
-      iframe.remove();
-    } catch {}
-  }, 20000);
-}
-
 export default function WorkspacePage() {
   const router = useRouter();
 
   const [tab, setTab] = useState<"face-swap" | "ai-generate">("face-swap");
   const [fullscreen, setFullscreen] = useState(false);
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
+
   const [progress, setProgress] = useState(0);
 
   // SOURCE (uploaded face)
   const [source, setSource] = useState<any>(null);
+
   // TARGET (theme preview)
   const [target, setTarget] = useState<any>(null);
 
@@ -255,11 +175,14 @@ export default function WorkspacePage() {
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [selectedThemeId, setSelectedThemeId] = useState<number | null>(null);
   const [copiedThemeId, setCopiedThemeId] = useState<number | null>(null);
+
   const [heroThemes, setHeroThemes] = useState<any[]>([]);
   const [webcamOpen, setWebcamOpen] = useState(false);
+
   const [prompt, setPrompt] = useState(
     "A cinematic neon portrait with dramatic lighting"
   );
+
   const [isProcessing, setProcessing] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
   const [jobs, setJobs] = useState<any[]>([]);
@@ -305,6 +228,7 @@ export default function WorkspacePage() {
         setAuthChecked(true);
       }
     })();
+
     return () => {
       mounted = false;
     };
@@ -347,6 +271,7 @@ export default function WorkspacePage() {
         setThemesLoading(false);
       }
     })();
+
     return () => {
       mounted = false;
     };
@@ -375,12 +300,14 @@ export default function WorkspacePage() {
       for (const item of dbResults as any[]) {
         if (item?.id && !map.has(item.id)) map.set(item.id, item);
       }
+
       setResults(Array.from(map.values()));
     })();
   }, []);
 
   useEffect(() => {
     if (!loadMoreRef.current) return;
+
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting) {
@@ -389,6 +316,7 @@ export default function WorkspacePage() {
       },
       { rootMargin: "200px" }
     );
+
     observer.observe(loadMoreRef.current);
     return () => observer.disconnect();
   }, []);
@@ -406,15 +334,17 @@ export default function WorkspacePage() {
     });
   }
 
-  // ✅ FIXED: download without redirect/new-tab fallback
   async function downloadResult(item: any) {
     if (isLocked) return goLogin();
 
     const url = item?.url;
     if (!url) return;
 
-    const mimeHint = item?.meta?.mime;
-    const ext = guessExtFromUrlOrMime(url, mimeHint);
+    const ext = url.startsWith("data:image/jpeg")
+      ? "jpg"
+      : url.startsWith("data:image/webp")
+      ? "webp"
+      : "png";
 
     const filename =
       item?.meta?.type === "ai-generate"
@@ -422,40 +352,33 @@ export default function WorkspacePage() {
         : `theme-${item.id}.${ext}`;
 
     try {
-      // data: -> blob -> download (most reliable)
       if (url.startsWith("data:")) {
-        const blob = dataUrlToBlob(url);
-        triggerBlobDownload(blob, filename);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
         return;
       }
 
-      // try direct fetch (works when CORS allows)
-      try {
-        const blob = await fetchAsBlob(url);
-        triggerBlobDownload(blob, filename);
-        return;
-      } catch (e) {
-        // try proxy fetch (if you have /api/download)
-        try {
-          const blob = await fetchViaProxyAsBlob(url);
-          triggerBlobDownload(blob, filename);
-          return;
-        } catch (e2) {
-          // last resort: no redirect (hidden iframe). may still download if server sets attachment headers
-          console.warn("Direct + proxy download failed; using iframe fallback.", {
-            direct: e,
-            proxy: e2,
-          });
-          iframeAttemptDownload(url);
-          alert(
-            "Download could not be forced due to browser/CORS restrictions. If it didn't download, open the image in fullscreen and use 'Save image as…'."
-          );
-          return;
-        }
-      }
-    } catch (err) {
-      console.warn("Download failed:", err);
-      alert("Download failed. Please try again.");
+      const res = await fetch(url, { mode: "cors" });
+      if (!res.ok) throw new Error("fetch failed");
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(blobUrl);
+    } catch (e) {
+      console.warn(
+        "Download blocked (likely CORS). Opening image instead.",
+        e
+      );
+      window.open(url, "_blank");
     }
   }
 
@@ -464,6 +387,7 @@ export default function WorkspacePage() {
    ---------------------------------------------------- */
   useEffect(() => {
     if (typeof window === "undefined") return;
+
     try {
       const saved = window.localStorage.getItem("mitux_selected_theme");
       if (saved) {
@@ -485,22 +409,27 @@ export default function WorkspacePage() {
   useEffect(() => {
     if (themesLoading) return;
     if (!Array.isArray(themes)) return;
+
     try {
       const saved =
         typeof window !== "undefined"
           ? window.localStorage.getItem("mitux_selected_theme")
           : null;
+
       if (saved) {
         const parsed = JSON.parse(saved);
         const selected = themes.find((t: any) => t?.id === parsed?.id) || null;
+
         const others = themes
           .filter((t: any) => t?.id !== parsed?.id)
           .sort(() => Math.random() - 0.5)
           .slice(0, 3);
+
         const next = [selected, ...others].filter(Boolean);
         setHeroThemes(next.length ? next : themes.slice(0, 4));
         return;
       }
+
       const shuffled = shuffleAnyArray(themes);
       setHeroThemes(shuffled.slice(0, 4));
     } catch (e) {
@@ -514,24 +443,30 @@ export default function WorkspacePage() {
    ---------------------------------------------------- */
   const handleThemeSelect = (themeId: number) => {
     if (isLocked) return goLogin();
+
     const theme = (Array.isArray(themes) ? themes : []).find(
       (t: any) => t?.id === themeId
     );
     if (!theme) return;
+
     const raw =
       theme.imageUrls?.[
         Math.floor(Math.random() * (theme.imageUrls?.length || 1))
       ];
     const abs = encodeURI(raw || "");
+
     setTarget({ file: null, preview: abs, themeId });
     setSelectedThemeId(themeId);
     setCopiedThemeId(themeId);
+
     window.localStorage.setItem(
       "mitux_selected_theme",
       JSON.stringify({ id: themeId, imageUrl: abs })
     );
+
     const label = theme.label || "Mitux AI Theme";
     navigator.clipboard?.writeText(label).catch(() => {});
+
     setTimeout(() => {
       setCopiedThemeId((v) => (v === themeId ? null : v));
     }, 1500);
@@ -540,6 +475,7 @@ export default function WorkspacePage() {
   /* ---------------------------------------------------
    FACE SWAP (UNCHANGED logic)
    ---------------------------------------------------- */
+
   const urlToBase64 = async (url: string) => {
     const res = await fetch(url);
     const blob = await res.blob();
@@ -556,26 +492,33 @@ export default function WorkspacePage() {
       goLogin();
       return Promise.resolve();
     }
+
     return new Promise<void>((resolve) => {
       if (!selectedThemeId) return resolve();
+
       const theme = (Array.isArray(themes) ? themes : []).find(
         (t: any) => t?.id === selectedThemeId
       );
       if (!theme) return resolve();
+
       const randomImg =
         theme.imageUrls?.[
           Math.floor(Math.random() * (theme.imageUrls?.length || 1))
         ];
+
       const encoded = encodeURI(randomImg || "");
+
       setTarget({
         file: null,
         preview: encoded,
         themeId: selectedThemeId,
       });
+
       window.localStorage.setItem(
         "mitux_selected_theme",
         JSON.stringify({ id: selectedThemeId, imageUrl: encoded })
       );
+
       requestAnimationFrame(() => {
         requestAnimationFrame(() => resolve());
       });
@@ -584,8 +527,10 @@ export default function WorkspacePage() {
 
   async function startFaceSwap() {
     if (isLocked) return goLogin();
+
     console.log("🚀 startFaceSwap CALLED");
     let interval: any = null;
+
     try {
       if (!source) return alert("Upload your face photo.");
       if (!selectedThemeId) return alert("Select a theme.");
@@ -695,11 +640,11 @@ export default function WorkspacePage() {
     } catch (err: any) {
       console.error("🔥 FACE SWAP ERROR:", err);
       alert(err?.message || "Unknown error");
+
       if (interval) clearInterval(interval);
+
       setResults((prev) =>
-        (Array.isArray(prev) ? prev : []).filter(
-          (x: any) => x?.isLoading !== true
-        )
+        (Array.isArray(prev) ? prev : []).filter((x: any) => x?.isLoading !== true)
       );
       setProcessing(false);
     }
@@ -745,6 +690,7 @@ sharp focus
   /* ---------------------------------------------------
    ✅ ADVANCED PAYWALL (unchanged logic)
    ---------------------------------------------------- */
+
   const packs = useMemo(
     () => [
       { c: 3, p: 199, name: "Starter", desc: "Try it out", badge: "" },
@@ -848,6 +794,7 @@ sharp focus
         if (typeof updaterOrNext === "function") {
           const maybeNext = updaterOrNext(safePrev);
           const safeNext = Array.isArray(maybeNext) ? maybeNext : safePrev;
+
           if (areResultsSame(safePrev, safeNext)) return safePrev;
           persistResultsToLocal(safeNext);
           return safeNext;
@@ -874,6 +821,7 @@ sharp focus
         );
 
         if (areResultsSame(safePrev, merged)) return safePrev;
+
         persistResultsToLocal(merged);
         return merged;
       });
@@ -885,13 +833,16 @@ sharp focus
     (item: any) => {
       setResults((prev) => {
         const safePrev = Array.isArray(prev) ? prev : [];
+
         if (item?.__remove === true) {
           const next = safePrev.filter((x: any) => x.id !== item.id);
           persistResultsToLocal(next);
           return next;
         }
+
         const idx = safePrev.findIndex((x: any) => x.id === item.id);
         let nextArr: any[];
+
         if (idx !== -1) {
           const copy = [...safePrev];
           copy[idx] = item;
@@ -899,6 +850,7 @@ sharp focus
         } else {
           nextArr = [item, ...safePrev];
         }
+
         persistResultsToLocal(nextArr);
         return nextArr;
       });
@@ -915,6 +867,7 @@ sharp focus
    - NO whole-page overlay
    - Only shows inside Jobs card
    ---------------------------------------------------- */
+
   const [queuePhase, setQueuePhase] = useState<QueuePhase>("idle");
   const [queuePos, setQueuePos] = useState<number>(3);
   const [startedAt, setStartedAt] = useState<number | null>(null);
@@ -926,6 +879,7 @@ sharp focus
       setStartedAt(null);
       return;
     }
+
     // processing started
     if (!startedAt) setStartedAt(Date.now());
     setQueuePhase("queued");
@@ -934,6 +888,7 @@ sharp focus
 
   useEffect(() => {
     if (!isProcessing) return;
+
     // Phase switching: once progress moves, switch to generating
     if (progress >= 10) setQueuePhase("generating");
     if (progress >= 100) setQueuePhase("idle");
@@ -942,15 +897,18 @@ sharp focus
   useEffect(() => {
     if (!isProcessing) return;
     if (queuePhase !== "queued") return;
+
     // Countdown 3 -> 2 -> 1 (visual only)
     const t = setInterval(() => {
       setQueuePos((p) => (p > 1 ? p - 1 : 1));
     }, 2200);
+
     return () => clearInterval(t);
   }, [isProcessing, queuePhase]);
 
   const etaSeconds = useMemo(() => {
     if (!isProcessing || !startedAt) return 0;
+
     // lightweight “ETA” feel: increases if stuck near 90, reduces as progress rises
     const elapsed = (Date.now() - startedAt) / 1000;
     const base = Math.max(8, 30 - Math.floor(progress / 4));
@@ -1012,6 +970,7 @@ sharp focus
                         <div className="hidden lg:block">
                           <CreditsBar />
                         </div>
+
                         <motion.button
                           whileTap={{ scale: 0.98 }}
                           whileHover={{ scale: 1.01 }}
@@ -1020,6 +979,7 @@ sharp focus
                         >
                           Buy Credits
                         </motion.button>
+
                         <ProfileAvatar />
                       </>
                     ) : (
@@ -1086,6 +1046,7 @@ sharp focus
                   <p className="text-[11px] uppercase tracking-[0.22em] text-white/45 mb-4">
                     Workspace
                   </p>
+
                   <div className="flex gap-3 mb-6">
                     <motion.button
                       whileTap={{ scale: 0.98 }}
@@ -1098,6 +1059,7 @@ sharp focus
                     >
                       Trending Art
                     </motion.button>
+
                     <motion.button
                       whileTap={{ scale: 0.98 }}
                       onClick={() => setTab("ai-generate")}
@@ -1155,6 +1117,7 @@ sharp focus
                             </p>
                           </div>
                         </div>
+
                         <div className="mt-4 flex gap-3">
                           <button
                             onClick={goLogin}
@@ -1189,6 +1152,7 @@ sharp focus
                           : "High-quality AI image generation is available here (your existing logic stays)."}
                       </p>
                     </div>
+
                     <div className="hidden md:flex items-center gap-2 text-[11px] px-3 py-1 rounded-full bg-black/25 border border-white/10 text-white/60">
                       <Sparkles size={14} />
                       Live preview
@@ -1207,6 +1171,7 @@ sharp focus
                             Tap a theme or browse the full library.
                           </p>
                         </div>
+
                         <Link
                           href="/themes"
                           className="px-4 py-2 rounded-full bg-white/5 border border-white/15 text-[12px] text-white/85 hover:bg-white/10 transition"
@@ -1218,8 +1183,10 @@ sharp focus
                       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                         {heroThemes.map((theme) => {
                           if (!theme) return null;
+
                           const isActive = selectedThemeId === theme.id;
                           const isCopied = copiedThemeId === theme.id;
+
                           return (
                             <motion.button
                               key={theme.id}
@@ -1238,17 +1205,21 @@ sharp focus
                                 alt={theme.label}
                                 className="w-full h-[240px] object-cover transition-transform duration-500 group-hover:scale-105"
                               />
+
                               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
+
                               {isActive && (
                                 <div className="absolute top-3 left-3 z-20 w-8 h-8 rounded-full bg-purple-500/90 flex items-center justify-center text-white shadow-lg">
                                   ✓
                                 </div>
                               )}
+
                               {isActive && isCopied && (
                                 <div className="absolute top-3 right-3 z-20 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/90 text-black font-semibold animate-pulse">
                                   Selected
                                 </div>
                               )}
+
                               <div className="absolute bottom-0 left-0 right-0 p-4 z-10">
                                 <h3 className="text-sm font-semibold text-white leading-tight">
                                   {theme.label}
@@ -1310,6 +1281,7 @@ sharp focus
                                 if (isLocked) return goLogin();
                                 const file = e.target.files?.[0];
                                 if (!file) return;
+
                                 try {
                                   const dataUrl = await toBase64(file);
                                   setSource({
@@ -1336,6 +1308,7 @@ sharp focus
                                 whileTap={{ scale: 0.98 }}
                                 onClick={async () => {
                                   if (isLocked) return goLogin();
+
                                   try {
                                     const imgBase64 = await urlToBase64(
                                       absoluteUrl(p.imageUrl)
@@ -1451,10 +1424,12 @@ sharp focus
                         Playground history
                       </p>
                     </div>
+
                     <motion.button
                       whileTap={{ scale: 0.98 }}
                       onClick={async () => {
                         if (isLocked) return goLogin();
+
                         await clearResults();
                         setResults([]);
                         try {
@@ -1500,10 +1475,12 @@ sharp focus
                               ) : null}
                             </p>
                           </div>
+
                           <div className="text-white/70 text-sm font-semibold">
                             {Math.min(99, Math.max(0, progress))}%
                           </div>
                         </div>
+
                         <div className="mt-3">
                           <div className="w-full h-2.5 bg-white/10 rounded-full overflow-hidden">
                             <div
@@ -1511,6 +1488,7 @@ sharp focus
                               className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 transition-all duration-200 shadow-[0_0_10px_rgba(168,85,247,0.55)]"
                             />
                           </div>
+
                           <div className="mt-2 flex items-center justify-between text-[11px] text-white/55">
                             <span>
                               {queuePhase === "queued"
@@ -1528,96 +1506,97 @@ sharp focus
 
                   {results.length > 0 && (
                     <div className="mt-4 grid gap-6 grid-cols-[repeat(auto-fit,minmax(260px,1fr))]">
-                      {results
-                        .slice(0, visibleCount)
-                        .map((item: any, index: number) =>
-                          item.isLoading ? (
-                            <div
-                              key={`${item.id || "loading"}-${index}`}
-                              className="animate-pulse bg-black/25 rounded-3xl border border-white/10 p-5 shadow-xl"
-                            >
-                              <div className="w-full flex justify-center mb-4">
-                                <div className="w-full max-w-[340px] aspect-[4/5] rounded-2xl border border-white/10 bg-white/5" />
-                              </div>
-                              <div className="flex items-center justify-center gap-3 mt-auto">
-                                <div className="h-9 w-24 rounded-2xl bg-white/5 border border-white/10" />
-                                <div className="h-9 w-24 rounded-2xl bg-white/5 border border-white/10" />
-                                <div className="h-9 w-10 rounded-2xl bg-white/5 border border-white/10" />
+                      {results.slice(0, visibleCount).map((item: any, index: number) =>
+                        item.isLoading ? (
+                          <div
+                            key={`${item.id || "loading"}-${index}`}
+                            className="animate-pulse bg-black/25 rounded-3xl border border-white/10 p-5 shadow-xl"
+                          >
+                            <div className="w-full flex justify-center mb-4">
+                              <div className="w-full max-w-[340px] aspect-[4/5] rounded-2xl border border-white/10 bg-white/5" />
+                            </div>
+
+                            <div className="flex items-center justify-center gap-3 mt-auto">
+                              <div className="h-9 w-24 rounded-2xl bg-white/5 border border-white/10" />
+                              <div className="h-9 w-24 rounded-2xl bg-white/5 border border-white/10" />
+                              <div className="h-9 w-10 rounded-2xl bg-white/5 border border-white/10" />
+                            </div>
+                          </div>
+                        ) : (
+                          <motion.div
+                            key={`${item.id}-${index}`}
+                            id={`card-${item.id}`}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.25, ease: "easeOut" }}
+                            className="bg-black/25 border border-white/10 rounded-3xl p-5 shadow-xl flex flex-col transition-all duration-300"
+                          >
+                            <div className="w-full flex justify-center mb-5">
+                              <div className="w-full max-w-[340px] aspect-[4/5] rounded-2xl overflow-hidden border border-white/10 shadow-md">
+                                <img
+                                  loading="lazy"
+                                  src={item.url}
+                                  alt="Result"
+                                  className="w-full h-full object-cover"
+                                />
                               </div>
                             </div>
-                          ) : (
-                            <motion.div
-                              key={`${item.id}-${index}`}
-                              id={`card-${item.id}`}
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ duration: 0.25, ease: "easeOut" }}
-                              className="bg-black/25 border border-white/10 rounded-3xl p-5 shadow-xl flex flex-col transition-all duration-300"
-                            >
-                              <div className="w-full flex justify-center mb-5">
-                                <div className="w-full max-w-[340px] aspect-[4/5] rounded-2xl overflow-hidden border border-white/10 shadow-md">
-                                  <img
-                                    loading="lazy"
-                                    src={item.url}
-                                    alt="Result"
-                                    className="w-full h-full object-cover"
-                                  />
-                                </div>
-                              </div>
 
-                              <div className="flex justify-center gap-3 pt-4 border-t border-white/10">
-                                <RegenButton
-                                  item={item}
-                                  handleRegen={(x: any) => {
-                                    if (isLocked) return goLogin();
-                                    handleRegen(x);
-                                  }}
-                                />
-                                <motion.button
-                                  whileTap={{ scale: 0.98 }}
-                                  onClick={() => {
-                                    setFullscreenImage(item.url);
-                                    setFullscreen(true);
-                                  }}
-                                  className="px-4 py-2 text-xs sm:text-sm bg-white/5 text-white rounded-2xl border border-white/10 shadow hover:bg-white/10 transition flex items-center gap-2"
-                                >
-                                  <Maximize2 size={16} /> Full
-                                </motion.button>
+                            <div className="flex justify-center gap-3 pt-4 border-t border-white/10">
+                              <RegenButton
+                                item={item}
+                                handleRegen={(x: any) => {
+                                  if (isLocked) return goLogin();
+                                  handleRegen(x);
+                                }}
+                              />
 
-                                <motion.button
-                                  whileTap={{ scale: 0.98 }}
-                                  onClick={() => downloadResult(item)}
-                                  className="p-2.5 rounded-2xl bg-emerald-500 text-black shadow hover:bg-emerald-400 transition"
-                                  title="Download"
-                                >
-                                  <Download size={16} />
-                                </motion.button>
+                              <motion.button
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => {
+                                  setFullscreenImage(item.url);
+                                  setFullscreen(true);
+                                }}
+                                className="px-4 py-2 text-xs sm:text-sm bg-white/5 text-white rounded-2xl border border-white/10 shadow hover:bg-white/10 transition flex items-center gap-2"
+                              >
+                                <Maximize2 size={16} /> Full
+                              </motion.button>
 
-                                <motion.button
-                                  whileTap={{ scale: 0.98 }}
-                                  onClick={async () => {
-                                    if (isLocked) return goLogin();
-                                    const el = document.getElementById(
-                                      `card-${item.id}`
+                              <motion.button
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => downloadResult(item)}
+                                className="p-2.5 rounded-2xl bg-emerald-500 text-black shadow hover:bg-emerald-400 transition"
+                              >
+                                <Download size={16} />
+                              </motion.button>
+
+                              <motion.button
+                                whileTap={{ scale: 0.98 }}
+                                onClick={async () => {
+                                  if (isLocked) return goLogin();
+
+                                  const el = document.getElementById(
+                                    `card-${item.id}`
+                                  );
+                                  if (el) el.classList.add("opacity-50");
+
+                                  setTimeout(async () => {
+                                    await deleteResult(item.id);
+                                    setResults((prev) =>
+                                      (Array.isArray(prev) ? prev : []).filter(
+                                        (r: any) => r.id !== item.id
+                                      )
                                     );
-                                    if (el) el.classList.add("opacity-50");
-                                    setTimeout(async () => {
-                                      await deleteResult(item.id);
-                                      setResults((prev) =>
-                                        (Array.isArray(prev) ? prev : []).filter(
-                                          (r: any) => r.id !== item.id
-                                        )
-                                      );
-                                    }, 200);
-                                  }}
-                                  className="p-2.5 rounded-2xl bg-red-500/80 text-white shadow hover:bg-red-500 transition"
-                                >
-                                  <Trash2 size={16} />
-                                </motion.button>
-                              </div>
-                            </motion.div>
-                          )
-                        )}
+                                  }, 200);
+                                }}
+                                className="p-2.5 rounded-2xl bg-red-500/80 text-white shadow hover:bg-red-500 transition"
+                              >
+                                <Trash2 size={16} />
+                              </motion.button>
+                            </div>
+                          </motion.div>
+                        )
+                      )}
                     </div>
                   )}
 
@@ -1650,6 +1629,7 @@ sharp focus
               className="absolute inset-0 bg-black/70 backdrop-blur-[2px]"
               onClick={() => setPaywallOpen(false)}
             />
+
             <div
               className={[
                 "relative w-full sm:max-w-3xl",
@@ -1675,6 +1655,7 @@ sharp focus
                       Credits are used for image generation and re-generation.
                     </p>
                   </div>
+
                   <button
                     onClick={() => setPaywallOpen(false)}
                     className="shrink-0 p-2 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition"
@@ -1714,6 +1695,7 @@ sharp focus
                                 </span>
                               )}
                             </div>
+
                             <div className="mt-4">
                               <p className="text-5xl font-semibold leading-none">
                                 {pk.c}
@@ -1722,6 +1704,7 @@ sharp focus
                                 Credits
                               </p>
                             </div>
+
                             <div className="mt-5">
                               <p className="text-2xl font-semibold">₹{pk.p}</p>
                               <p className="text-[12px] text-white/50 mt-1">
@@ -1729,6 +1712,7 @@ sharp focus
                               </p>
                             </div>
                           </div>
+
                           <div className="shrink-0 h-12 w-12 rounded-2xl bg-black/30 border border-white/10 flex items-center justify-center">
                             <CreditCard size={18} className="text-white/70" />
                           </div>
@@ -1764,6 +1748,7 @@ sharp focus
                   >
                     Not now
                   </button>
+
                   <button
                     onClick={continueToBilling}
                     className="py-3 rounded-2xl bg-white text-black font-semibold hover:bg-gray-200 transition flex items-center justify-center gap-2"
