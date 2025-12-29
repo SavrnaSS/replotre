@@ -107,7 +107,6 @@ function dataURLtoFile(dataurl: string, filename = "file.jpg") {
 function pickFinalImageSrcFromBackend(data: any): string | null {
   const url = data?.imageUrl || data?.image_url || data?.url;
   if (url && typeof url === "string") return url;
-
   const b64 = data?.image;
   if (b64 && typeof b64 === "string") {
     let cleanBase64 = b64.replace(/^"|"$/g, "").replace(/\n/g, "").trim();
@@ -177,7 +176,6 @@ const clamp2: React.CSSProperties = {
 
 export default function WorkspacePage() {
   const router = useRouter();
-
   const [tab, setTab] = useState<"face-swap" | "ai-generate">("face-swap");
   const [fullscreen, setFullscreen] = useState(false);
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
@@ -190,25 +188,19 @@ export default function WorkspacePage() {
 
   const aiGenerateRef = useRef<any>(null);
   const [resultImage, setResultImage] = useState<string | null>(null);
-
   const [selectedThemeId, setSelectedThemeId] = useState<number | null>(null);
   const [copiedThemeId, setCopiedThemeId] = useState<number | null>(null);
-
-  // ✅ HERO THEMES: should show ONLY 2 (selected theme pinned on top + 1 more)
   const [heroThemes, setHeroThemes] = useState<any[]>([]);
-
   const [webcamOpen, setWebcamOpen] = useState(false);
   const [prompt, setPrompt] = useState(
     "A cinematic neon portrait with dramatic lighting"
   );
-
   const [isProcessing, setProcessing] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
   const [jobs, setJobs] = useState<any[]>([]);
   const [isPaywallOpen, setPaywallOpen] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-
   const [results, setResults] = useState<ResultItem[]>([]);
   const [visibleCount, setVisibleCount] = useState(12);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
@@ -308,7 +300,6 @@ export default function WorkspacePage() {
       } catch (e) {
         console.warn("Failed to restore local results:", e);
       }
-
       const map = new Map<string, any>();
       for (const item of localResults) {
         if (item?.id) map.set(item.id, item);
@@ -380,14 +371,17 @@ export default function WorkspacePage() {
       )}&filename=${encodeURIComponent(filename)}`;
       const res = await fetch(proxyUrl, { cache: "no-store" });
       if (!res.ok) throw new Error("proxy fetch failed");
+
       const blob = await res.blob();
       const blobUrl = URL.createObjectURL(blob);
+
       const a = document.createElement("a");
       a.href = blobUrl;
       a.download = filename;
       document.body.appendChild(a);
       a.click();
       a.remove();
+
       setTimeout(() => URL.revokeObjectURL(blobUrl), 1500);
     } catch (e) {
       console.warn("Download failed. Opening image instead.", e);
@@ -418,65 +412,38 @@ export default function WorkspacePage() {
     }
   }, []);
 
-  /**
-   * ✅ HERO THEMES (UPDATED):
-   * - Show ONLY 2 themes on hero
-   * - If a theme is selected (from anywhere), it is pinned at top as #1
-   * - The 2nd card is a random "other" theme
-   */
-  const buildHeroTwo = useCallback(
-    (selectedId: number | null) => {
-      const list = Array.isArray(themes) ? themes : [];
-      if (!list.length) return [];
-
-      const selected = selectedId
-        ? list.find((t: any) => t?.id === selectedId) || null
-        : null;
-
-      const others = list
-        .filter((t: any) => t && (!selected || t?.id !== selected?.id))
-        .sort(() => Math.random() - 0.5);
-
-      // If selected exists -> [selected, one other]
-      if (selected) return [selected, others[0]].filter(Boolean);
-
-      // If none selected -> 2 random
-      return shuffleAnyArray(list).slice(0, 2);
-    },
-    [themes]
-  );
-
   useEffect(() => {
     if (themesLoading) return;
     if (!Array.isArray(themes)) return;
-
     try {
       const saved =
         typeof window !== "undefined"
           ? window.localStorage.getItem("mitux_selected_theme")
           : null;
-
       if (saved) {
         const parsed = JSON.parse(saved);
-        const nextHero = buildHeroTwo(parsed?.id ?? null);
-        setHeroThemes(nextHero.length ? nextHero : themes.slice(0, 2));
+        const selected = themes.find((t: any) => t?.id === parsed?.id) || null;
+        const others = themes
+          .filter((t: any) => t?.id !== parsed?.id)
+          .sort(() => Math.random() - 0.5)
+          .slice(0, 3);
+        const next = [selected, ...others].filter(Boolean);
+        setHeroThemes(next.length ? next : themes.slice(0, 4));
         return;
       }
-
-      // no saved theme
-      setHeroThemes(shuffleAnyArray(themes).slice(0, 2));
+      const shuffled = shuffleAnyArray(themes);
+      setHeroThemes(shuffled.slice(0, 4));
     } catch (e) {
       console.error("Theme restore (heroThemes) error:", e);
-      setHeroThemes(Array.isArray(themes) ? themes.slice(0, 2) : []);
+      setHeroThemes(Array.isArray(themes) ? themes.slice(0, 4) : []);
     }
-  }, [themesLoading, themes, buildHeroTwo]);
+  }, [themesLoading, themes]);
 
   /* ---------------------------------------------------
-   SELECT THEME (UNCHANGED behavior + UPDATED hero pin)
+   SELECT THEME (UNCHANGED behavior)
    ---------------------------------------------------- */
   const handleThemeSelect = (themeId: number) => {
     if (isLocked) return goLogin();
-
     const theme = (Array.isArray(themes) ? themes : []).find(
       (t: any) => t?.id === themeId
     );
@@ -502,9 +469,6 @@ export default function WorkspacePage() {
     setTimeout(() => {
       setCopiedThemeId((v) => (v === themeId ? null : v));
     }, 1500);
-
-    // ✅ NEW: keep hero as ONLY 2 + pin selected at top
-    setHeroThemes(buildHeroTwo(themeId));
   };
 
   /* ---------------------------------------------------
@@ -532,20 +496,24 @@ export default function WorkspacePage() {
         (t: any) => t?.id === selectedThemeId
       );
       if (!theme) return resolve();
+
       const randomImg =
         theme.imageUrls?.[
           Math.floor(Math.random() * (theme.imageUrls?.length || 1))
         ];
       const encoded = encodeURI(randomImg || "");
+
       setTarget({
         file: null,
         preview: encoded,
         themeId: selectedThemeId,
       });
+
       window.localStorage.setItem(
         "mitux_selected_theme",
         JSON.stringify({ id: selectedThemeId, imageUrl: encoded })
       );
+
       requestAnimationFrame(() => {
         requestAnimationFrame(() => resolve());
       });
@@ -652,7 +620,6 @@ export default function WorkspacePage() {
       };
 
       await saveResult(finalItem);
-
       setResults((prev) =>
         (Array.isArray(prev) ? prev : []).map((x: any) =>
           x.id === placeholderId ? finalItem : x
@@ -667,12 +634,9 @@ export default function WorkspacePage() {
     } catch (err: any) {
       console.error("🔥 FACE SWAP ERROR:", err);
       alert(err?.message || "Unknown error");
-
       if (interval) clearInterval(interval);
       setResults((prev) =>
-        (Array.isArray(prev) ? prev : []).filter(
-          (x: any) => x?.isLoading !== true
-        )
+        (Array.isArray(prev) ? prev : []).filter((x: any) => x?.isLoading !== true)
       );
       setProcessing(false);
     }
@@ -721,13 +685,7 @@ sharp focus
   const packs = useMemo(
     () => [
       { c: 3, p: 199, name: "Starter", desc: "Try it out", badge: "" },
-      {
-        c: 10,
-        p: 499,
-        name: "Most popular",
-        desc: "Best value",
-        badge: "Most popular",
-      },
+      { c: 10, p: 499, name: "Most popular", desc: "Best value", badge: "Most popular" },
       { c: 30, p: 999, name: "Pro", desc: "For power users", badge: "Best value" },
     ],
     []
@@ -783,9 +741,7 @@ sharp focus
   // ✅ helper: keep localStorage sync for results (stable)
   const persistResultsToLocal = useCallback((arr: any[]) => {
     try {
-      const finals = (Array.isArray(arr) ? arr : []).filter(
-        (x) => x?.isLoading !== true
-      );
+      const finals = (Array.isArray(arr) ? arr : []).filter((x) => x?.isLoading !== true);
       localStorage.setItem("mitux_jobs_results", JSON.stringify(finals));
     } catch (e) {
       console.warn("Failed to persist results:", e);
@@ -811,7 +767,6 @@ sharp focus
     (updaterOrNext: any) => {
       setResults((prevAll) => {
         const safePrev = Array.isArray(prevAll) ? prevAll : [];
-
         if (typeof updaterOrNext === "function") {
           const maybeNext = updaterOrNext(safePrev);
           const safeNext = Array.isArray(maybeNext) ? maybeNext : safePrev;
@@ -821,9 +776,7 @@ sharp focus
         }
 
         const incoming = Array.isArray(updaterOrNext) ? updaterOrNext : [];
-        const incomingIds = new Set(
-          incoming.map((x: any) => x?.id).filter(Boolean)
-        );
+        const incomingIds = new Set(incoming.map((x: any) => x?.id).filter(Boolean));
 
         const kept = safePrev.filter((x: any) => {
           if (x?.isLoading === true) return true;
@@ -852,7 +805,6 @@ sharp focus
     (item: any) => {
       setResults((prev) => {
         const safePrev = Array.isArray(prev) ? prev : [];
-
         if (item?.__remove === true) {
           const next = safePrev.filter((x: any) => x.id !== item.id);
           persistResultsToLocal(next);
@@ -868,6 +820,7 @@ sharp focus
         } else {
           nextArr = [item, ...safePrev];
         }
+
         persistResultsToLocal(nextArr);
         return nextArr;
       });
@@ -1051,7 +1004,6 @@ sharp focus
                   <p className="text-[11px] uppercase tracking-[0.22em] text-white/45 mb-4">
                     Workspace
                   </p>
-
                   <div className="flex gap-3 mb-6">
                     <motion.button
                       whileTap={{ scale: 0.98 }}
@@ -1156,6 +1108,7 @@ sharp focus
                           : "High-quality AI image generation is available here (your existing logic stays)."}
                       </p>
                     </div>
+
                     <div className="hidden md:flex items-center gap-2 text-[11px] px-3 py-1 rounded-full bg-black/25 border border-white/10 text-white/60 whitespace-nowrap">
                       <Sparkles size={14} />
                       Live preview
@@ -1183,13 +1136,11 @@ sharp focus
                         </Link>
                       </div>
 
-                      {/* ✅ HERO GRID: ONLY 2 themes shown */}
-                      <div className="grid grid-cols-2 gap-3">
-                        {heroThemes.slice(0, 2).map((theme) => {
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                        {heroThemes.map((theme) => {
                           if (!theme) return null;
                           const isActive = selectedThemeId === theme.id;
                           const isCopied = copiedThemeId === theme.id;
-
                           return (
                             <motion.button
                               key={theme.id}
@@ -1215,7 +1166,6 @@ sharp focus
                                   ✓
                                 </div>
                               )}
-
                               {isActive && isCopied && (
                                 <div className="absolute top-3 right-3 z-20 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/90 text-black font-semibold animate-pulse">
                                   Selected
@@ -1557,6 +1507,7 @@ sharp focus
                                   handleRegen(x);
                                 }}
                               />
+
                               <motion.button
                                 whileTap={{ scale: 0.98 }}
                                 onClick={() => {
@@ -1567,6 +1518,7 @@ sharp focus
                               >
                                 <Maximize2 size={16} /> Full
                               </motion.button>
+
                               <motion.button
                                 whileTap={{ scale: 0.98 }}
                                 onClick={() => downloadResult(item)}
@@ -1575,6 +1527,7 @@ sharp focus
                               >
                                 <Download size={16} />
                               </motion.button>
+
                               <motion.button
                                 whileTap={{ scale: 0.98 }}
                                 onClick={async () => {
@@ -1601,6 +1554,7 @@ sharp focus
                       )}
                     </div>
                   )}
+
                   <div ref={loadMoreRef} className="w-full h-10" />
                 </MotionCard>
 
