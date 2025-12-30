@@ -7,10 +7,7 @@ export const metadata: Metadata = {
   description: "Gerox",
   icons: {
     icon: [
-      { url: "/favicon.png", type: "image/png" }, // or "/favicon.svg"
-    ],
-    apple: [
-      { url: "/apple-touch-icon.png", type: "image/png" }, // optional
+      { url: "/logo.jpeg", type: "image/png" }, // or "/favicon.svg"
     ],
   },
 };
