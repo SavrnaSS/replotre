@@ -1,14 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import AuthWall from "../components/AuthWall";
 import useAuth from "../hooks/useAuth";
 import ThemeCard from "../components/ThemeCard";
 import { Search, Sparkles, Filter, Check, ArrowRight, User } from "lucide-react";
-
-// ✅ FIX: artThemes export doesn't exist in your module
-// Use getArtThemes (as your error message suggested)
 import { getArtThemes } from "../config/artThemes";
 
 function UserAvatar({ name }: { name?: string | null }) {
@@ -51,7 +48,6 @@ function absoluteUrl(path: string) {
 export default function ThemesPage() {
   const { user } = useAuth();
 
-  // ✅ themes now come from getArtThemes()
   const [themes, setThemes] = useState<any[]>([]);
   const [themesLoading, setThemesLoading] = useState(true);
 
@@ -59,14 +55,11 @@ export default function ThemesPage() {
   const [copiedThemeId, setCopiedThemeId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Sticky Search + Shrinking Header (preserved)
   const [isSticky, setIsSticky] = useState(false);
   const [isHeaderShrunk, setIsHeaderShrunk] = useState(false);
 
-  // Tag filter
   const [activeTag, setActiveTag] = useState<string>("All");
 
-  // Bottom-right toast
   const [showToast, setShowToast] = useState(false);
   const toastTimer = useRef<number | null>(null);
 
@@ -94,25 +87,33 @@ export default function ThemesPage() {
     };
   }, []);
 
+  // ✅ Smooth scroll handling (rAF throttled to reduce jank on mobile)
   useEffect(() => {
-    let lastY = window.scrollY;
+    let lastY = typeof window !== "undefined" ? window.scrollY : 0;
+    let ticking = false;
 
-    const handleScroll = () => {
+    const onScroll = () => {
       const currentY = window.scrollY;
 
-      setIsSticky(currentY > 40);
+      if (!ticking) {
+        ticking = true;
+        requestAnimationFrame(() => {
+          setIsSticky(currentY > 40);
 
-      if (currentY > lastY && currentY > 20) {
-        setIsHeaderShrunk(true);
-      } else if (currentY < lastY) {
-        setIsHeaderShrunk(false);
+          if (currentY > lastY && currentY > 20) {
+            setIsHeaderShrunk(true);
+          } else if (currentY < lastY) {
+            setIsHeaderShrunk(false);
+          }
+
+          lastY = currentY;
+          ticking = false;
+        });
       }
-
-      lastY = currentY;
     };
 
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   // Restore selected theme highlight
@@ -140,7 +141,8 @@ export default function ThemesPage() {
     const q = searchQuery.trim().toLowerCase();
     return (themes as any[]).filter((theme) => {
       const labelOk = (theme?.label || "").toLowerCase().includes(q);
-      const tagOk = activeTag === "All" ? true : clampTag(theme?.tag) === activeTag;
+      const tagConfirm = clampTag(theme?.tag);
+      const tagOk = activeTag === "All" ? true : tagConfirm === activeTag;
       return labelOk && tagOk;
     });
   }, [themes, searchQuery, activeTag]);
@@ -150,13 +152,12 @@ export default function ThemesPage() {
     return (themes as any[]).find((t) => t.id === selectedThemeId) || null;
   }, [themes, selectedThemeId]);
 
-  const handleThemeClick = (theme: any) => {
+  const handleThemeClick = useCallback((theme: any) => {
     setSelectedThemeId(theme.id);
     setCopiedThemeId(theme.id);
 
     if (typeof window !== "undefined") {
       try {
-        // ✅ keep same storage key + shape Workspace expects
         const rawImg = theme.imageUrls?.[0] || "";
         const encoded =
           rawImg && !rawImg.startsWith("data:")
@@ -174,38 +175,14 @@ export default function ThemesPage() {
       navigator.clipboard.writeText(theme.label).catch(() => {});
     }
 
-    // toast feedback
     setShowToast(true);
     if (toastTimer.current) window.clearTimeout(toastTimer.current);
     toastTimer.current = window.setTimeout(() => setShowToast(false), 1900);
 
-    setTimeout(() => {
+    window.setTimeout(() => {
       setCopiedThemeId((c) => (c === theme.id ? null : c));
     }, 1500);
-  };
-
-  // 3D hover handlers (safe for touch)
-  const handleCardMouseMove = (e: any) => {
-    if (typeof window !== "undefined" && window.matchMedia?.("(hover: none)")?.matches) return;
-
-    const card = e.currentTarget as HTMLDivElement;
-    const rect = card.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    const centerX = rect.width / 2;
-    const centerY = rect.height / 2;
-
-    const rotateX = ((y - centerY) / centerY) * 6;
-    const rotateY = ((x - centerX) / centerX) * -6;
-
-    card.style.transform = `perspective(700px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(0) scale(1.02)`;
-  };
-
-  const handleCardMouseLeave = (e: any) => {
-    const card = e.currentTarget as HTMLDivElement;
-    card.style.transform = "perspective(700px) rotateX(0deg) rotateY(0deg) scale(1)";
-  };
+  }, []);
 
   return (
     <AuthWall>
@@ -216,12 +193,12 @@ export default function ThemesPage() {
         <div className="absolute -bottom-36 right-[-140px] h-[520px] w-[520px] rounded-full bg-purple-600/14 blur-[140px]" />
         <div className="absolute inset-0 bg-gradient-to-b from-white/[0.04] via-transparent to-black/50" />
 
-        <main className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6">
+        <main className="relative z-10 max-w-6xl mx-auto px-3 sm:px-6">
           {/* Header */}
           <header
             className={[
-              "flex items-start justify-between gap-4 sm:items-center sm:justify-between transition-all duration-300",
-              isHeaderShrunk ? "pt-3 pb-4" : "pt-8 pb-10",
+              "flex flex-col min-[460px]:flex-row items-start min-[460px]:items-center justify-between gap-3 transition-all duration-300",
+              isHeaderShrunk ? "pt-3 pb-4" : "pt-6 sm:pt-8 pb-7 sm:pb-10",
             ].join(" ")}
           >
             <div className="min-w-0 flex-1">
@@ -230,7 +207,7 @@ export default function ThemesPage() {
                   href="/workspace"
                   className={[
                     "inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/50 hover:bg-black/70 hover:border-white/30 transition-all duration-300",
-                    isHeaderShrunk ? "px-3 py-1 text-[10px]" : "px-4 py-2 text-xs",
+                    isHeaderShrunk ? "px-3 py-1 text-[10px]" : "px-3.5 py-2 text-[11px] sm:text-xs",
                   ].join(" ")}
                 >
                   <span>Back</span>
@@ -240,30 +217,35 @@ export default function ThemesPage() {
                   href="/workspace"
                   className={[
                     "inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 transition-all duration-300",
-                    isHeaderShrunk ? "px-3 py-1 text-[10px]" : "px-4 py-2 text-xs",
+                    isHeaderShrunk ? "px-3 py-1 text-[10px]" : "px-3.5 py-2 text-[11px] sm:text-xs",
                   ].join(" ")}
                 >
-                  Go to Workspace <ArrowRight size={14} />
+                  <span className="truncate max-w-[140px] sm:max-w-none">
+                    Go to Workspace
+                  </span>
+                  <ArrowRight size={14} />
                 </Link>
 
-                <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-[11px] text-white/70">
+                <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-[11px] text-white/70 max-w-full">
                   <Sparkles size={14} />
-                  {themesLoading ? "Loading…" : `${filteredThemes.length} themes`}
+                  <span className="truncate">
+                    {themesLoading ? "Loading…" : `${filteredThemes.length} themes`}
+                  </span>
                 </span>
               </div>
 
-              <div className="mt-4">
+              <div className="mt-3 sm:mt-4 min-w-0">
                 <h1
                   className={[
-                    "font-semibold leading-tight transition-all duration-300",
-                    isHeaderShrunk ? "text-base sm:text-lg" : "text-2xl sm:text-4xl",
+                    "font-semibold leading-tight transition-all duration-300 break-words",
+                    isHeaderShrunk ? "text-base sm:text-lg" : "text-xl sm:text-4xl",
                   ].join(" ")}
                 >
                   Browse AI Art Themes
                 </h1>
                 <p
                   className={[
-                    "text-white/60 leading-snug transition-all duration-300 mt-2",
+                    "text-white/60 leading-snug transition-all duration-300 mt-2 break-words",
                     isHeaderShrunk ? "text-[10px] sm:text-xs" : "text-[12px] sm:text-sm",
                   ].join(" ")}
                 >
@@ -273,9 +255,10 @@ export default function ThemesPage() {
             </div>
 
             <div
-              className={[isHeaderShrunk ? "scale-90" : "scale-100", "transition-all duration-300"].join(
-                " "
-              )}
+              className={[
+                isHeaderShrunk ? "scale-90" : "scale-100",
+                "transition-all duration-300 self-start min-[460px]:self-auto",
+              ].join(" ")}
             >
               {user && <UserAvatar name={user.name || user.email} />}
             </div>
@@ -284,26 +267,26 @@ export default function ThemesPage() {
           {/* Main Card */}
           <section className="rounded-[26px] border border-white/10 bg-white/[0.05] backdrop-blur-xl shadow-[0_30px_120px_rgba(0,0,0,0.35)] overflow-hidden">
             {/* Top strip */}
-            <div className="px-5 sm:px-6 py-5 border-b border-white/10">
-              <div className="flex items-start justify-between gap-4 flex-wrap">
-                <div>
-                  <h2 className="text-base sm:text-lg font-semibold tracking-wide flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-purple-400/80" />
-                    Trending AI Art Themes
+            <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-white/10">
+              <div className="flex items-start justify-between gap-3 flex-wrap">
+                <div className="min-w-0">
+                  <h2 className="text-sm sm:text-lg font-semibold tracking-wide flex items-center gap-2 min-w-0">
+                    <span className="w-1.5 h-1.5 rounded-full bg-purple-400/80 shrink-0" />
+                    <span className="truncate">Trending AI Art Themes</span>
                   </h2>
-                  <p className="text-xs sm:text-sm text-white/50 mt-1 leading-snug">
+                  <p className="text-[11px] sm:text-sm text-white/50 mt-1 leading-snug break-words">
                     Tap a style to save it instantly. We also copy the theme name to your clipboard.
                   </p>
                 </div>
 
-                <div className="inline-flex items-center gap-2 text-[11px] px-3 py-1.5 rounded-full bg-black/30 border border-white/10 text-white/60">
+                <div className="inline-flex items-center gap-2 text-[11px] px-3 py-1.5 rounded-full bg-black/30 border border-white/10 text-white/60 shrink-0">
                   <Filter size={14} />
                   Filters
                 </div>
               </div>
 
               {/* Sticky Search + Tags */}
-              <div className="mt-5 relative">
+              <div className="mt-4 relative">
                 <div className={["sticky top-3 z-10", isSticky ? "pb-3" : "pb-2"].join(" ")}>
                   <div
                     className={[
@@ -323,12 +306,21 @@ export default function ThemesPage() {
                           placeholder="Search themes..."
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
-                          className="w-full pl-10 pr-4 py-2.5 sm:py-3 rounded-xl bg-black/30 text-sm sm:text-base text-white placeholder-white/35 border border-white/10 focus:outline-none focus:ring-2 focus:ring-purple-500/30 transition-all"
+                          inputMode="search"
+                          className="w-full pl-10 pr-4 py-2.5 sm:py-3 rounded-xl bg-black/30 text-[13px] sm:text-base text-white placeholder-white/35 border border-white/10 focus:outline-none focus:ring-2 focus:ring-purple-500/30 transition-all"
                         />
                       </div>
 
-                      {/* Tag chips */}
-                      <div className="mt-3 flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+                      {/* Tag chips
+                          ✅ Mobile (<460): wrap instead of horizontal scroll for smoother swipe/scroll
+                      */}
+                      <div
+                        className={[
+                          "mt-3 flex items-center gap-2 pb-1",
+                          "flex-wrap",
+                          "min-[460px]:flex-nowrap min-[460px]:overflow-x-auto min-[460px]:no-scrollbar",
+                        ].join(" ")}
+                      >
                         {tags.map((t) => {
                           const active = t === activeTag;
                           return (
@@ -337,13 +329,16 @@ export default function ThemesPage() {
                               type="button"
                               onClick={() => setActiveTag(t)}
                               className={[
-                                "shrink-0 px-3 py-1.5 rounded-full text-[11px] border transition",
+                                "shrink-0 px-3 py-1.5 rounded-full text-[11px] border transition max-w-full",
                                 active
                                   ? "bg-white text-black border-transparent"
                                   : "bg-white/5 text-white/75 border-white/10 hover:bg-white/10",
                               ].join(" ")}
+                              title={t}
                             >
-                              {t}
+                              <span className="truncate max-w-[180px] inline-block align-bottom">
+                                {t}
+                              </span>
                             </button>
                           );
                         })}
@@ -355,7 +350,7 @@ export default function ThemesPage() {
             </div>
 
             {/* Grid */}
-            <div className="px-5 sm:px-6 py-6">
+            <div className="px-4 sm:px-6 py-5 sm:py-6">
               {themesLoading ? (
                 <div className="py-10 text-center text-sm text-white/55">Loading themes…</div>
               ) : filteredThemes.length === 0 ? (
@@ -377,22 +372,26 @@ export default function ThemesPage() {
                   </button>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+                <div className="grid grid-cols-1 min-[420px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
                   {filteredThemes.map((theme: any, index: number) => (
                     <div
                       key={theme.id}
-                      onMouseMove={handleCardMouseMove}
-                      onMouseLeave={handleCardMouseLeave}
-                      style={{ animationDelay: `${index * 55}ms` }}
-                      className="relative opacity-0 scale-95 animate-fadeInCard transition-transform duration-300 will-change-transform group"
+                      style={{ animationDelay: `${index * 45}ms` }}
+                      className={[
+                        "relative opacity-0 scale-95 animate-fadeInCard",
+                        "transition-transform duration-300",
+                        "will-change-transform",
+                        "themeCardHover",
+                      ].join(" ")}
                     >
-                      <div className="absolute inset-0 rounded-xl pointer-events-none opacity-0 group-hover:opacity-100 transition duration-300 bg-gradient-to-tr from-white/10 to-transparent" />
+                      <div className="absolute inset-0 rounded-xl pointer-events-none opacity-0 themeCardHoverOverlay transition duration-300 bg-gradient-to-tr from-white/10 to-transparent" />
 
                       <ThemeCard
                         theme={theme}
                         isActive={selectedThemeId === theme.id}
                         isCopied={copiedThemeId === theme.id}
                         onSelect={handleThemeClick}
+                        // ThemeCard already handles its own text; this wrapper fixes layout + hover perf.
                       />
                     </div>
                   ))}
@@ -401,7 +400,7 @@ export default function ThemesPage() {
             </div>
           </section>
 
-          <div className="mt-6 text-center text-xs text-white/45">
+          <div className="mt-5 sm:mt-6 text-center text-[11px] sm:text-xs text-white/45 px-1 sm:px-0 leading-snug">
             Tip: after selecting a theme, open{" "}
             <Link href="/workspace" className="text-white/70 font-semibold hover:text-white transition">
               Workspace
@@ -413,14 +412,14 @@ export default function ThemesPage() {
         {/* Bottom-right toast (animated) */}
         <div
           className={[
-            "fixed bottom-5 right-5 z-50 w-[92%] max-w-sm transition-all duration-300",
+            "fixed bottom-5 right-1/2 translate-x-1/2 min-[460px]:right-5 min-[460px]:translate-x-0 z-50 w-[92%] max-w-sm transition-all duration-300",
             showToast ? "translate-y-0 opacity-100" : "translate-y-3 opacity-0 pointer-events-none",
           ].join(" ")}
           aria-live="polite"
         >
           <div className="rounded-2xl border border-white/10 bg-black/70 backdrop-blur-xl px-4 py-3 shadow-[0_20px_80px_rgba(0,0,0,0.55)]">
-            <div className="flex items-center gap-3">
-              <span className="inline-flex items-center justify-center w-9 h-9 rounded-2xl bg-emerald-500/15 border border-emerald-400/25">
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="inline-flex items-center justify-center w-9 h-9 rounded-2xl bg-emerald-500/15 border border-emerald-400/25 shrink-0">
                 <Check size={18} className="text-emerald-200" />
               </span>
               <div className="min-w-0">
@@ -451,7 +450,29 @@ export default function ThemesPage() {
             }
           }
           .animate-fadeInCard {
-            animation: fadeInCard 450ms ease forwards;
+            animation: fadeInCard 420ms ease forwards;
+          }
+
+          /* ✅ Hover effects only on devices that actually hover (prevents mobile swipe lag) */
+          @media (hover: hover) and (pointer: fine) {
+            .themeCardHover:hover {
+              transform: translateY(-2px) scale(1.02);
+            }
+            .themeCardHover:hover .themeCardHoverOverlay {
+              opacity: 1;
+            }
+          }
+
+          /* ✅ Reduce motion if user prefers */
+          @media (prefers-reduced-motion: reduce) {
+            .animate-fadeInCard {
+              animation: none !important;
+              opacity: 1 !important;
+              transform: none !important;
+            }
+            .themeCardHover {
+              transition: none !important;
+            }
           }
         `}</style>
       </div>
