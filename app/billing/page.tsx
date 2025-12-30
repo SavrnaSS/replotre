@@ -100,9 +100,9 @@ function BillingPageInner() {
 
   const packs: Pack[] = useMemo(
     () => [
-      { c: 3, p: 199, badge: "Starter", desc: "Try it out" },
-      { c: 10, p: 499, badge: "Most popular", desc: "Best value" },
-      { c: 30, p: 999, badge: "Pro", desc: "For power users" },
+      { c: 2000, p: 19, badge: "Starter", desc: "Try it out" },
+      { c: 5000, p: 39, badge: "Most popular", desc: "Best value" },
+      { c: 12999, p: 79, badge: "Pro", desc: "For power users" },
     ],
     []
   );

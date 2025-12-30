@@ -684,9 +684,9 @@ sharp focus
    ---------------------------------------------------- */
   const packs = useMemo(
     () => [
-      { c: 3, p: 199, name: "Starter", desc: "Try it out", badge: "" },
-      { c: 10, p: 499, name: "Most popular", desc: "Best value", badge: "Most popular" },
-      { c: 30, p: 999, name: "Pro", desc: "For power users", badge: "Best value" },
+      { c: 2000, p: 19, name: "Starter", desc: "Try it out", badge: "" },
+      { c: 5000, p: 39, name: "Most popular", desc: "Best value", badge: "Most popular" },
+      { c: 12999, p: 79, name: "Pro", desc: "For power users", badge: "Best value" },
     ],
     []
   );
