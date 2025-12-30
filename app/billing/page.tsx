@@ -33,7 +33,7 @@ async function safeJson(res: Response) {
   }
 }
 
-function formatINR(n: number) {
+function formatUSD(n: number) {
   try {
     return new Intl.NumberFormat("en-IN").format(n);
   } catch {
@@ -159,7 +159,7 @@ function BillingPageInner() {
       await safeJson(res).catch(() => null);
 
       await refresh?.();
-      alert(`Purchased ${amount} credits for ₹${price}!`);
+      alert(`Purchased ${amount} credits for $${price}!`);
     } catch (e: any) {
       alert(e?.message || "Failed to purchase credits.");
     } finally {
@@ -336,7 +336,7 @@ function BillingPageInner() {
                         <p className="text-white/70 mt-2">Credits</p>
 
                         <p className="mt-6 text-2xl font-semibold">
-                          ₹{formatINR(pack.p)}
+                        ${formatUSD(pack.p)}
                         </p>
                         <p className="text-sm text-white/55 mt-2">
                           {pack.desc || "Instant top-up"}
@@ -375,7 +375,7 @@ function BillingPageInner() {
               <div className="mt-4 rounded-2xl border border-white/10 bg-black/25 p-4 text-sm text-white/60 leading-snug">
                 <span className="text-white/85 font-semibold">Selected pack:</span>{" "}
                 <span className="text-white/90 font-semibold">
-                  {selectedPack.c} credits (₹{formatINR(selectedPack.p)})
+                  {selectedPack.c} credits (${formatUSD(selectedPack.p)})
                 </span>
               </div>
 
@@ -456,7 +456,7 @@ function BillingPageInner() {
                         </p>
                       </div>
                       <div className="shrink-0 text-right">
-                        <p className="font-bold">₹{formatINR(item.amount)}</p>
+                        <p className="font-bold">${formatUSD(item.amount)}</p>
                         <p className="text-[11px] text-white/45">Paid</p>
                       </div>
                     </div>
@@ -471,7 +471,7 @@ function BillingPageInner() {
                 <span className="text-white/70 font-semibold">Contact support</span>{" "}
                 if something looks off.
               </p>
-              <p>Amounts shown in INR (₹)</p>
+              <p>Amounts shown in USD ($)</p>
             </div>
           </div>
         </section>

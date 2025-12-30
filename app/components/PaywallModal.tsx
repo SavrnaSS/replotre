@@ -192,7 +192,7 @@ export default function PaywallModal({ open, onClose, initialSelected = null }: 
                     <div className="mt-4 flex items-end justify-between gap-3">
                       <div>
                         <p className="text-xs text-white/50">Price</p>
-                        <p className="text-xl font-semibold">₹{p.p}</p>
+                        <p className="text-xl font-semibold">${p.p}</p>
                       </div>
 
                       <div

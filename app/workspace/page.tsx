@@ -1657,7 +1657,7 @@ sharp focus
                               </p>
                             </div>
                             <div className="mt-5">
-                              <p className="text-2xl font-semibold">₹{pk.p}</p>
+                              <p className="text-2xl font-semibold">${pk.p}</p>
                               <p className="text-[12px] text-white/50 mt-1">
                                 {pk.desc}
                               </p>

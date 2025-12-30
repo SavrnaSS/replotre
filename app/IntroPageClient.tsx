@@ -52,7 +52,7 @@ function absoluteUrl(path: string) {
   return path;
 }
 
-function formatINR(n: number) {
+function formatUSD(n: number) {
   try {
     return new Intl.NumberFormat("en-IN").format(n);
   } catch {
@@ -216,7 +216,7 @@ function PaywallModal({
                 </div>
                 <div className="inline-flex items-center gap-2 text-xs text-white/60">
                   <CreditCard size={16} />
-                  INR (₹)
+                  USD ($)
                 </div>
               </div>
 
@@ -286,7 +286,7 @@ function PaywallModal({
                         <p className="text-white/70 mt-2">Credits</p>
 
                         <p className="mt-6 text-2xl font-semibold">
-                          ₹{formatINR(pack.p)}
+                        ${formatUSD(pack.p)}
                         </p>
 
                         <p className="text-sm text-white/55 mt-2">
@@ -334,7 +334,7 @@ function PaywallModal({
                 Selected:{" "}
                 <span className="text-white/85 font-semibold">
                   {selectedPack
-                    ? `${selectedPack.c} credits (₹${formatINR(selectedPack.p)})`
+                    ? `${selectedPack.c} credits (₹${formatUSD(selectedPack.p)})`
                     : "None"}
                 </span>
               </div>
@@ -429,9 +429,9 @@ export default function IntroPageClient() {
 
   const packs: Pack[] = useMemo(
     () => [
-      { c: 3, p: 199, badge: "Starter", desc: "Try it out" },
-      { c: 10, p: 499, badge: "Most popular", desc: "Best value" },
-      { c: 30, p: 999, badge: "Pro", desc: "For power users" },
+      { c: 2000, p: 19, badge: "Starter", desc: "Try it out" },
+      { c: 5000, p: 39, badge: "Most popular", desc: "Best value" },
+      { c: 12999, p: 79, badge: "Pro", desc: "For power users" },
     ],
     []
   );
