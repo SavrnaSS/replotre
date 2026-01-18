@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import {
   Check,
   Sparkles,
   ArrowRight,
+  ArrowLeft,
   Lock,
   X,
   CreditCard,
@@ -341,6 +343,69 @@ export default function IntroPageClient() {
   );
   const [imgError, setImgError] = useState<Record<number, boolean>>({});
 
+// ✅ Mobile one-by-one slider state (keeps your existing logic intact)
+const showcaseRef = useRef<HTMLDivElement | null>(null);
+const showcaseSectionRef = useRef<HTMLElement | null>(null);
+const [showcaseActive, setShowcaseActive] = useState(0);
+
+const scrollShowcaseTo = (i: number) => {
+  const el = showcaseRef.current;
+  if (!el) return;
+
+  const max = Math.max(0, showcaseImages.length - 1);
+  const clamped = Math.max(0, Math.min(i, max));
+
+  const child = el.children.item(clamped) as HTMLElement | null;
+  if (!child) return;
+
+  child.scrollIntoView({
+    behavior: "smooth",
+    inline: "center",
+    block: "nearest",
+  });
+};
+
+// ✅ autoplay should run ONLY when user is near showcase (within ~2 screens)
+const isNearShowcase = () => {
+  const sec = showcaseSectionRef.current;
+  if (!sec) return false;
+
+  const vh = window.innerHeight || 1;
+  const rect = sec.getBoundingClientRect();
+
+  // within 2 viewport heights
+  const threshold = vh * 2;
+
+  // distance from viewport to section (0 if overlapping)
+  const dist =
+    rect.bottom < 0 ? -rect.bottom : rect.top > vh ? rect.top - vh : 0;
+
+  return dist <= threshold;
+};
+
+useEffect(() => {
+  // autoplay only on mobile
+  if (typeof window === "undefined") return;
+  if (window.matchMedia("(min-width: 768px)").matches) return; // md+
+
+  if (showcaseImages.length <= 1) return;
+
+  const id = window.setInterval(() => {
+    // ✅ don't autoplay if user is far away
+    if (!isNearShowcase()) return;
+
+    setShowcaseActive((prev) => {
+      const next = (prev + 1) % showcaseImages.length;
+      scrollShowcaseTo(next);
+      return next;
+    });
+  }, 7500);
+
+  return () => window.clearInterval(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [showcaseImages.length]);
+
+
   useEffect(() => {
     const ac = new AbortController();
     let mounted = true;
@@ -541,7 +606,12 @@ export default function IntroPageClient() {
           border-radius: 9999px;
           color: #fff;
           border: 1px solid rgba(255, 255, 255, 0.22);
-          background: linear-gradient(100deg, #2f3340 0%, #6d5dfc 45%, #6aa7ff 100%);
+          background: linear-gradient(
+            100deg,
+            #2f3340 0%,
+            #6d5dfc 45%,
+            #6aa7ff 100%
+          );
           box-shadow: 0 18px 60px rgba(109, 93, 252, 0.28);
           transform: translateZ(0);
         }
@@ -552,7 +622,7 @@ export default function IntroPageClient() {
           border-radius: 9999px;
           background: linear-gradient(
             180deg,
-            rgba(255, 255, 255, 0.10) 0%,
+            rgba(255, 255, 255, 0.1) 0%,
             rgba(0, 0, 0, 0.22) 100%
           );
           opacity: 0.75;
@@ -615,6 +685,11 @@ export default function IntroPageClient() {
           background: rgba(255, 255, 255, 0.06);
           border-radius: 999px;
         }
+
+        /* ✅ hide scrollbar for the showcase one-by-one slider only */
+        .gx-hide-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
       `}</style>
 
       {/* Ambient BG */}
@@ -627,135 +702,130 @@ export default function IntroPageClient() {
 
       {/* Top Nav */}
       <header className="relative z-10 mx-auto w-full max-w-7xl px-3 pt-4 sm:px-6 sm:pt-6">
-        <div className="overflow-hidden rounded-3xl border border-white/10 bg-white/[0.05] backdrop-blur-xl shadow-[0_20px_80px_rgba(0,0,0,0.35)]">
-          <div className="p-3 sm:p-5">
-            <div className="flex items-center justify-between gap-3">
-              {/* Brand */}
-              <div className="flex min-w-0 items-center gap-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-gradient-to-br from-violet-500 via-indigo-500 to-sky-500 text-white shadow-lg shadow-indigo-500/25">
-                  <span className="text-base font-bold">G</span>
-                </div>
-
-                <div className="min-w-0">
-                  <div className="flex min-w-0 items-center gap-2">
-                    <p className="truncate text-base font-semibold">Gerox</p>
-
-                    <span className="hidden max-w-[160px] truncate rounded-full bg-white/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.18em] text-white/70 sm:inline-flex">
-                      AI Model Studio
-                    </span>
-                  </div>
-
-                  <p className="truncate text-[12px] text-white/55">
-                    Realistic AI influencer that never sleeps.
-                  </p>
-                </div>
-              </div>
-
-              {/* Desktop nav + actions */}
-              <div className="hidden items-center gap-6 md:flex">
-                <nav className="flex items-center gap-4 text-[13px] text-white/70">
-                  <Link
-                    href="#"
-                    className="transition hover:text-white hover:underline hover:underline-offset-4"
-                  >
-                    Home
-                  </Link>
-                  <Link
-                    href="#how-it-works"
-                    className="transition hover:text-white hover:underline hover:underline-offset-4"
-                  >
-                    Workflow
-                  </Link>
-                  <Link
-                    href="#pricing"
-                    className="transition hover:text-white hover:underline hover:underline-offset-4"
-                  >
-                    Pricing
-                  </Link>
-                  <Link
-                    href="#faq"
-                    className="transition hover:text-white hover:underline hover:underline-offset-4"
-                  >
-                    FAQ
-                  </Link>
-                </nav>
-
-                {isAuthed ? (
-                  <>
-                    <div className="hidden lg:block">
-                      <CreditsBar />
-                    </div>
-                    <button
-                      onClick={() => setPaywallOpen(true)}
-                      className="gx-btn px-4 py-2 text-sm font-semibold"
-                      type="button"
-                    >
-                      <span>Get credits</span>
-                    </button>
-                    <ProfileAvatar />
-                  </>
-                ) : (
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={goLogin}
-                      className="rounded-2xl border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
-                      type="button"
-                    >
-                      Sign in
-                    </button>
-                    <button
-                      onClick={() => setPaywallOpen(true)}
-                      className="gx-btn px-4 py-2 text-sm font-semibold"
-                      type="button"
-                    >
-                      <span>Get credits</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Mobile actions */}
-              <div className="flex shrink-0 items-center gap-2 md:hidden">
-                {isAuthed ? (
-                  <>
-                    <button
-                      onClick={() => setPaywallOpen(true)}
-                      className="gx-btn px-3 py-2 text-[12px] font-semibold"
-                      type="button"
-                    >
-                      <span>Credits</span>
-                    </button>
-                    <ProfileAvatar />
-                  </>
-                ) : (
-                  <>
-                    <button
-                      onClick={goLogin}
-                      className="rounded-2xl border border-white/15 bg-white/5 px-3 py-2 text-[12px] font-semibold text-white"
-                      type="button"
-                    >
-                      Sign in
-                    </button>
-                    <button
-                      onClick={() => setPaywallOpen(true)}
-                      className="gx-btn px-3 py-2 text-[12px] font-semibold"
-                      type="button"
-                    >
-                      <span>Get credits</span>
-                    </button>
-                  </>
-                )}
+        <div className="overflow-hidden rounded-3xl border border-white/10 bg-white/[0.06] backdrop-blur-xl shadow-[0_18px_60px_rgba(0,0,0,0.35)]">
+          {/* Main row */}
+          <div className="flex h-16 items-center justify-between gap-3 px-4 sm:h-[72px] sm:px-6">
+            {/* Brand */}
+            <div className="flex items-center justify-start">
+              <div className="relative h-14 w-[220px] sm:h-16 sm:w-[260px]">
+                <Image
+                  src="/logo.png"
+                  alt="Replotre"
+                  fill
+                  unoptimized
+                  sizes="(max-width: 640px) 275px, 330px"
+                  className="object-contain object-left"
+                  priority
+                />
               </div>
             </div>
 
-            {isAuthed && (
-              <div className="mt-3 w-full md:hidden">
-                <CreditsBar />
-              </div>
-            )}
+            {/* Desktop nav + actions */}
+            <div className="hidden items-center gap-6 md:flex">
+              <nav className="flex items-center gap-5 text-[13px] text-white/70">
+                <Link
+                  href="#"
+                  className="transition hover:text-white hover:underline hover:underline-offset-4"
+                >
+                  Home
+                </Link>
+                <Link
+                  href="#how-it-works"
+                  className="transition hover:text-white hover:underline hover:underline-offset-4"
+                >
+                  Workflow
+                </Link>
+                <Link
+                  href="#pricing"
+                  className="transition hover:text-white hover:underline hover:underline-offset-4"
+                >
+                  Pricing
+                </Link>
+                <Link
+                  href="#faq"
+                  className="transition hover:text-white hover:underline hover:underline-offset-4"
+                >
+                  FAQ
+                </Link>
+              </nav>
+
+              {isAuthed ? (
+                <>
+                  <div className="hidden lg:block">
+                    <CreditsBar />
+                  </div>
+
+                  <button
+                    onClick={() => setPaywallOpen(true)}
+                    className="gx-btn h-11 px-5 text-sm font-semibold"
+                    type="button"
+                  >
+                    <span>Get credits</span>
+                  </button>
+
+                  <ProfileAvatar />
+                </>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={goLogin}
+                    className="h-11 rounded-full border border-white/15 bg-white/[0.05] px-5 text-sm font-semibold text-white/90 transition hover:bg-white/[0.10]"
+                    type="button"
+                  >
+                    Sign in
+                  </button>
+
+                  <button
+                    onClick={() => setPaywallOpen(true)}
+                    className="gx-btn h-11 px-5 text-sm font-semibold"
+                    type="button"
+                  >
+                    <span>Get credits</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Mobile actions */}
+            <div className="flex shrink-0 items-center gap-2 md:hidden">
+              {isAuthed ? (
+                <>
+                  <button
+                    onClick={() => setPaywallOpen(true)}
+                    className="gx-btn h-10 px-3 text-[12px] font-semibold"
+                    type="button"
+                  >
+                    <span>Credits</span>
+                  </button>
+                  <ProfileAvatar />
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={goLogin}
+                    className="h-10 rounded-full border border-white/15 bg-white/[0.05] px-3 text-[12px] font-semibold text-white/90 transition hover:bg-white/[0.10]"
+                    type="button"
+                  >
+                    Sign in
+                  </button>
+                  <button
+                    onClick={() => setPaywallOpen(true)}
+                    className="gx-btn h-10 px-3 text-[12px] font-semibold"
+                    type="button"
+                  >
+                    <span>Get credits</span>
+                  </button>
+                </>
+              )}
+            </div>
           </div>
 
-          <div className="h-px bg-white/10" />
+          {/* Mobile credits bar */}
+          {isAuthed && (
+            <div className="border-t border-white/10 px-4 py-3 md:hidden">
+              <CreditsBar />
+            </div>
+          )}
         </div>
       </header>
 
@@ -901,6 +971,8 @@ export default function IntroPageClient() {
 
           {/* RIGHT – comparison board (desktop only) */}
           <section className="hidden min-w-0 lg:col-span-6 lg:block xl:col-span-5">
+            {/* ... unchanged (your full comparison board stays as-is) */}
+            {/* (Keeping your exact block to avoid touching working logic) */}
             <div className="relative lg:mt-4">
               <div className="pointer-events-none absolute inset-x-6 -bottom-6 h-32 rounded-full bg-black/90 blur-2xl" />
               <div className="pointer-events-none absolute -inset-x-10 -top-10 h-48 rounded-[40px] bg-gradient-to-br from-violet-500/25 via-indigo-500/15 to-sky-500/10 blur-3xl" />
@@ -917,7 +989,7 @@ export default function IntroPageClient() {
                           Realtime model comparison
                         </span>
                         <span className="rounded-full bg-white/5 px-3 py-1 text-[10px]">
-                          Benchmark: other AI tools vs Gerox
+                          Benchmark: other AI tools vs Replotre
                         </span>
                       </div>
 
@@ -925,7 +997,10 @@ export default function IntroPageClient() {
                         <div className="rounded-2xl bg-black/70 p-3 shadow-sm shadow-black/50">
                           <div className="flex items-center justify-between gap-2">
                             <div className="flex min-w-0 items-center gap-2">
-                              <Sparkles size={14} className="shrink-0 text-sky-300" />
+                              <Sparkles
+                                size={14}
+                                className="shrink-0 text-sky-300"
+                              />
                               <span className="truncate font-semibold">
                                 Identity match accuracy
                               </span>
@@ -945,7 +1020,7 @@ export default function IntroPageClient() {
 
                             <div className="mt-1 flex items-center justify-between">
                               <span className="font-semibold text-violet-100">
-                                Gerox GXR
+                                Replotre GXR
                               </span>
                               <span className="font-semibold text-sky-200">
                                 97%
@@ -960,7 +1035,10 @@ export default function IntroPageClient() {
                         <div className="rounded-2xl bg-black/70 p-3 shadow-sm shadow-black/50">
                           <div className="flex items-center justify-between gap-2">
                             <div className="flex min-w-0 items-center gap-2">
-                              <Wand2 size={14} className="shrink-0 text-sky-300" />
+                              <Wand2
+                                size={14}
+                                className="shrink-0 text-sky-300"
+                              />
                               <span className="truncate font-semibold">
                                 Engagement lift vs normal posts
                               </span>
@@ -975,7 +1053,7 @@ export default function IntroPageClient() {
                               </p>
                             </div>
                             <div className="rounded-xl border border-violet-400/30 bg-violet-500/10 px-2.5 py-2">
-                              <p className="text-violet-100">Gerox GXR</p>
+                              <p className="text-violet-100">Replotre GXR</p>
                               <p className="mt-1 text-lg font-semibold text-sky-200">
                                 3.1×
                               </p>
@@ -989,7 +1067,10 @@ export default function IntroPageClient() {
                         <div className="rounded-2xl bg-black/70 p-3 shadow-sm shadow-black/50">
                           <div className="flex items-center justify-between gap-2">
                             <div className="flex min-w-0 items-center gap-2">
-                              <ShieldCheck size={14} className="shrink-0 text-sky-300" />
+                              <ShieldCheck
+                                size={14}
+                                className="shrink-0 text-sky-300"
+                              />
                               <span className="truncate font-semibold">
                                 Trust &amp; control
                               </span>
@@ -1008,7 +1089,7 @@ export default function IntroPageClient() {
                             </div>
                             <div className="rounded-xl border border-violet-400/25 bg-violet-500/10 px-2.5 py-2">
                               <p className="font-semibold text-violet-100">
-                                Gerox
+                                Replotre
                               </p>
                               <ul className="mt-1 space-y-1 text-white/70">
                                 <li>Creator-first training stack</li>
@@ -1024,7 +1105,7 @@ export default function IntroPageClient() {
                             <div className="h-28 w-28 rounded-full border border-violet-400/25 bg-violet-500/10 sm:h-32 sm:w-32" />
                             <div className="absolute flex h-24 w-24 flex-col items-center justify-center rounded-full border border-white/15 bg-black/90 sm:h-28 sm:w-28">
                               <p className="text-[10px] text-white/70">
-                                Gerox core model
+                                Replotre core model
                               </p>
                               <p className="text-xl font-semibold tracking-wide">
                                 GXR
@@ -1070,7 +1151,13 @@ export default function IntroPageClient() {
         </div>
 
         {/* ✅ SHOWCASE SECTION */}
-        <section id="showcase" className="mt-10 sm:mt-12 lg:mt-14">
+        <section
+  id="showcase"
+  ref={(el) => {
+    showcaseSectionRef.current = el;
+  }}
+  className="mt-10 sm:mt-12 lg:mt-14"
+>
           <div className="overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.05] shadow-[0_30px_120px_rgba(0,0,0,0.35)] backdrop-blur-xl">
             <div className="border-b border-white/10 px-5 py-6 sm:px-8 sm:py-7">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -1107,7 +1194,7 @@ export default function IntroPageClient() {
                 return (
                   <div
                     key={idx}
-                    className="group relative overflow-hidden rounded-[26px] border border-white/10 bg-black/30 shadow-[0_20px_80px_rgba(0,0,0,0.45)]"
+                    className="group relative overflow-hidden rounded-[26px] border border-white/10  bg-black/30 shadow-[0_20px_80px_rgba(0,0,0,0.45)]"
                   >
                     <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent opacity-90" />
                     <div className="relative aspect-[4/5] w-full">
@@ -1130,15 +1217,54 @@ export default function IntroPageClient() {
               })}
             </div>
 
-            {/* ✅ Mobile: snap carousel (shows all 3, scrolls clearly) */}
-            <div className="md:hidden">
-              <div className="gx-scrollbar -mx-5 flex snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-3 [scrollbar-width:thin] touch-pan-x overscroll-x-contain sm:-mx-8 sm:px-8">
+            {/* ✅ Mobile: modern one-by-one slider (snap-stop + arrows + dots) */}
+            <div className="md:hidden relative">
+              {/* edge fades */}
+              <div className="pointer-events-none absolute inset-y-0 left-0 z-[1] w-8 bg-gradient-to-r from-black/30 to-transparent" />
+              <div className="pointer-events-none absolute inset-y-0 right-0 z-[1] w-8 bg-gradient-to-l from-black/30 to-transparent" />
+
+              {/* arrows */}
+              <button
+                type="button"
+                aria-label="Previous"
+                onClick={() => scrollShowcaseTo(showcaseActive - 1)}
+                disabled={showcaseActive <= 0}
+                className={cx(
+                  "absolute left-3 top-1/2 z-10 -translate-y-1/2 rounded-full border border-white/10 bg-black/40 p-2 text-white/80 backdrop-blur-md transition hover:bg-black/55 active:scale-[0.98]",
+                  showcaseActive <= 0 && "opacity-40 pointer-events-none"
+                )}
+              >
+                <ArrowLeft size={18} />
+              </button>
+
+              <button
+                type="button"
+                aria-label="Next"
+                onClick={() => scrollShowcaseTo(showcaseActive + 1)}
+                disabled={showcaseActive >= showcaseImages.length - 1}
+                className={cx(
+                  "absolute right-3 top-1/2 z-10 -translate-y-1/2 rounded-full border border-white/10 bg-black/40 p-2 text-white/80 backdrop-blur-md transition hover:bg-black/55 active:scale-[0.98]",
+                  showcaseActive >= showcaseImages.length - 1 &&
+                    "opacity-40 pointer-events-none"
+                )}
+              >
+                <ArrowRight size={18} />
+              </button>
+
+              {/* slider */}
+              <div
+                ref={showcaseRef}
+                className={cx(
+                  "gx-hide-scrollbar -mx-5 flex snap-x snap-mandatory overflow-x-auto px-5 pb-3 touch-pan-x overscroll-x-contain",
+                  "[scrollbar-width:none] [-ms-overflow-style:none]"
+                )}
+              >
                 {showcaseImages.map((img, idx) => {
                   const fallback = imgError[idx];
                   return (
                     <div
                       key={idx}
-                      className="w-[86vw] max-w-[420px] shrink-0 snap-center"
+                      className="w-full shrink-0 snap-center [scroll-snap-stop:always] pr-4 last:pr-0"
                     >
                       <div className="relative overflow-hidden rounded-[26px] border border-white/10 bg-black/30 shadow-[0_20px_80px_rgba(0,0,0,0.45)]">
                         <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent opacity-90" />
@@ -1159,6 +1285,27 @@ export default function IntroPageClient() {
                         </div>
                       </div>
                     </div>
+                  );
+                })}
+              </div>
+
+              {/* dots */}
+              <div className="mt-3 flex items-center justify-center gap-2 pb-1">
+                {showcaseImages.map((_, i) => {
+                  const active = i === showcaseActive;
+                  return (
+                    <button
+                      key={i}
+                      type="button"
+                      aria-label={`Go to slide ${i + 1}`}
+                      onClick={() => scrollShowcaseTo(i)}
+                      className={cx(
+                        "h-2 rounded-full transition-all",
+                        active
+                          ? "w-7 bg-white/80"
+                          : "w-2 bg-white/25 hover:bg-white/40"
+                      )}
+                    />
                   );
                 })}
               </div>
@@ -1313,7 +1460,11 @@ export default function IntroPageClient() {
         </section>
 
         {/* Pricing */}
+        {/* ... unchanged (your pricing + FAQ stays exactly as-is below) */}
+
+        {/* Pricing */}
         <section id="pricing" className="mt-14 sm:mt-16 lg:mt-20">
+          {/* (unchanged pricing section) */}
           <div className="text-center">
             <p className="text-[11px] uppercase tracking-[0.24em] text-white/50">
               Pricing
@@ -1502,13 +1653,13 @@ export default function IntroPageClient() {
 
             <details className="group rounded-2xl border border-white/10 bg-white/5 p-4">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-sm font-semibold text-white/85">
-                How is Gerox different from other AI model providers?
+                How is Replotre different from other AI model providers?
                 <span className="text-xs text-white/60 transition group-open:rotate-90">
                   ❯
                 </span>
               </summary>
               <p className="mt-2 text-sm text-white/65">
-                Most tools are built for generic avatars. Gerox is tuned for
+                Most tools are built for generic avatars. Replotre is tuned for
                 realistic AI influencers: stronger identity match, better
                 engagement and creator-grade control.
               </p>

@@ -536,34 +536,32 @@ export default function Page() {
             title="Create Your AI Influencer"
             subtitle="Join thousands of creators building unique AI models — we’ll guide you through every step."
           >
-            <div className="mx-auto max-w-4xl">
-              <div className="grid gap-4 sm:grid-cols-3">
-                {[
-                  { k: "5 min", v: "Setup time" },
-                  { k: "70+", v: "Ready models" },
-                  { k: "5K+", v: "Active creators" },
-                ].map((x) => (
-                  <div
-                    key={x.v}
-                    className="rounded-3xl border border-white/10 bg-white/[0.04] p-6 text-center shadow-[0_24px_90px_rgba(0,0,0,0.45)]"
-                  >
-                    <p className="text-3xl font-semibold">{x.k}</p>
-                    <p className="mt-2 text-sm text-white/55">{x.v}</p>
-                  </div>
-                ))}
-              </div>
+         <div className="mx-auto max-w-4xl">
+  <div className="flex gap-4 overflow-x-auto sm:grid sm:grid-cols-3 sm:overflow-visible justify-center">
+    {[
+      { k: "5 min", v: "Setup time" },
+      { k: "70+", v: "Ready models" },
+      { k: "5K+", v: "Active creators" },
+    ].map((x) => (
+      <div
+        key={x.v}
+        className="mt-[40px] min-w-[240px] shrink-0 rounded-3xl text-center sm:mt-0 sm:min-w-0 sm:shrink"
+      >
+        <p className="text-[27px] font-semibold sm:text-3xl">{x.k}</p>
+        <p className="mt-2 text-[13px] text-white/55 sm:text-sm">{x.v}</p>
+      </div>
+    ))}
+  </div>
 
-              <div className="mt-8 flex justify-center">
-                <GradientButton
-                  type="button"
-                  onClick={next}
-                  innerClassName="px-8 py-3"
-                >
-                  Start Creating{" "}
-                  <ArrowRight className="ml-2 inline" size={16} />
-                </GradientButton>
-              </div>
-            </div>
+  <div className="mt-8 flex justify-center">
+    <GradientButton type="button" onClick={next} innerClassName="px-8 py-3">
+      Start Creating <ArrowRight className="ml-2 inline" size={16} />
+    </GradientButton>
+  </div>
+</div>
+
+
+
           </Shell>
         )}
 
