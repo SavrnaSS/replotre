@@ -1199,15 +1199,18 @@ useEffect(() => {
                     <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent opacity-90" />
                     <div className="relative aspect-[4/5] w-full">
                       {!fallback ? (
-                        <img
-                          src={img.src}
-                          alt={img.alt}
-                          className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
-                          loading="lazy"
-                          onError={() =>
-                            setImgError((p) => ({ ...p, [idx]: true }))
-                          }
-                        />
+                        <Image
+                        src={img.src}
+                        alt={img.alt}
+                        fill
+                        sizes="(min-width: 768px) 33vw, 100vw"
+                        className="object-cover transition duration-500 group-hover:scale-[1.03]"
+                        priority={idx === 0}
+                        loading={idx === 0 ? "eager" : "lazy"}
+                        placeholder="blur"
+                        blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjEyIiBoZWlnaHQ9IjEyIiBmaWxsPSIjMDcwODE2Ii8+PC9zdmc+"
+                        onError={() => setImgError((p) => ({ ...p, [idx]: true }))}
+                       />                      
                       ) : (
                         <div className="h-full w-full bg-gradient-to-br from-violet-500/15 via-indigo-500/10 to-sky-500/10" />
                       )}
@@ -1270,15 +1273,18 @@ useEffect(() => {
                         <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent opacity-90" />
                         <div className="relative aspect-[4/5] w-full">
                           {!fallback ? (
-                            <img
-                              src={img.src}
-                              alt={img.alt}
-                              className="h-full w-full object-cover"
-                              loading="lazy"
-                              onError={() =>
-                                setImgError((p) => ({ ...p, [idx]: true }))
-                              }
-                            />
+                            <Image
+                               src={img.src}
+                               alt={img.alt}
+                                 fill
+                               sizes="(max-width: 767px) 100vw, 33vw"
+                               className="object-cover"
+                               priority={idx === 0}
+                               loading={idx === 0 ? "eager" : "lazy"}
+                               placeholder="blur"
+                               blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjEyIiBoZWlnaHQ9IjEyIiBmaWxsPSIjMDcwODE2Ii8+PC9zdmc+"
+                               onError={() => setImgError((p) => ({ ...p, [idx]: true }))}
+                             />
                           ) : (
                             <div className="h-full w-full bg-gradient-to-br from-violet-500/15 via-indigo-500/10 to-sky-500/10" />
                           )}
