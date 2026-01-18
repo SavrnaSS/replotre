@@ -1,9 +1,7 @@
-// app/(wherever)/IntroPageClient.tsx  (or your current file path)
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
   Check,
@@ -21,14 +19,6 @@ import {
 import CreditsBar from "@/app/components/CreditsBar";
 import ProfileAvatar from "@/app/components/ProfileAvatar";
 
-type Theme = {
-  id: number;
-  label: string;
-  tag?: string;
-  folder?: string;
-  imageUrls: string[];
-};
-
 type Pack = {
   c: number; // credits
   p: number; // price
@@ -36,20 +26,8 @@ type Pack = {
   desc?: string;
 };
 
-function absoluteUrl(path: string) {
-  if (!path) return "";
-  if (
-    path.startsWith("data:") ||
-    path.startsWith("http://") ||
-    path.startsWith("https://") ||
-    path.startsWith("file://")
-  ) {
-    return path;
-  }
-  if (typeof window !== "undefined") {
-    return `${window.location.origin}${path}`;
-  }
-  return path;
+function cx(...parts: Array<string | false | null | undefined>) {
+  return parts.filter(Boolean).join(" ");
 }
 
 function formatUSD(n: number) {
@@ -73,7 +51,9 @@ function safeSetSelectedPack(pack: Pack) {
       "mitux_selected_pack",
       JSON.stringify({ c: pack.c, p: pack.p })
     );
-  } catch {}
+  } catch {
+    // ignore
+  }
 }
 
 function safeGetSelectedPack(): { c?: number; p?: number } | null {
@@ -88,57 +68,8 @@ function safeGetSelectedPack(): { c?: number; p?: number } | null {
 }
 
 /* ------------------------------------------
-   Fancy loader bits (shimmer + spinner)
+   Paywall modal
 ------------------------------------------- */
-function SpinnerSparkle() {
-  return (
-    <div className="relative h-12 w-12">
-      <div className="absolute inset-0 rounded-full border border-white/15" />
-      <div className="absolute inset-0 rounded-full loader-ring" />
-      <div className="absolute inset-0 flex items-center justify-center">
-        <Sparkles className="h-5 w-5 text-white/75" />
-      </div>
-    </div>
-  );
-}
-
-function ThemeCardSkeleton() {
-  return (
-    <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-black/30">
-      <div className="aspect-[4/3] w-full skeleton" />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
-      <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4">
-        <div className="h-4 w-3/4 rounded-lg skeleton" />
-        <div className="mt-2 h-3 w-1/2 rounded-lg skeleton" />
-      </div>
-    </div>
-  );
-}
-
-function TrendingLoader() {
-  return (
-    <div className="py-8">
-      <div className="flex flex-col items-center justify-center gap-3 text-center">
-        <SpinnerSparkle />
-        <div>
-          <p className="text-sm font-semibold text-white/85">
-            Loading trending themes
-          </p>
-          <p className="text-xs text-white/55 mt-0.5">
-            Preparing previews for the best experience…
-          </p>
-        </div>
-      </div>
-
-      <div className="mt-6 grid grid-cols-2 gap-3">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <ThemeCardSkeleton key={i} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function PaywallModal({
   open,
   onClose,
@@ -168,7 +99,6 @@ function PaywallModal({
   }, [open]);
 
   if (!open) return null;
-
   const selectedPack = packs.find((p) => p.c === selectedCredits) ?? null;
 
   return (
@@ -178,28 +108,29 @@ function PaywallModal({
         onClick={onClose}
       />
 
-      <div className="absolute inset-0 flex items-end sm:items-center justify-center p-3 sm:p-6">
+      <div className="absolute inset-0 flex items-end justify-center p-3 sm:items-center sm:p-6">
         <div
-          className="w-full max-w-3xl rounded-[28px] border border-white/10 bg-[#0b0b10]/90 shadow-[0_40px_140px_rgba(0,0,0,0.65)] overflow-hidden"
+          className="w-full max-w-3xl overflow-hidden rounded-[28px] border border-white/10 bg-[#050612]/95 shadow-[0_40px_140px_rgba(0,0,0,0.8)]"
           role="dialog"
           aria-modal="true"
         >
-          <div className="flex items-center justify-between gap-3 px-5 sm:px-6 py-4 border-b border-white/10">
+          <div className="flex items-center justify-between gap-3 border-b border-white/10 px-5 py-4 sm:px-6">
             <div className="min-w-0">
               <p className="text-[11px] uppercase tracking-[0.22em] text-white/50">
                 Upgrade
               </p>
-              <h3 className="text-lg sm:text-xl font-semibold truncate">
+              <h3 className="truncate text-lg font-semibold sm:text-xl">
                 Buy credits
               </h3>
-              <p className="text-xs text-white/55 mt-0.5">
-                Credits are used for generation and re-generation.
+              <p className="mt-0.5 text-xs text-white/55">
+                Credits are used when training or generating with your AI
+                influencer.
               </p>
             </div>
 
             <button
               onClick={onClose}
-              className="shrink-0 h-10 w-10 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition flex items-center justify-center"
+              className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 transition hover:bg-white/10"
               aria-label="Close"
               type="button"
             >
@@ -207,12 +138,12 @@ function PaywallModal({
             </button>
           </div>
 
-          <div className="max-h-[78vh] sm:max-h-[70vh] overflow-y-auto overscroll-contain touch-pan-y">
-            <div className="px-5 sm:px-6 py-5">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="max-h-[78vh] overflow-y-auto overscroll-contain sm:max-h-[70vh]">
+            <div className="px-5 py-5 sm:px-6">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="inline-flex items-center gap-2 text-xs text-white/70">
                   <ShieldCheck size={16} className="text-white/70" />
-                  Secure billing · Pay once, use anytime
+                  Secure billing · Pay once, generate anytime
                 </div>
                 <div className="inline-flex items-center gap-2 text-xs text-white/60">
                   <CreditCard size={16} />
@@ -220,7 +151,7 @@ function PaywallModal({
                 </div>
               </div>
 
-              <div className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
                 {packs.map((pack) => {
                   const active = pack.c === selectedCredits;
 
@@ -240,41 +171,35 @@ function PaywallModal({
                           safeSetSelectedPack(pack);
                         }
                       }}
-                      className={[
-                        "relative rounded-[26px] border bg-black/25 p-5 cursor-pointer transition",
-                        "focus:outline-none focus:ring-2 focus:ring-purple-500/40",
+                      className={cx(
+                        "relative cursor-pointer rounded-[26px] border bg-black/40 p-5 transition",
+                        "focus:outline-none focus:ring-2 focus:ring-violet-500/40",
                         active
-                          ? "border-purple-400/60 ring-2 ring-purple-500/30"
-                          : "border-white/10 hover:border-white/20",
-                      ].join(" ")}
+                          ? "border-violet-400/70 ring-2 ring-violet-500/30"
+                          : "border-white/10 hover:border-white/25"
+                      )}
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                          {pack.badge ? (
-                            <span
-                              className={[
-                                "text-[11px] px-2.5 py-1 rounded-full border",
-                                active
-                                  ? "bg-purple-500/20 border-purple-400/30 text-purple-100"
-                                  : "bg-white/5 border-white/10 text-white/70",
-                              ].join(" ")}
-                            >
-                              {pack.badge}
-                            </span>
-                          ) : (
-                            <span className="text-[11px] px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-white/70">
-                              Pack
-                            </span>
-                          )}
+                        <div className="flex min-w-0 items-center gap-2">
+                          <span
+                            className={cx(
+                              "rounded-full border px-2.5 py-1 text-[11px]",
+                              active
+                                ? "border-violet-400/40 bg-violet-500/15 text-violet-100"
+                                : "border-white/10 bg-white/5 text-white/80"
+                            )}
+                          >
+                            {pack.badge || "Pack"}
+                          </span>
 
                           {active && (
-                            <span className="text-[11px] px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-400/25 text-emerald-200">
+                            <span className="rounded-full border border-violet-400/25 bg-violet-500/10 px-2.5 py-1 text-[11px] text-violet-200">
                               Selected
                             </span>
                           )}
                         </div>
 
-                        <div className="h-11 w-11 rounded-2xl border border-white/10 bg-white/5 flex items-center justify-center">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5">
                           <CreditCard size={18} className="text-white/70" />
                         </div>
                       </div>
@@ -283,14 +208,13 @@ function PaywallModal({
                         <p className="text-5xl font-bold leading-none">
                           {pack.c}
                         </p>
-                        <p className="text-white/70 mt-2">Credits</p>
+                        <p className="mt-2 text-white/70">Credits</p>
 
                         <p className="mt-6 text-2xl font-semibold">
-                        ${formatUSD(pack.p)}
+                          ${formatUSD(pack.p)}
                         </p>
-
-                        <p className="text-sm text-white/55 mt-2">
-                          {pack.desc || "Instant top-up"}
+                        <p className="mt-2 text-sm text-white/55">
+                          {pack.desc || "Instant top-up, no expiry"}
                         </p>
                       </div>
 
@@ -302,14 +226,14 @@ function PaywallModal({
                             setSelectedCredits(pack.c);
                             safeSetSelectedPack(pack);
                           }}
-                          className={[
-                            "w-full py-3 rounded-2xl font-semibold transition border",
+                          className={cx(
+                            "w-full rounded-2xl border py-3 font-semibold transition",
                             active
-                              ? "bg-white text-black border-transparent hover:bg-gray-200"
-                              : "bg-white/5 text-white border-white/10 hover:bg-white/10",
-                          ].join(" ")}
+                              ? "gx-btn gx-btn-sm border-transparent text-white"
+                              : "border-white/10 bg-white/5 text-white hover:bg-white/10"
+                          )}
                         >
-                          {active ? "Selected" : "Select pack"}
+                          {active ? "Selected" : "Choose pack"}
                         </button>
                       </div>
                     </div>
@@ -317,24 +241,22 @@ function PaywallModal({
                 })}
               </div>
 
-              <div className="mt-4 rounded-2xl border border-white/10 bg-black/25 p-4 text-sm text-white/60 leading-snug">
-                <span className="text-white/85 font-semibold">Tip:</span> For
-                the smoothest flow, continue to the{" "}
-                <span className="text-white/90 underline underline-offset-4">
-                  Billing
-                </span>{" "}
-                page where your balance & history update instantly.
+              <div className="mt-4 rounded-2xl border border-white/10 bg-black/40 p-4 text-sm leading-snug text-white/60">
+                <span className="font-semibold text-white/85">Tip:</span>{" "}
+                Creators usually start with{" "}
+                <span className="font-medium text-violet-200">5k–8k credits</span>{" "}
+                to train one AI influencer and keep it posting for a month.
               </div>
             </div>
           </div>
 
-          <div className="px-5 sm:px-6 py-4 border-t border-white/10 bg-black/20">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="border-t border-white/10 bg-black/30 px-5 py-4 sm:px-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="text-xs text-white/55">
                 Selected:{" "}
-                <span className="text-white/85 font-semibold">
+                <span className="font-semibold text-white/85">
                   {selectedPack
-                    ? `${selectedPack.c} credits (₹${formatUSD(selectedPack.p)})`
+                    ? `${selectedPack.c} credits ($${formatUSD(selectedPack.p)})`
                     : "None"}
                 </span>
               </div>
@@ -342,7 +264,7 @@ function PaywallModal({
               <div className="flex gap-3">
                 <button
                   onClick={onClose}
-                  className="flex-1 sm:flex-none px-4 py-3 rounded-2xl bg-white/5 border border-white/10 text-white/85 font-semibold hover:bg-white/10 transition"
+                  className="flex-1 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-white/85 transition hover:bg-white/10 sm:flex-none"
                   type="button"
                 >
                   Not now
@@ -351,18 +273,18 @@ function PaywallModal({
                 {isAuthed ? (
                   <button
                     onClick={onContinue}
-                    className="flex-1 sm:flex-none px-5 py-3 rounded-2xl bg-white text-black font-semibold hover:bg-gray-200 transition"
+                    className="gx-btn flex-1 px-5 py-3 text-sm font-semibold sm:flex-none"
                     type="button"
                   >
-                    Continue to Billing
+                    <span>Continue to billing</span>
                   </button>
                 ) : (
                   <button
                     onClick={onLogin}
-                    className="flex-1 sm:flex-none px-5 py-3 rounded-2xl bg-white/10 border border-white/15 text-white font-semibold hover:bg-white/15 transition"
+                    className="gx-btn flex-1 px-5 py-3 text-sm font-semibold sm:flex-none"
                     type="button"
                   >
-                    Login to buy credits
+                    <span>Login to buy credits</span>
                   </button>
                 )}
               </div>
@@ -370,126 +292,55 @@ function PaywallModal({
           </div>
         </div>
       </div>
-
-      {/* styled-jsx for a smoother loader */}
-      <style jsx>{`
-        .loader-ring {
-          border-radius: 9999px;
-          border: 2px solid rgba(255, 255, 255, 0.12);
-          border-top-color: rgba(255, 255, 255, 0.8);
-          animation: spin 0.9s linear infinite;
-        }
-        .skeleton {
-          position: relative;
-          background: rgba(255, 255, 255, 0.06);
-          overflow: hidden;
-        }
-        .skeleton::after {
-          content: "";
-          position: absolute;
-          inset: 0;
-          transform: translateX(-100%);
-          background: linear-gradient(
-            90deg,
-            transparent,
-            rgba(255, 255, 255, 0.16),
-            transparent
-          );
-          animation: shimmer 1.2s ease-in-out infinite;
-        }
-        @keyframes spin {
-          to {
-            transform: rotate(360deg);
-          }
-        }
-        @keyframes shimmer {
-          100% {
-            transform: translateX(100%);
-          }
-        }
-      `}</style>
     </div>
   );
 }
 
+/* ------------------------------------------
+   Page
+------------------------------------------- */
 export default function IntroPageClient() {
   const router = useRouter();
-
-  // ✅ THEMES: keep payload light to reduce lag (store only what we need on landing)
-  const [themes, setThemes] = useState<Theme[]>([]);
-  const [themesLoading, setThemesLoading] = useState(true);
 
   const [authChecked, setAuthChecked] = useState(false);
   const [authUser, setAuthUser] = useState<any>(null);
   const isLocked = authChecked && !authUser;
   const isAuthed = !!authUser;
 
-  const [heroThemes, setHeroThemes] = useState<Theme[]>([]);
-  const [selectedThemeId, setSelectedThemeId] = useState<number | null>(null);
-
   const packs: Pack[] = useMemo(
     () => [
-      { c: 2000, p: 19, badge: "Starter", desc: "Try it out" },
-      { c: 5000, p: 39, badge: "Most popular", desc: "Best value" },
-      { c: 12999, p: 79, badge: "Pro", desc: "For power users" },
+      { c: 2000, p: 19, badge: "Starter", desc: "Test your first AI twin" },
+      {
+        c: 5000,
+        p: 39,
+        badge: "Most popular",
+        desc: "Daily posting for 1–2 AI influencers",
+      },
+      { c: 12000, p: 79, badge: "Studio", desc: "For agencies & power users" },
     ],
     []
   );
 
+  const defaultPack = getDefaultPack(packs);
   const [paywallOpen, setPaywallOpen] = useState(false);
-  const [selectedCredits, setSelectedCredits] = useState<number | null>(() => {
-    if (typeof window === "undefined") return null;
-    const saved = safeGetSelectedPack();
-    if (saved?.c) return saved.c;
-    return getDefaultPack(packs)?.c ?? null;
-  });
+  const [selectedCredits, setSelectedCredits] = useState<number | null>(
+    defaultPack?.c ?? null
+  );
 
-  // ✅ fetch themes with abort + minimal mapping for performance
-  useEffect(() => {
-    const ac = new AbortController();
-    let mounted = true;
+  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">(
+    "monthly"
+  );
 
-    (async () => {
-      setThemesLoading(true);
-      try {
-        const res = await fetch("/api/themes", {
-          cache: "no-store",
-          signal: ac.signal,
-        });
+  const showcaseImages = useMemo(
+    () => [
+      { src: "/model/face-1.jpg", alt: "Showcase model 1" },
+      { src: "/model/face-2.jpg", alt: "Showcase model 2" },
+      { src: "/model/face-3.jpg", alt: "Showcase model 3" },
+    ],
+    []
+  );
+  const [imgError, setImgError] = useState<Record<number, boolean>>({});
 
-        const data = await res.json().catch(() => ({}));
-        if (!mounted) return;
-
-        const raw = Array.isArray(data?.themes) ? data.themes : [];
-
-        // keep only minimal fields + only first image to reduce memory & re-render cost
-        const slim: Theme[] = raw
-          .map((t: any) => ({
-            id: Number(t?.id),
-            label: String(t?.label || "Theme"),
-            tag: t?.tag ? String(t.tag) : undefined,
-            folder: t?.folder ? String(t.folder) : undefined,
-            imageUrls: Array.isArray(t?.imageUrls) ? t.imageUrls.slice(0, 1) : [],
-          }))
-          .filter((t: Theme) => Number.isFinite(t.id) && t.imageUrls.length > 0);
-
-        setThemes(slim);
-      } catch {
-        if (!mounted) return;
-        setThemes([]);
-      } finally {
-        if (!mounted) return;
-        setThemesLoading(false);
-      }
-    })();
-
-    return () => {
-      mounted = false;
-      ac.abort();
-    };
-  }, []);
-
-  // auth (unchanged logic)
   useEffect(() => {
     const ac = new AbortController();
     let mounted = true;
@@ -518,60 +369,20 @@ export default function IntroPageClient() {
     };
   }, []);
 
-  // restore selected theme + build hero themes (same behavior, now lightweight)
   useEffect(() => {
     if (typeof window === "undefined") return;
-
-    if (!themes.length) {
-      setHeroThemes([]);
-      return;
+    const saved = safeGetSelectedPack();
+    if (saved?.c && saved.c !== selectedCredits) {
+      setSelectedCredits(saved.c);
     }
-
-    try {
-      const saved = window.localStorage.getItem("mitux_selected_theme");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        setSelectedThemeId(parsed?.id ?? null);
-
-        const selected = themes.find((t) => t.id === parsed.id);
-        const others = themes
-          .filter((t) => t.id !== parsed.id)
-          .sort(() => Math.random() - 0.5)
-          .slice(0, 3);
-
-        const next = [selected, ...others].filter(Boolean) as Theme[];
-        setHeroThemes(next.length ? next : themes.slice(0, 4));
-        return;
-      }
-    } catch {}
-
-    const shuffled = [...themes].sort(() => Math.random() - 0.5);
-    setHeroThemes(shuffled.slice(0, 4));
-  }, [themes]);
-
-  const selectedTheme = useMemo(() => {
-    if (!selectedThemeId) return null;
-    return themes.find((t) => t.id === selectedThemeId) || null;
-  }, [selectedThemeId, themes]);
-
-  const handleThemeSelect = (themeId: number) => {
-    const theme = themes.find((t) => t.id === themeId);
-    if (!theme) return;
-
-    const raw =
-      theme.imageUrls[Math.floor(Math.random() * theme.imageUrls.length)];
-    const abs = encodeURI(raw);
-
-    setSelectedThemeId(themeId);
-
-    window.localStorage.setItem(
-      "mitux_selected_theme",
-      JSON.stringify({ id: themeId, imageUrl: abs })
-    );
-  };
+  }, [selectedCredits]);
 
   const start = () => router.push("/workspace");
-  const goLogin = () => (window.location.href = "/login");
+  const goLogin = () => {
+    if (typeof window !== "undefined") {
+      window.location.href = "/login";
+    }
+  };
 
   const continueToBilling = () => {
     if (!isAuthed) {
@@ -587,128 +398,361 @@ export default function IntroPageClient() {
 
     const c = pack?.c ?? "";
     const p = pack?.p ?? "";
-    window.location.href = `/billing?pack=${encodeURIComponent(
-      String(c)
-    )}&price=${encodeURIComponent(String(p))}`;
+    if (typeof window !== "undefined") {
+      window.location.href = `/billing?pack=${encodeURIComponent(
+        String(c)
+      )}&price=${encodeURIComponent(String(p))}`;
+    }
   };
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (selectedCredits != null) return;
-    const def = getDefaultPack(packs);
-    if (def) {
-      setSelectedCredits(def.c);
-      safeSetSelectedPack(def);
+  const pricingCards = useMemo(() => {
+    const commonFeatures = [
+      { ok: true, label: "Video face swap" },
+      { ok: true, label: "Access to all features" },
+    ];
+
+    if (billingCycle === "yearly") {
+      return [
+        {
+          key: "builder",
+          name: "Builder",
+          subtitle: "For growing creators",
+          price: 2.99,
+          billed: 35.88,
+          credits: 500,
+          trainings: 1,
+          button: "Get Credits",
+          popular: false,
+          features: [
+            { ok: true, label: "1 Influencer trainings" },
+            { ok: true, label: "500 credits/month" },
+            { ok: false, label: "Image & video generation" },
+            ...commonFeatures,
+            { ok: true, label: "Standard support" },
+          ],
+        },
+        {
+          key: "launch",
+          name: "Launch",
+          subtitle: "Ready to scale",
+          price: 7.99,
+          billed: 95.88,
+          credits: 2000,
+          trainings: 2,
+          button: "Get Credits",
+          popular: true,
+          features: [
+            { ok: true, label: "2 Influencer trainings" },
+            { ok: true, label: "2,000 credits/month" },
+            { ok: true, label: "Image & video generation" },
+            ...commonFeatures,
+            { ok: true, label: "Standard support" },
+          ],
+        },
+        {
+          key: "growth",
+          name: "Growth",
+          subtitle: "Best for businesses",
+          price: 15.99,
+          billed: 191.88,
+          credits: 8000,
+          trainings: 5,
+          button: "Get Credits",
+          popular: false,
+          features: [
+            { ok: true, label: "5 Influencer trainings" },
+            { ok: true, label: "8,000 credits/month" },
+            { ok: true, label: "Image & video generation" },
+            ...commonFeatures,
+            { ok: true, label: "Priority support" },
+          ],
+        },
+      ];
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [packs]);
+
+    return [
+      {
+        key: "builder",
+        name: "Builder",
+        subtitle: "For growing creators",
+        price: 15,
+        billed: null as number | null,
+        credits: 500,
+        trainings: 1,
+        button: "Get Credits",
+        popular: false,
+        features: [
+          { ok: true, label: "1 Influencer trainings" },
+          { ok: true, label: "500 credits/month" },
+          { ok: false, label: "Image & video generation" },
+          ...commonFeatures,
+          { ok: true, label: "Standard support" },
+        ],
+      },
+      {
+        key: "launch",
+        name: "Launch",
+        subtitle: "Ready to scale",
+        price: 29,
+        billed: null,
+        credits: 2000,
+        trainings: 2,
+        button: "Get Credits",
+        popular: true,
+        features: [
+          { ok: true, label: "2 Influencer trainings" },
+          { ok: true, label: "2,000 credits/month" },
+          { ok: true, label: "Image & video generation" },
+          ...commonFeatures,
+          { ok: true, label: "Standard support" },
+        ],
+      },
+      {
+        key: "growth",
+        name: "Growth",
+        subtitle: "Best for businesses",
+        price: 79,
+        billed: null,
+        credits: 8000,
+        trainings: 5,
+        button: "Get Credits",
+        popular: false,
+        features: [
+          { ok: true, label: "5 Influencer trainings" },
+          { ok: true, label: "8,000 credits/month" },
+          { ok: true, label: "Image & video generation" },
+          ...commonFeatures,
+          { ok: true, label: "Priority support" },
+        ],
+      },
+    ];
+  }, [billingCycle]);
 
   return (
-    <div className="relative min-h-screen bg-[#07070B] text-white overflow-hidden">
+    <div className="relative min-h-screen w-full overflow-x-clip bg-[#050612] text-white">
+      <style jsx global>{`
+        /* Gradient buttons like your screenshot */
+        .gx-btn {
+          position: relative;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.5rem;
+          border-radius: 9999px;
+          color: #fff;
+          border: 1px solid rgba(255, 255, 255, 0.22);
+          background: linear-gradient(100deg, #2f3340 0%, #6d5dfc 45%, #6aa7ff 100%);
+          box-shadow: 0 18px 60px rgba(109, 93, 252, 0.28);
+          transform: translateZ(0);
+        }
+        .gx-btn::before {
+          content: "";
+          position: absolute;
+          inset: 2px;
+          border-radius: 9999px;
+          background: linear-gradient(
+            180deg,
+            rgba(255, 255, 255, 0.10) 0%,
+            rgba(0, 0, 0, 0.22) 100%
+          );
+          opacity: 0.75;
+          pointer-events: none;
+        }
+        .gx-btn > * {
+          position: relative;
+          z-index: 1;
+        }
+        .gx-btn:hover {
+          filter: brightness(1.06);
+        }
+        .gx-btn:active {
+          transform: translateY(1px);
+        }
+        .gx-btn-sm::before {
+          inset: 1px;
+        }
+
+        @media (max-width: 459px) {
+          html,
+          body {
+            overflow-x: hidden !important;
+          }
+          * {
+            max-width: 100%;
+          }
+          .gx-grid {
+            justify-items: center !important;
+          }
+          .gx-hero-section {
+            display: flex !important;
+            justify-content: center !important;
+            width: 100% !important;
+          }
+          .gx-hero-card {
+            width: min(90vw, 720px) !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+          }
+          .gx-hero-title {
+            font-size: 30px !important;
+            line-height: 1.05 !important;
+            letter-spacing: -0.02em !important;
+          }
+          .gx-hero-desc {
+            font-size: 13px !important;
+            line-height: 1.6 !important;
+          }
+        }
+
+        .gx-scrollbar::-webkit-scrollbar {
+          height: 10px;
+        }
+        .gx-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.12);
+          border-radius: 999px;
+        }
+        .gx-scrollbar::-webkit-scrollbar-track {
+          background: rgba(255, 255, 255, 0.06);
+          border-radius: 999px;
+        }
+      `}</style>
+
       {/* Ambient BG */}
-      <div className="absolute inset-0">
-        <div className="absolute -top-40 left-1/2 h-[520px] w-[900px] -translate-x-1/2 rounded-full bg-purple-600/20 blur-[120px]" />
-        <div className="absolute -bottom-56 right-[-120px] h-[520px] w-[520px] rounded-full bg-indigo-500/20 blur-[120px]" />
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -top-56 left-1/2 h-[520px] w-[930px] -translate-x-1/2 rounded-full bg-violet-500/30 blur-[120px]" />
+        <div className="absolute -bottom-56 right-[-120px] h-[520px] w-[520px] rounded-full bg-sky-400/25 blur-[120px]" />
         <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.04]" />
-        <div className="absolute inset-0 bg-gradient-to-b from-white/[0.04] via-transparent to-black/40" />
+        <div className="absolute inset-0 bg-gradient-to-b from-white/[0.04] via-transparent to-black/60" />
       </div>
 
       {/* Top Nav */}
-      <header className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pt-6">
-        <div className="rounded-3xl border border-white/10 bg-white/[0.05] backdrop-blur-xl shadow-[0_20px_80px_rgba(0,0,0,0.35)]">
-          <div className="flex flex-col gap-4 p-4 sm:p-5">
-            {/* Row 1 */}
+      <header className="relative z-10 mx-auto w-full max-w-7xl px-3 pt-4 sm:px-6 sm:pt-6">
+        <div className="overflow-hidden rounded-3xl border border-white/10 bg-white/[0.05] backdrop-blur-xl shadow-[0_20px_80px_rgba(0,0,0,0.35)]">
+          <div className="p-3 sm:p-5">
             <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="h-11 w-11 shrink-0 rounded-2xl overflow-hidden bg-white/10 border border-white/10 flex items-center justify-center">
-                  <Image
-                    src="/logo.jpeg"
-                    alt="Gerox"
-                    width={44}
-                    height={44}
-                    priority
-                    className="h-full w-full object-cover"
-                  />
+              {/* Brand */}
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-gradient-to-br from-violet-500 via-indigo-500 to-sky-500 text-white shadow-lg shadow-indigo-500/25">
+                  <span className="text-base font-bold">G</span>
                 </div>
 
                 <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="text-base font-semibold">Gerox</p>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/10 border border-white/10 text-white/70">
-                      beta
+                  <div className="flex min-w-0 items-center gap-2">
+                    <p className="truncate text-base font-semibold">Gerox</p>
+
+                    <span className="hidden max-w-[160px] truncate rounded-full bg-white/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.18em] text-white/70 sm:inline-flex">
+                      AI Model Studio
                     </span>
                   </div>
-                  <p className="text-[12px] text-white/55 truncate">
-                    Trending Ai Themes · Private photoshoot
+
+                  <p className="truncate text-[12px] text-white/55">
+                    Realistic AI influencer that never sleeps.
                   </p>
                 </div>
               </div>
 
-              {/* Desktop actions */}
-              <div className="hidden md:flex items-center gap-3">
+              {/* Desktop nav + actions */}
+              <div className="hidden items-center gap-6 md:flex">
+                <nav className="flex items-center gap-4 text-[13px] text-white/70">
+                  <Link
+                    href="#"
+                    className="transition hover:text-white hover:underline hover:underline-offset-4"
+                  >
+                    Home
+                  </Link>
+                  <Link
+                    href="#how-it-works"
+                    className="transition hover:text-white hover:underline hover:underline-offset-4"
+                  >
+                    Workflow
+                  </Link>
+                  <Link
+                    href="#pricing"
+                    className="transition hover:text-white hover:underline hover:underline-offset-4"
+                  >
+                    Pricing
+                  </Link>
+                  <Link
+                    href="#faq"
+                    className="transition hover:text-white hover:underline hover:underline-offset-4"
+                  >
+                    FAQ
+                  </Link>
+                </nav>
+
                 {isAuthed ? (
                   <>
                     <div className="hidden lg:block">
                       <CreditsBar />
                     </div>
-
                     <button
                       onClick={() => setPaywallOpen(true)}
-                      className="px-4 py-2 rounded-2xl bg-white text-black font-semibold shadow hover:bg-gray-200 transition"
+                      className="gx-btn px-4 py-2 text-sm font-semibold"
                       type="button"
                     >
-                      Buy Credits
+                      <span>Get credits</span>
                     </button>
-
                     <ProfileAvatar />
                   </>
                 ) : (
-                  <button
-                    onClick={goLogin}
-                    className="px-4 py-2 rounded-2xl bg-white/10 border border-white/15 text-white font-semibold hover:bg-white/15 transition"
-                    type="button"
-                  >
-                    Login
-                  </button>
-                )}
-              </div>
-
-              {/* Mobile top-right */}
-              <div className="md:hidden shrink-0">
-                {isAuthed ? (
-                  <ProfileAvatar />
-                ) : (
-                  <button
-                    onClick={goLogin}
-                    className="px-4 py-2 rounded-2xl bg-white/10 border border-white/15 text-white font-semibold hover:bg-white/15 transition"
-                    type="button"
-                  >
-                    Login
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Row 2: Mobile actions */}
-            <div className="md:hidden w-full">
-              {isAuthed ? (
-                <div className="grid grid-cols-1 gap-3">
-                  <div className="w-full">
-                    <CreditsBar />
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={goLogin}
+                      className="rounded-2xl border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
+                      type="button"
+                    >
+                      Sign in
+                    </button>
+                    <button
+                      onClick={() => setPaywallOpen(true)}
+                      className="gx-btn px-4 py-2 text-sm font-semibold"
+                      type="button"
+                    >
+                      <span>Get credits</span>
+                    </button>
                   </div>
+                )}
+              </div>
 
-                  <button
-                    onClick={() => setPaywallOpen(true)}
-                    className="w-full py-3 rounded-2xl bg-white text-black font-semibold shadow hover:bg-gray-200 transition"
-                    type="button"
-                  >
-                    Buy Credits
-                  </button>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 gap-3" />
-              )}
+              {/* Mobile actions */}
+              <div className="flex shrink-0 items-center gap-2 md:hidden">
+                {isAuthed ? (
+                  <>
+                    <button
+                      onClick={() => setPaywallOpen(true)}
+                      className="gx-btn px-3 py-2 text-[12px] font-semibold"
+                      type="button"
+                    >
+                      <span>Credits</span>
+                    </button>
+                    <ProfileAvatar />
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={goLogin}
+                      className="rounded-2xl border border-white/15 bg-white/5 px-3 py-2 text-[12px] font-semibold text-white"
+                      type="button"
+                    >
+                      Sign in
+                    </button>
+                    <button
+                      onClick={() => setPaywallOpen(true)}
+                      className="gx-btn px-3 py-2 text-[12px] font-semibold"
+                      type="button"
+                    >
+                      <span>Get credits</span>
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
+
+            {isAuthed && (
+              <div className="mt-3 w-full md:hidden">
+                <CreditsBar />
+              </div>
+            )}
           </div>
 
           <div className="h-px bg-white/10" />
@@ -716,314 +760,759 @@ export default function IntroPageClient() {
       </header>
 
       {/* Hero */}
-      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pt-10 md:pt-14 pb-16">
-        <div className="grid grid-cols-12 gap-8 items-stretch">
-          {/* Left hero */}
-          <section className="col-span-12 lg:col-span-7">
-            <div className="rounded-[28px] border border-white/10 bg-white/[0.05] backdrop-blur-xl p-6 sm:p-8 shadow-[0_30px_120px_rgba(0,0,0,0.45)]">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-[12px] text-white/75">
-                <Sparkles size={14} />
-                Create studio‑grade visuals in seconds
+      <main className="relative z-10 mx-auto w-full max-w-7xl px-3 pb-20 pt-8 sm:px-6 sm:pt-10 md:pt-14">
+        <div className="gx-grid grid items-stretch lg:grid-cols-12 lg:gap-8">
+          {/* LEFT hero */}
+          <section className="gx-hero-section col-span-12 min-w-0 lg:col-span-6 xl:col-span-7">
+            <div className="gx-hero-card max-w-full overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.05] p-5 shadow-[0_30px_120px_rgba(0,0,0,0.55)] backdrop-blur-xl sm:p-8">
+              <div className="inline-flex max-w-full items-center gap-2 rounded-full bg-black/60 px-3 py-1 text-[11px] text-violet-200 ring-1 ring-violet-400/30">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-violet-300" />
+                <span className="truncate">The future of AI influencers</span>
               </div>
 
-              <h1 className="mt-6 text-3xl sm:text-5xl font-semibold leading-[1.1]">
-                Make your face fit any{" "}
-                <span className="bg-gradient-to-r from-purple-300 via-indigo-200 to-white bg-clip-text text-transparent">
-                  trending AI art
+              <h1 className="gx-hero-title mt-6 max-w-full break-words [overflow-wrap:anywhere] text-[clamp(30px,7.2vw,56px)] font-semibold leading-[1.05]">
+                Create Your{" "}
+                <span className="break-words [overflow-wrap:anywhere] bg-gradient-to-r from-violet-200 via-indigo-200 to-sky-200 bg-clip-text text-transparent">
+                  AI Influencer
                 </span>{" "}
-                style.
+                Empire
               </h1>
 
-              <p className="mt-4 text-[14px] sm:text-[16px] text-white/65 max-w-xl">
-                Pick a theme, upload a photo, and generate a premium‑looking
-                portrait. Your recent results stay saved — and you can
-                re‑generate with one click.
+              <p className="gx-hero-desc mt-4 max-w-full break-words [overflow-wrap:anywhere] text-[13px] leading-relaxed text-white/70 sm:max-w-xl sm:text-[16px]">
+                Train a realistic AI influencer that looks and acts like you —
+                but never sleeps. Our models routinely beat human influencers on{" "}
+                <span className="font-semibold text-violet-200">
+                  reach, engagement and consistency
+                </span>{" "}
+                across Instagram, TikTok and YouTube.
               </p>
 
-              <div className="mt-6 flex flex-wrap items-center gap-3 sm:gap-4 text-[12px] text-white/70">
-                {["Fast generation", "Saved history", "Download anytime"].map(
-                  (txt) => (
-                    <span key={txt} className="inline-flex items-center gap-2">
-                      <span className="h-5 w-5 rounded-full bg-emerald-500/15 border border-emerald-400/25 flex items-center justify-center">
-                        <Check size={12} className="text-emerald-300" />
-                      </span>
-                      {txt}
-                    </span>
-                  )
-                )}
+              <div className="mt-5 flex max-w-full flex-col gap-2 text-[11px] text-white/70 sm:flex-row sm:flex-wrap">
+                <span className="inline-flex max-w-full items-start gap-2 rounded-full bg-black/50 px-3 py-1">
+                  <Check size={12} className="mt-[2px] shrink-0 text-sky-300" />
+                  <span className="min-w-0 break-words [overflow-wrap:anywhere]">
+                    3× more reach than baseline creators
+                  </span>
+                </span>
+                <span className="inline-flex max-w-full items-start gap-2 rounded-full bg-black/50 px-3 py-1">
+                  <Check size={12} className="mt-[2px] shrink-0 text-sky-300" />
+                  <span className="min-w-0 break-words [overflow-wrap:anywhere]">
+                    Always-on posting, zero burnout
+                  </span>
+                </span>
+                <span className="inline-flex max-w-full items-start gap-2 rounded-full bg-black/50 px-3 py-1">
+                  <Check size={12} className="mt-[2px] shrink-0 text-sky-300" />
+                  <span className="min-w-0 break-words [overflow-wrap:anywhere]">
+                    Brand-safe &amp; fully controlled
+                  </span>
+                </span>
               </div>
 
-              <div className="mt-7">
+              <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
                 <button
                   onClick={start}
-                  className="w-full rounded-2xl bg-white text-black font-semibold py-4 text-base shadow hover:bg-gray-200 transition flex items-center justify-center gap-2"
+                  className="gx-btn w-full px-5 py-4 text-[15px] font-semibold leading-snug sm:w-auto sm:px-6"
                   type="button"
                 >
-                  Start Image generation <ArrowRight size={18} />
+                  <span className="min-w-0 text-center break-words [overflow-wrap:anywhere]">
+                    Start AI model generation
+                  </span>
+                  <ArrowRight size={18} className="shrink-0" />
                 </button>
 
-                {isLocked && (
-                  <div className="mt-4 rounded-2xl border border-white/10 bg-black/25 p-4">
-                    <div className="flex items-center gap-2 text-white/85">
-                      <Lock size={16} />
-                      <p className="text-sm font-semibold">
-                        Login required to generate
-                      </p>
-                    </div>
-                    <p className="text-[12px] text-white/60 mt-1 leading-snug">
-                      You can browse themes now — generation & saving history
-                      unlock after login.
-                    </p>
-                    <button
-                      onClick={goLogin}
-                      className="mt-3 w-full py-2.5 rounded-xl bg-white text-black font-semibold hover:bg-gray-200 transition"
-                      type="button"
-                    >
-                      Login to unlock
-                    </button>
-                  </div>
-                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const el = document.getElementById("showcase");
+                    if (el) el.scrollIntoView({ behavior: "smooth" });
+                    else {
+                      const el2 = document.getElementById("how-it-works");
+                      if (el2) el2.scrollIntoView({ behavior: "smooth" });
+                    }
+                  }}
+                  className="flex w-full items-center justify-center gap-2 rounded-full border border-white/15 bg-black/40 px-5 py-4 text-[13px] font-semibold leading-snug text-white/85 transition hover:bg-white/5 sm:w-auto"
+                >
+                  <span className="min-w-0 text-center break-words [overflow-wrap:anywhere]">
+                    View styles &amp; case studies
+                  </span>
+                </button>
+              </div>
 
-                <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-[12px] text-white/55">
-                  <Link
-                    href="/themes"
-                    className="hover:text-white/80 transition"
+              {isLocked && (
+                <div className="mt-4 max-w-full overflow-hidden rounded-2xl border border-white/10 bg-black/40 p-4">
+                  <div className="flex min-w-0 items-center gap-2 text-white/85">
+                    <Lock size={16} className="shrink-0" />
+                    <p className="min-w-0 break-words [overflow-wrap:anywhere] text-sm font-semibold">
+                      Login required to save trainings
+                    </p>
+                  </div>
+                  <p className="mt-1 break-words [overflow-wrap:anywhere] text-[12px] leading-snug text-white/60">
+                    You can preview the workflow now. Saving trainings and
+                    influencer models unlocks after you sign in.
+                  </p>
+                  <button
+                    onClick={goLogin}
+                    className="gx-btn gx-btn-sm mt-3 w-full px-3 py-2.5 text-[13px] font-semibold"
+                    type="button"
                   >
-                    Browse full library →
-                  </Link>
-                  <span className="text-white/45">Tip: use centered face photo</span>
+                    <span>Sign in to keep progress</span>
+                  </button>
+                </div>
+              )}
+
+              <div className="mt-5 flex flex-col gap-3 text-[12px] text-white/60 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-wrap gap-2">
+                  <span className="inline-flex max-w-full items-center gap-2 rounded-full bg-black/50 px-3 py-1">
+                    <Upload size={13} className="shrink-0 text-sky-300" />
+                    <span className="min-w-0 break-words [overflow-wrap:anywhere]">
+                      Upload training set (20–40 photos)
+                    </span>
+                  </span>
+                  <span className="inline-flex max-w-full items-center gap-2 rounded-full bg-black/50 px-3 py-1">
+                    <Sparkles size={13} className="shrink-0 text-sky-300" />
+                    <span className="min-w-0 break-words [overflow-wrap:anywhere]">
+                      Generate daily content in seconds
+                    </span>
+                  </span>
+                  <span className="inline-flex max-w-full items-center gap-2 rounded-full bg-black/50 px-3 py-1">
+                    <Download size={13} className="shrink-0 text-sky-300" />
+                    <span className="min-w-0 break-words [overflow-wrap:anywhere]">
+                      Export 4K reels &amp; story assets
+                    </span>
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 text-[11px] text-white/55">
+                  <span className="inline-flex -space-x-2 overflow-hidden rounded-full bg-black/40 px-2 py-1">
+                    <span className="h-5 w-5 rounded-full bg-gradient-to-br from-violet-500 to-indigo-700" />
+                    <span className="h-5 w-5 rounded-full bg-gradient-to-br from-sky-500 to-blue-700" />
+                    <span className="h-5 w-5 rounded-full bg-gradient-to-br from-fuchsia-500 to-purple-700" />
+                  </span>
+                  <span className="min-w-0 break-words [overflow-wrap:anywhere]">
+                    1,000+ creators testing AI influencers
+                  </span>
+                  <span className="whitespace-nowrap text-yellow-300">
+                    ★★★★★ 4.9/5
+                  </span>
                 </div>
               </div>
             </div>
           </section>
 
-          {/* Right theme cards */}
-          <section className="col-span-12 lg:col-span-5">
-            <div className="rounded-[28px] border border-white/10 bg-white/[0.05] backdrop-blur-xl p-5 sm:p-6 shadow-[0_30px_120px_rgba(0,0,0,0.45)]">
-              <div className="flex items-center justify-between gap-3 mb-4">
-                <div>
-                  <p className="text-sm font-semibold">Trending picks</p>
-                  <p className="text-[12px] text-white/55 mt-0.5">
-                    Select a theme — Workspace will use it
-                  </p>
-                </div>
+          {/* RIGHT – comparison board (desktop only) */}
+          <section className="hidden min-w-0 lg:col-span-6 lg:block xl:col-span-5">
+            <div className="relative lg:mt-4">
+              <div className="pointer-events-none absolute inset-x-6 -bottom-6 h-32 rounded-full bg-black/90 blur-2xl" />
+              <div className="pointer-events-none absolute -inset-x-10 -top-10 h-48 rounded-[40px] bg-gradient-to-br from-violet-500/25 via-indigo-500/15 to-sky-500/10 blur-3xl" />
+              <div className="relative mx-auto w-full max-w-xl lg:max-w-none">
+                <div className="rounded-[42px] bg-gradient-to-br from-violet-500/60 via-indigo-500/20 to-black/95 p-[1.5px] shadow-[0_32px_120px_rgba(0,0,0,0.9)]">
+                  <div className="relative overflow-hidden rounded-[38px] bg-[#060717]">
+                    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(109,93,252,0.22),transparent_55%),radial-gradient(circle_at_bottom,rgba(106,167,255,0.18),transparent_60%)] opacity-90" />
+                    <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.08)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.08)_1px,transparent_1px)] bg-[size:26px_26px] opacity-[0.12]" />
 
-                <Link
-                  href="/themes"
-                  className="px-4 py-2 rounded-full bg-white/5 border border-white/15 text-[12px] text-white/85 hover:bg-white/10 transition"
-                >
-                  Browse ↗
-                </Link>
-              </div>
+                    <div className="relative p-5 sm:p-6">
+                      <div className="flex flex-wrap items-center justify-between gap-3 text-[11px] text-white/70">
+                        <span className="inline-flex items-center gap-2 rounded-full bg-black/70 px-3 py-1 shadow-sm shadow-black/60">
+                          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-violet-300" />
+                          Realtime model comparison
+                        </span>
+                        <span className="rounded-full bg-white/5 px-3 py-1 text-[10px]">
+                          Benchmark: other AI tools vs Gerox
+                        </span>
+                      </div>
 
-              {themesLoading ? (
-                <TrendingLoader />
-              ) : heroThemes.length === 0 ? (
-                <div className="py-10 text-center text-sm text-white/55">
-                  No themes available.
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-3">
-                  {heroThemes.map((t, idx) => {
-                    const active = selectedThemeId === t.id;
-                    const img = t.imageUrls?.[0]
-                      ? encodeURI(t.imageUrls[0])
-                      : "";
-
-                    return (
-                      <button
-                        key={t.id}
-                        type="button"
-                        onClick={() => handleThemeSelect(t.id)}
-                        className={[
-                          "relative overflow-hidden rounded-3xl border bg-black/30 transition group text-left",
-                          "will-change-transform",
-                          active
-                            ? "border-purple-400/60 ring-2 ring-purple-500/40"
-                            : "border-white/10 hover:border-white/20",
-                        ].join(" ")}
-                      >
-                        <div className="aspect-[4/3] w-full overflow-hidden">
-                          {/* Next/Image = much smoother on production */}
-                          <Image
-                            src={img}
-                            alt={t.label}
-                            width={640}
-                            height={480}
-                            sizes="(max-width: 1024px) 50vw, 25vw"
-                            priority={idx < 2} // first 2 load quickly; rest lazy
-                            className="h-full w-full object-cover group-hover:scale-[1.03] transition-transform duration-500"
-                          />
-                        </div>
-
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
-
-                        {active && (
-                          <div className="absolute top-3 left-3 h-8 w-8 rounded-full bg-purple-500/90 text-white flex items-center justify-center shadow">
-                            <Check size={16} />
+                      <div className="mt-6 grid gap-5 text-[11px] text-white/75 md:grid-cols-2">
+                        <div className="rounded-2xl bg-black/70 p-3 shadow-sm shadow-black/50">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex min-w-0 items-center gap-2">
+                              <Sparkles size={14} className="shrink-0 text-sky-300" />
+                              <span className="truncate font-semibold">
+                                Identity match accuracy
+                              </span>
+                            </div>
                           </div>
-                        )}
 
-                        <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4">
-                          <p className="text-sm font-semibold leading-tight">
-                            {t.label}
-                          </p>
-                          <p className="text-[12px] text-white/60 mt-0.5">
-                            {t.tag || "Portrait imagination"}
-                          </p>
+                          <div className="mt-3 space-y-1.5 text-[10px]">
+                            <div className="flex items-center justify-between">
+                              <span className="text-white/55">
+                                Other AI model tools
+                              </span>
+                              <span className="text-white/60">82%</span>
+                            </div>
+                            <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+                              <div className="h-full w-[82%] rounded-full bg-zinc-500/80" />
+                            </div>
+
+                            <div className="mt-1 flex items-center justify-between">
+                              <span className="font-semibold text-violet-100">
+                                Gerox GXR
+                              </span>
+                              <span className="font-semibold text-sky-200">
+                                97%
+                              </span>
+                            </div>
+                            <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+                              <div className="h-full w-[97%] rounded-full bg-gradient-to-r from-[#6d5dfc] to-[#6aa7ff]" />
+                            </div>
+                          </div>
                         </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
 
-              <div className="mt-4 rounded-2xl border border-white/10 bg-black/25 p-4 text-[12px] text-white/60">
-                <span className="text-white/80 font-semibold">Pro tip:</span>{" "}
-                choose a theme here, then in Workspace upload a centered face
-                photo for best results.
+                        <div className="rounded-2xl bg-black/70 p-3 shadow-sm shadow-black/50">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex min-w-0 items-center gap-2">
+                              <Wand2 size={14} className="shrink-0 text-sky-300" />
+                              <span className="truncate font-semibold">
+                                Engagement lift vs normal posts
+                              </span>
+                            </div>
+                          </div>
+                          <div className="mt-3 grid grid-cols-2 gap-2 text-[10px]">
+                            <div className="rounded-xl border border-white/10 bg-white/5 px-2.5 py-2">
+                              <p className="text-white/60">Other AI models</p>
+                              <p className="mt-1 text-lg font-semibold">1.3×</p>
+                              <p className="text-[9px] text-white/50">
+                                Average reach boost
+                              </p>
+                            </div>
+                            <div className="rounded-xl border border-violet-400/30 bg-violet-500/10 px-2.5 py-2">
+                              <p className="text-violet-100">Gerox GXR</p>
+                              <p className="mt-1 text-lg font-semibold text-sky-200">
+                                3.1×
+                              </p>
+                              <p className="text-[9px] text-white/70">
+                                Tuned for realistic creator content
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="rounded-2xl bg-black/70 p-3 shadow-sm shadow-black/50">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex min-w-0 items-center gap-2">
+                              <ShieldCheck size={14} className="shrink-0 text-sky-300" />
+                              <span className="truncate font-semibold">
+                                Trust &amp; control
+                              </span>
+                            </div>
+                            <span className="text-sky-200">Advanced</span>
+                          </div>
+                          <div className="mt-2 grid grid-cols-2 gap-2 text-[10px] text-white/60">
+                            <div className="rounded-xl border border-white/10 bg-white/5 px-2.5 py-2">
+                              <p className="font-semibold text-white/75">
+                                Other tools
+                              </p>
+                              <ul className="mt-1 space-y-1">
+                                <li>Generic base models</li>
+                                <li>Limited audit trail</li>
+                              </ul>
+                            </div>
+                            <div className="rounded-xl border border-violet-400/25 bg-violet-500/10 px-2.5 py-2">
+                              <p className="font-semibold text-violet-100">
+                                Gerox
+                              </p>
+                              <ul className="mt-1 space-y-1 text-white/70">
+                                <li>Creator-first training stack</li>
+                                <li>Versioned models &amp; rollbacks</li>
+                                <li>Fine-grained prompts &amp; limits</li>
+                              </ul>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="relative flex items-center justify-center overflow-hidden rounded-2xl bg-black/70 p-4 shadow-sm shadow-black/50 md:p-5">
+                          <div className="relative flex h-36 w-36 items-center justify-center rounded-full border border-violet-400/30 bg-black/70 shadow-[0_0_40px_rgba(109,93,252,0.25)] sm:h-40 sm:w-40">
+                            <div className="h-28 w-28 rounded-full border border-violet-400/25 bg-violet-500/10 sm:h-32 sm:w-32" />
+                            <div className="absolute flex h-24 w-24 flex-col items-center justify-center rounded-full border border-white/15 bg-black/90 sm:h-28 sm:w-28">
+                              <p className="text-[10px] text-white/70">
+                                Gerox core model
+                              </p>
+                              <p className="text-xl font-semibold tracking-wide">
+                                GXR
+                              </p>
+                              <p className="px-2 text-center text-[9px] text-white/60">
+                                Outperforming 9/10 providers
+                              </p>
+                            </div>
+
+                            <div className="pointer-events-none absolute right-2 top-2 rounded-full bg-black/90 px-2.5 py-1 text-[10px] text-white/80 shadow-lg shadow-black/80">
+                              Batch · 16 posts
+                            </div>
+                            <div className="pointer-events-none absolute bottom-2 left-2 rounded-full bg-black/90 px-2.5 py-1 text-[10px] text-white/80 shadow-lg shadow-black/80">
+                              Training · 32 photos
+                            </div>
+                            <div className="pointer-events-none absolute bottom-2 right-2 rounded-full bg-black/90 px-2.5 py-1 text-[10px] text-white/80 shadow-lg shadow-black/80">
+                              Latency · 2.1s/gen
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-6 flex flex-wrap gap-2 text-[10px] text-white/70">
+                        <span className="rounded-full bg-white/5 px-2.5 py-1">
+                          Built for creators, not generic avatars
+                        </span>
+                        <span className="rounded-full bg-white/5 px-2.5 py-1">
+                          Trains in minutes, not hours
+                        </span>
+                        <span className="rounded-full bg-white/5 px-2.5 py-1">
+                          Ready for UGC ads, brand work &amp; fan content
+                        </span>
+                        <span className="rounded-full bg-white/5 px-2.5 py-1">
+                          Better identity + control than most AI tools
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </section>
         </div>
 
-        {/* How it works */}
-        <section className="mt-8 sm:mt-10">
-          <div className="rounded-[28px] border border-white/10 bg-white/[0.05] backdrop-blur-xl shadow-[0_30px_120px_rgba(0,0,0,0.35)] overflow-hidden">
-            <div className="px-5 sm:px-8 py-6 sm:py-7 border-b border-white/10">
-              <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-                <div>
+        {/* ✅ SHOWCASE SECTION */}
+        <section id="showcase" className="mt-10 sm:mt-12 lg:mt-14">
+          <div className="overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.05] shadow-[0_30px_120px_rgba(0,0,0,0.35)] backdrop-blur-xl">
+            <div className="border-b border-white/10 px-5 py-6 sm:px-8 sm:py-7">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <div className="min-w-0">
                   <p className="text-[11px] uppercase tracking-[0.22em] text-white/50">
-                    Private photoshoot flow
+                    Showcase
                   </p>
-                  <h2 className="mt-2 text-xl sm:text-2xl font-semibold">
-                    Generate a private photoshoot in 3 steps
+                  <h2 className="mt-2 text-xl font-semibold sm:text-2xl">
+                    Quality That Sells
                   </h2>
-                  <p className="mt-2 text-sm text-white/60 max-w-2xl">
-                    fast, simple, and repeatable. Your theme selection carries
-                    into Workspace.
+                  <p className="mt-2 max-w-2xl text-sm text-white/65">
+                    Creator-grade realism for Instagram, TikTok, and YouTube —
+                    the same quality your subscribers pay $50+ for.
                   </p>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2 text-xs text-white/60">
-                  <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/30 border border-white/10">
-                    <ShieldCheck size={14} />
-                    Private by default
+                <div className="flex flex-wrap items-center gap-2 text-[11px] text-white/60">
+                  <span className="inline-flex items-center gap-2 rounded-full bg-black/30 px-3 py-1.5">
+                    <Sparkles size={14} className="text-sky-300" />
+                    4K-ready exports
                   </span>
-                  <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/30 border border-white/10">
-                    <Download size={14} />
-                    Download anytime
+                  <span className="inline-flex items-center gap-2 rounded-full bg-black/30 px-3 py-1.5">
+                    <ShieldCheck size={14} className="text-sky-300" />
+                    Brand-safe control
                   </span>
                 </div>
               </div>
             </div>
 
-            <div className="px-5 sm:px-8 py-6 sm:py-8">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5">
-                <div className="rounded-3xl border border-white/10 bg-black/25 p-5 sm:p-6">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-[11px] px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-white/70">
-                      Step 1
-                    </span>
-                    <span className="h-10 w-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
-                      <Sparkles size={18} className="text-white/80" />
-                    </span>
-                  </div>
-                  <h3 className="mt-4 text-base font-semibold">Choose a theme</h3>
-                  <p className="mt-2 text-sm text-white/60 leading-snug">
-                    Browse trending styles and select one. We’ll remember it for
-                    Workspace so you don’t repeat steps.
-                  </p>
-
-                  <div className="mt-4 text-xs text-white/55">
-                    <span className="text-white/80 font-semibold">Tip:</span>{" "}
-                    Pick “cinematic / studio” themes for HD‑looking results.
-                  </div>
-                </div>
-
-                <div className="rounded-3xl border border-white/10 bg-black/25 p-5 sm:p-6">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-[11px] px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-white/70">
-                      Step 2
-                    </span>
-                    <span className="h-10 w-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
-                      <Upload size={18} className="text-white/80" />
-                    </span>
-                  </div>
-                  <h3 className="mt-4 text-base font-semibold">
-                    Upload a centered face photo
-                  </h3>
-                  <p className="mt-2 text-sm text-white/60 leading-snug">
-                    Use a front‑facing image with good lighting. Avoid heavy
-                    blur, sunglasses, or extreme angles.
-                  </p>
-
-                  <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-white/55">
-                    <div className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2">
-                      ✅ Good lighting
-                    </div>
-                    <div className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2">
-                      ✅ Centered face
-                    </div>
-                    <div className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2">
-                      ❌ Side angles
-                    </div>
-                    <div className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2">
-                      ❌ Sunglasses
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-3xl border border-white/10 bg-black/25 p-5 sm:p-6">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-[11px] px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-white/70">
-                      Step 3
-                    </span>
-                    <span className="h-10 w-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
-                      <Wand2 size={18} className="text-white/80" />
-                    </span>
-                  </div>
-                  <h3 className="mt-4 text-base font-semibold">
-                    Generate & re‑generate
-                  </h3>
-                  <p className="mt-2 text-sm text-white/60 leading-snug">
-                    Create results, then tweak and re‑generate until it’s
-                    perfect. Download anytime and keep your favorites.
-                  </p>
-
-                  <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-3 text-xs text-white/60">
-                    <span className="text-white/80 font-semibold">
-                      Pro workflow:
-                    </span>{" "}
-                    Generate 3–5 times → pick best → download.
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div className="text-xs text-white/55">
-                  <span className="text-white/75 font-semibold">Privacy:</span>{" "}
-                  Don’t upload private documents; use face photos only.
-                </div>
-
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <Link
-                    href="/themes"
-                    className="px-4 py-3 rounded-2xl bg-white/5 border border-white/10 text-white/85 font-semibold hover:bg-white/10 transition text-center"
+            {/* Desktop grid */}
+            <div className="hidden gap-5 px-5 py-6 md:grid md:grid-cols-3 sm:px-8 sm:py-8">
+              {showcaseImages.map((img, idx) => {
+                const fallback = imgError[idx];
+                return (
+                  <div
+                    key={idx}
+                    className="group relative overflow-hidden rounded-[26px] border border-white/10 bg-black/30 shadow-[0_20px_80px_rgba(0,0,0,0.45)]"
                   >
-                    Explore themes
-                  </Link>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent opacity-90" />
+                    <div className="relative aspect-[4/5] w-full">
+                      {!fallback ? (
+                        <img
+                          src={img.src}
+                          alt={img.alt}
+                          className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                          loading="lazy"
+                          onError={() =>
+                            setImgError((p) => ({ ...p, [idx]: true }))
+                          }
+                        />
+                      ) : (
+                        <div className="h-full w-full bg-gradient-to-br from-violet-500/15 via-indigo-500/10 to-sky-500/10" />
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* ✅ Mobile: snap carousel (shows all 3, scrolls clearly) */}
+            <div className="md:hidden">
+              <div className="gx-scrollbar -mx-5 flex snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-3 [scrollbar-width:thin] touch-pan-x overscroll-x-contain sm:-mx-8 sm:px-8">
+                {showcaseImages.map((img, idx) => {
+                  const fallback = imgError[idx];
+                  return (
+                    <div
+                      key={idx}
+                      className="w-[86vw] max-w-[420px] shrink-0 snap-center"
+                    >
+                      <div className="relative overflow-hidden rounded-[26px] border border-white/10 bg-black/30 shadow-[0_20px_80px_rgba(0,0,0,0.45)]">
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent opacity-90" />
+                        <div className="relative aspect-[4/5] w-full">
+                          {!fallback ? (
+                            <img
+                              src={img.src}
+                              alt={img.alt}
+                              className="h-full w-full object-cover"
+                              loading="lazy"
+                              onError={() =>
+                                setImgError((p) => ({ ...p, [idx]: true }))
+                              }
+                            />
+                          ) : (
+                            <div className="h-full w-full bg-gradient-to-br from-violet-500/15 via-indigo-500/10 to-sky-500/10" />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* bottom CTA */}
+            <div className="border-t border-white/10 px-5 py-6 sm:px-8">
+              <div className="flex flex-col items-center justify-between gap-4 text-center sm:flex-row sm:text-left">
+                <p className="text-sm text-white/70">
+                  Ready to create content that sells for $50+ per PPV?
+                </p>
+
+                <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const el = document.getElementById("pricing");
+                      if (el) el.scrollIntoView({ behavior: "smooth" });
+                    }}
+                    className="w-full rounded-full border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-white/85 transition hover:bg-white/10 sm:w-auto"
+                  >
+                    View pricing
+                  </button>
 
                   <button
-                    onClick={start}
-                    className="px-5 py-3 rounded-2xl bg-white text-black font-semibold hover:bg-gray-200 transition flex items-center justify-center gap-2"
                     type="button"
+                    onClick={start}
+                    className="gx-btn w-full px-5 py-3 text-sm font-semibold sm:w-auto"
                   >
-                    Open Workspace <ArrowRight size={18} />
+                    <Check size={18} />
+                    <span>Get started</span>
                   </button>
                 </div>
               </div>
             </div>
+          </div>
+        </section>
+
+        {/* How it works */}
+        <section id="how-it-works" className="mt-12 sm:mt-14 lg:mt-16">
+          <div className="overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.05] shadow-[0_30px_120px_rgba(0,0,0,0.35)] backdrop-blur-xl">
+            <div className="border-b border-white/10 px-5 py-6 sm:px-8 sm:py-7">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <div className="min-w-0">
+                  <p className="text-[11px] uppercase tracking-[0.22em] text-white/50">
+                    Workflow
+                  </p>
+                  <h2 className="mt-2 text-xl font-semibold sm:text-2xl">
+                    Launch a realistic AI influencer in three steps
+                  </h2>
+                  <p className="mt-2 max-w-2xl text-sm text-white/65">
+                    Train once on your real photos; your AI twin keeps posting,
+                    replying and generating sponsor-ready content on demand.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 text-[11px] text-white/60">
+                  <span className="inline-flex items-center gap-2 rounded-full bg-black/30 px-3 py-1.5">
+                    <ShieldCheck size={14} />
+                    Likeness and controls built-in
+                  </span>
+                  <span className="inline-flex items-center gap-2 rounded-full bg-black/30 px-3 py-1.5">
+                    <Download size={14} />
+                    4K exports for ads &amp; socials
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="px-5 py-6 sm:px-8 sm:py-8">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3 sm:gap-5">
+                <div className="rounded-3xl border border-white/10 bg-black/30 p-5 sm:p-6">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="rounded-full bg-white/5 px-2.5 py-1 text-[11px] text-white/70">
+                      Step 1
+                    </span>
+                    <span className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5">
+                      <Upload size={18} className="text-sky-300" />
+                    </span>
+                  </div>
+                  <h3 className="mt-4 text-base font-semibold">
+                    Train your AI influencer
+                  </h3>
+                  <p className="mt-2 text-sm leading-snug text-white/65">
+                    Upload 20–40 selfies and lifestyle photos. We normalize
+                    lighting, poses and outfits automatically to build a strong
+                    base model.
+                  </p>
+                </div>
+
+                <div className="rounded-3xl border border-white/10 bg-black/30 p-5 sm:p-6">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="rounded-full bg-white/5 px-2.5 py-1 text-[11px] text-white/70">
+                      Step 2
+                    </span>
+                    <span className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5">
+                      <Sparkles size={18} className="text-sky-300" />
+                    </span>
+                  </div>
+                  <h3 className="mt-4 text-base font-semibold">
+                    Define persona &amp; boundaries
+                  </h3>
+                  <p className="mt-2 text-sm leading-snug text-white/65">
+                    Choose your niche, tone of voice and limits. Your AI stays
+                    on-brand and consistent.
+                  </p>
+                </div>
+
+                <div className="rounded-3xl border border-white/10 bg-black/30 p-5 sm:p-6">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="rounded-full bg-white/5 px-2.5 py-1 text-[11px] text-white/70">
+                      Step 3
+                    </span>
+                    <span className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5">
+                      <Wand2 size={18} className="text-sky-300" />
+                    </span>
+                  </div>
+                  <h3 className="mt-4 text-base font-semibold">
+                    Deploy to socials &amp; ads
+                  </h3>
+                  <p className="mt-2 text-sm leading-snug text-white/65">
+                    Generate packs of reels, posts and stories. Export for
+                    Instagram, TikTok and YouTube.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="text-[11px] text-white/60">
+                  <span className="font-semibold text-white/80">Note:</span>{" "}
+                  Be transparent with your audience about AI-assisted content.
+                </div>
+                <div className="flex flex-col gap-3 sm:flex-row">
+                  <Link
+                    href="#pricing"
+                    className="rounded-full border border-white/10 bg-white/5 px-4 py-3 text-center text-sm font-semibold text-white/85 transition hover:bg-white/10"
+                  >
+                    View pricing
+                  </Link>
+                  <button
+                    onClick={start}
+                    className="gx-btn px-5 py-3 text-sm font-semibold"
+                    type="button"
+                  >
+                    <span>Open workspace</span>
+                    <ArrowRight size={18} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Pricing */}
+        <section id="pricing" className="mt-14 sm:mt-16 lg:mt-20">
+          <div className="text-center">
+            <p className="text-[11px] uppercase tracking-[0.24em] text-white/50">
+              Pricing
+            </p>
+
+            <h2 className="mt-2 text-[clamp(34px,5.6vw,64px)] font-semibold leading-[1.02]">
+              Pay as you{" "}
+              <span className="bg-gradient-to-r from-violet-200 via-indigo-200 to-sky-200 bg-clip-text text-transparent">
+                grow
+              </span>
+            </h2>
+
+            <p className="mt-3 text-sm text-white/65">
+              Credits that scale with your business. No hidden fees.
+            </p>
+
+            {/* Toggle */}
+            <div className="mt-6 flex justify-center">
+              <div className="inline-flex items-center rounded-full border border-white/10 bg-white/5 p-1 shadow-[0_20px_80px_rgba(0,0,0,0.35)]">
+                <button
+                  type="button"
+                  onClick={() => setBillingCycle("monthly")}
+                  className={cx(
+                    "rounded-full px-6 py-2 text-[13px] font-semibold transition",
+                    billingCycle === "monthly"
+                      ? "gx-btn gx-btn-sm px-6 py-2"
+                      : "text-white/65 hover:text-white"
+                  )}
+                >
+                  <span>Monthly</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBillingCycle("yearly")}
+                  className={cx(
+                    "rounded-full px-6 py-2 text-[13px] font-semibold transition",
+                    billingCycle === "yearly"
+                      ? "gx-btn gx-btn-sm px-6 py-2"
+                      : "text-white/65 hover:text-white"
+                  )}
+                >
+                  <span>Yearly</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-10 grid gap-5 md:grid-cols-3 lg:gap-7">
+            {pricingCards.map((card) => {
+              const popular = !!card.popular;
+
+              return (
+                <div key={card.key} className="relative">
+                  {popular && (
+                    <div className="pointer-events-none absolute -top-4 left-1/2 z-10 -translate-x-1/2">
+                      <span className="rounded-full border border-white/15 bg-white/10 px-4 py-1 text-[12px] font-semibold text-white shadow-[0_14px_60px_rgba(109,93,252,0.18)]">
+                        Most Popular
+                      </span>
+                    </div>
+                  )}
+
+                  <div
+                    className={cx(
+                      "h-full overflow-hidden rounded-[26px] border bg-black/40 shadow-[0_24px_90px_rgba(0,0,0,0.55)] backdrop-blur-xl",
+                      popular ? "border-violet-400/20" : "border-white/10"
+                    )}
+                  >
+                    <div className="p-6">
+                      <h3 className="text-lg font-semibold">{card.name}</h3>
+                      <p className="mt-1 text-sm text-white/55">
+                        {card.subtitle}
+                      </p>
+
+                      <div className="mt-6 flex items-end justify-center gap-1">
+                        <span className="text-5xl font-semibold leading-none">
+                          ${String(card.price)}
+                        </span>
+                        <span className="pb-1 text-sm text-white/55">/mo</span>
+                      </div>
+
+                      {billingCycle === "yearly" && card.billed != null ? (
+                        <p className="mt-2 text-center text-[12px] text-white/45">
+                          Billed ${formatUSD(card.billed)} yearly
+                        </p>
+                      ) : (
+                        <p className="mt-2 text-center text-[12px] text-white/45">
+                          Billed monthly
+                        </p>
+                      )}
+
+                      <div className="mt-6 space-y-3">
+                        <div className="rounded-xl bg-white/10 px-3 py-2 text-center text-[13px] font-semibold text-white">
+                          ★&nbsp;&nbsp;{formatUSD(card.credits)} credits
+                        </div>
+
+                        <div className="rounded-xl bg-white/10 px-3 py-2 text-center text-[13px] font-semibold text-white">
+                          {card.trainings} Influencer Training
+                          {card.trainings > 1 ? "s" : ""}
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => setPaywallOpen(true)}
+                        type="button"
+                        className={cx(
+                          "mt-6 w-full px-4 py-3 text-sm font-semibold",
+                          popular
+                            ? "gx-btn"
+                            : "rounded-full border border-white/12 bg-white/10 text-white transition hover:bg-white/15"
+                        )}
+                      >
+                        {popular ? <span>{card.button}</span> : card.button}
+                      </button>
+
+                      <div className="mt-6 h-px bg-white/10" />
+
+                      <ul className="mt-5 space-y-3 text-[13px] text-white/75">
+                        {card.features.map((f, i) => (
+                          <li key={i} className="flex items-start gap-3">
+                            <span
+                              className={cx(
+                                "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full",
+                                f.ok
+                                  ? "bg-white/10 text-sky-200"
+                                  : "bg-red-500/10 text-red-300"
+                              )}
+                            >
+                              {f.ok ? <Check size={14} /> : <X size={14} />}
+                            </span>
+                            <span className="min-w-0 break-words [overflow-wrap:anywhere]">
+                              {f.label}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div className="pointer-events-none h-8 w-full bg-gradient-to-b from-transparent to-black/40" />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="mt-6 text-center text-[11px] text-white/50">
+            Tip: Switch to <span className="text-white/70">Yearly</span> for a
+            lower monthly rate.
+          </div>
+        </section>
+
+        {/* FAQ */}
+        <section id="faq" className="mx-auto mt-14 max-w-3xl sm:mt-16 lg:mt-20">
+          <p className="text-center text-[11px] uppercase tracking-[0.24em] text-white/50">
+            FAQ
+          </p>
+          <h2 className="mt-2 text-center text-2xl font-semibold sm:text-3xl">
+            Everything you need to know
+          </h2>
+          <div className="mt-6 space-y-3">
+            <details className="group rounded-2xl border border-white/10 bg-white/5 p-4">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-sm font-semibold text-white/85">
+                Are AI influencers allowed on social platforms?
+                <span className="text-xs text-white/60 transition group-open:rotate-90">
+                  ❯
+                </span>
+              </summary>
+              <p className="mt-2 text-sm text-white/65">
+                Most platforms allow AI-generated content as long as you follow
+                their guidelines. Avoid impersonation and be transparent where
+                needed.
+              </p>
+            </details>
+
+            <details className="group rounded-2xl border border-white/10 bg-white/5 p-4">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-sm font-semibold text-white/85">
+                Do I keep full rights to my AI influencer?
+                <span className="text-xs text-white/60 transition group-open:rotate-90">
+                  ❯
+                </span>
+              </summary>
+              <p className="mt-2 text-sm text-white/65">
+                Yes — you control your training data and can use your AI model
+                commercially within platform and policy guidelines.
+              </p>
+            </details>
+
+            <details className="group rounded-2xl border border-white/10 bg-white/5 p-4">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-sm font-semibold text-white/85">
+                How is Gerox different from other AI model providers?
+                <span className="text-xs text-white/60 transition group-open:rotate-90">
+                  ❯
+                </span>
+              </summary>
+              <p className="mt-2 text-sm text-white/65">
+                Most tools are built for generic avatars. Gerox is tuned for
+                realistic AI influencers: stronger identity match, better
+                engagement and creator-grade control.
+              </p>
+            </details>
           </div>
         </section>
       </main>
@@ -1039,44 +1528,6 @@ export default function IntroPageClient() {
         isAuthed={isAuthed}
         onLogin={goLogin}
       />
-
-      {/* loader css (shared) */}
-      <style jsx>{`
-        .loader-ring {
-          border-radius: 9999px;
-          border: 2px solid rgba(255, 255, 255, 0.12);
-          border-top-color: rgba(255, 255, 255, 0.8);
-          animation: spin 0.9s linear infinite;
-        }
-        .skeleton {
-          position: relative;
-          background: rgba(255, 255, 255, 0.06);
-          overflow: hidden;
-        }
-        .skeleton::after {
-          content: "";
-          position: absolute;
-          inset: 0;
-          transform: translateX(-100%);
-          background: linear-gradient(
-            90deg,
-            transparent,
-            rgba(255, 255, 255, 0.16),
-            transparent
-          );
-          animation: shimmer 1.2s ease-in-out infinite;
-        }
-        @keyframes spin {
-          to {
-            transform: rotate(360deg);
-          }
-        }
-        @keyframes shimmer {
-          100% {
-            transform: translateX(100%);
-          }
-        }
-      `}</style>
     </div>
   );
 }

@@ -1,1716 +1,1740 @@
-// app/workspace/page.tsx
 "use client";
-import dynamic from "next/dynamic";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import {
+
+import React, {
+  memo,
+  startTransition,
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
-  memo,
 } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 import {
-  Trash2,
-  Maximize2,
-  Download,
-  Lock,
-  Sparkles,
-  X,
+  ArrowLeft,
   ArrowRight,
+  BadgeCheck,
+  Check,
+  ChevronRight,
+  Sparkles,
+  Store,
+  Upload,
+  Wand2,
+  Globe,
+  Instagram,
+  Youtube,
+  Film,
+  Camera,
+  BriefcaseBusiness,
+  Dumbbell,
+  Palette,
+  Gamepad2,
+  X,
+  Lock,
   CreditCard,
-  ShieldCheck,
+  Crown,
 } from "lucide-react";
-import AuthWall from "@/app/components/AuthWall";
-import CreditsBar from "@/app/components/CreditsBar";
-import ProfileAvatar from "@/app/components/ProfileAvatar";
-import StartGenerationButton from "@/app/components/StartGenerationButton";
-import RegenButton from "@/app/components/RegenButton";
-import { getArtThemes, prototypeFaces } from "@/app/config/artThemes";
-import {
-  loadResults,
-  saveResult,
-  clearResults,
-  ResultItem,
-  deleteResult,
-} from "@/app/lib/db";
 
-/**
- * ✅ Component splitting (faster initial load)
- * - AIGenerateTab is heavy => load only when tab is opened
- * - ZoomViewer only when fullscreen is used
- */
-const AIGenerateTab = dynamic(() => import("@/app/components/AIGenerateTab"), {
-  ssr: false,
-  loading: () => (
-    <div className="rounded-3xl border border-white/10 bg-black/25 p-6 text-sm text-white/60">
-      Loading generator…
-    </div>
-  ),
-});
-const ZoomViewer = dynamic(
-  () => import("@/app/components/fullscreen/ZoomViewer"),
-  {
-    ssr: false,
-    loading: () => null,
-  }
-);
+type GoalKey = "business" | "content" | "agency" | "tech";
+type ExperienceKey = "new" | "some";
+type CreateMethodKey = "market" | "custom";
+type VisualStyleKey = "ultra" | "stylized" | "fantasy" | "anime";
+type FrequencyKey = "daily" | "3x" | "weekly" | "occasionally";
 
-/* ---------------------------------------------------
- WORKSPACE PAGE (your existing logic preserved)
----------------------------------------------------- */
-type QueuePhase = "idle" | "queued" | "generating";
-
-function absoluteUrl(path: string) {
-  if (!path) return "";
-  if (
-    path.startsWith("data:") ||
-    path.startsWith("http://") ||
-    path.startsWith("https://") ||
-    path.startsWith("file://")
-  ) {
-    return path;
-  }
-  if (typeof window !== "undefined") {
-    return `${window.location.origin}${path}`;
-  }
-  return path;
-}
-
-function shuffleAnyArray<T>(arr: T[]) {
-  const a = [...(Array.isArray(arr) ? arr : [])];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
-function stripDataPrefix(b64: string) {
-  if (!b64) return b64;
-  return b64.replace(/^data:image\/[a-zA-Z0-9+.-]+;base64,/, "");
-}
-
-function dataURLtoFile(dataurl: string, filename = "file.jpg") {
-  const arr = dataurl.split(",");
-  const mime = arr[0].match(/:(.*?);/)?.[1] || "image/jpeg";
-  const bstr = atob(arr[1]);
-  let n = bstr.length;
-  const u8arr = new Uint8Array(n);
-  while (n--) u8arr[n] = bstr.charCodeAt(n);
-  return new File([u8arr], filename, { type: mime });
-}
-
-// ✅ NEW: accept either imageUrl OR image(base64)
-function pickFinalImageSrcFromBackend(data: any): string | null {
-  const url = data?.imageUrl || data?.image_url || data?.url;
-  if (url && typeof url === "string") return url;
-  const b64 = data?.image;
-  if (b64 && typeof b64 === "string") {
-    let cleanBase64 = b64.replace(/^"|"$/g, "").replace(/\n/g, "").trim();
-    const mime = data?.mime || "image/png";
-    return `data:${mime};base64,${cleanBase64}`;
-  }
-  return null;
-}
-
-const MotionCard = memo(function MotionCard({
-  children,
-  className,
-  delay = 0,
-}: {
-  children: React.ReactNode;
-  className: string;
-  delay?: number;
-}) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10, filter: "blur(6px)" }}
-      animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-      transition={{ duration: 0.35, ease: "easeOut", delay }}
-      className={className}
-    >
-      {children}
-    </motion.div>
-  );
-});
-
-function formatEta(seconds: number) {
-  const s = Math.max(0, Math.floor(seconds));
-  const mm = Math.floor(s / 60);
-  const ss = s % 60;
-  if (mm <= 0) return `${ss}s`;
-  return `${mm}m ${ss}s`;
-}
-
-/** ✅ Robust ext detection for signed URLs like .../file.png?X-Amz-... */
-function guessExtFromUrl(url: string) {
-  try {
-    if (url.startsWith("data:")) {
-      if (url.startsWith("data:image/jpeg")) return "jpg";
-      if (url.startsWith("data:image/webp")) return "webp";
-      if (url.startsWith("data:image/png")) return "png";
-      return "png";
-    }
-    const u = new URL(url);
-    const pathname = u.pathname || "";
-    const m = pathname.match(/\.([a-zA-Z0-9]+)$/);
-    const ext = (m?.[1] || "").toLowerCase();
-    if (ext) return ext;
-    return "png";
-  } catch {
-    const clean = url.split("?")[0] || url;
-    const m = clean.match(/\.([a-zA-Z0-9]+)$/);
-    return (m?.[1] || "png").toLowerCase();
-  }
-}
-
-const clamp2: React.CSSProperties = {
-  display: "-webkit-box",
-  WebkitLineClamp: 2 as any,
-  WebkitBoxOrient: "vertical" as any,
-  overflow: "hidden",
+type Influencer = {
+  id: string;
+  name: string;
+  subtitle: string;
+  src: string;
+  badge?: string;
+  claimed?: string;
 };
 
-export default function WorkspacePage() {
-  const router = useRouter();
-  const [tab, setTab] = useState<"face-swap" | "ai-generate">("face-swap");
-  const [fullscreen, setFullscreen] = useState(false);
-  const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
-  const [progress, setProgress] = useState(0);
+type BillingKey = "monthly" | "yearly";
+type PlanKey = "basic" | "pro" | "elite";
 
-  // SOURCE (uploaded face)
-  const [source, setSource] = useState<any>(null);
-  // TARGET (theme preview)
-  const [target, setTarget] = useState<any>(null);
+function cn(...a: Array<string | false | undefined | null>) {
+  return a.filter(Boolean).join(" ");
+}
 
-  const aiGenerateRef = useRef<any>(null);
-  const [resultImage, setResultImage] = useState<string | null>(null);
-  const [selectedThemeId, setSelectedThemeId] = useState<number | null>(null);
-  const [copiedThemeId, setCopiedThemeId] = useState<number | null>(null);
-  const [heroThemes, setHeroThemes] = useState<any[]>([]);
-  const [webcamOpen, setWebcamOpen] = useState(false);
-  const [prompt, setPrompt] = useState(
-    "A cinematic neon portrait with dramatic lighting"
+/**
+ * GX Gradient (matches your screenshot CSS)
+ * Uses the exact background + glossy overlay + border vibe.
+ */
+function GradientButton({
+  children,
+  className,
+  innerClassName,
+  disabled,
+  ...props
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  innerClassName?: string;
+}) {
+  return (
+    <button
+      {...props}
+      disabled={disabled}
+      className={cn(
+        "gx-btn group select-none",
+        "focus:outline-none focus-visible:ring-2 focus-visible:ring-white/35 focus-visible:ring-offset-0",
+        disabled ? "cursor-not-allowed opacity-50" : "hover:brightness-[1.06]",
+        className
+      )}
+    >
+      <span
+        className={cn(
+          "inline-flex w-full items-center justify-center gap-2 px-6 py-2.5 text-sm font-semibold",
+          innerClassName
+        )}
+      >
+        {children}
+      </span>
+    </button>
   );
-  const [isProcessing, setProcessing] = useState(false);
-  const [history, setHistory] = useState<any[]>([]);
-  const [jobs, setJobs] = useState<any[]>([]);
-  const [isPaywallOpen, setPaywallOpen] = useState(false);
+}
 
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [results, setResults] = useState<ResultItem[]>([]);
-  const [visibleCount, setVisibleCount] = useState(12);
-  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+function GradientOutlineButton({
+  children,
+  className,
+  innerClassName,
+  disabled,
+  ...props
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  innerClassName?: string;
+}) {
+  return (
+    <button
+      {...props}
+      disabled={disabled}
+      className={cn(
+        "gx-btn gx-btn-outline group select-none",
+        "focus:outline-none focus-visible:ring-2 focus-visible:ring-white/35 focus-visible:ring-offset-0",
+        disabled ? "cursor-not-allowed opacity-50" : "hover:brightness-[1.06]",
+        className
+      )}
+    >
+      <span
+        className={cn(
+          "inline-flex w-full items-center justify-center gap-2 px-5 py-2.5 text-sm font-semibold",
+          innerClassName
+        )}
+      >
+        {children}
+      </span>
+    </button>
+  );
+}
 
-  const [lastThemeImageIndex, setLastThemeImageIndex] = useState<
-    Record<number, number>
-  >({});
-  const [shuffleMap, setShuffleMap] = useState<Record<number, number[]>>({});
-  const [generatedImage, setGeneratedImage] = useState<any>(null);
+const BackgroundFX = memo(function BackgroundFX() {
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden">
+      <div className="absolute -top-72 left-1/2 h-[540px] w-[860px] -translate-x-1/2 rounded-full bg-indigo-500/22 blur-[110px] sm:h-[720px] sm:w-[1100px] sm:bg-indigo-500/28 sm:blur-[140px]" />
+      <div className="absolute -bottom-72 right-[-180px] h-[520px] w-[520px] rounded-full bg-sky-500/14 blur-[115px] sm:-bottom-80 sm:right-[-200px] sm:h-[720px] sm:w-[720px] sm:bg-sky-500/18 sm:blur-[150px]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.06),transparent_55%)]" />
+      <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.05]" />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/70" />
+    </div>
+  );
+});
 
-  // ✅ THEMES: FIXED (no artThemes export). We load themes via getArtThemes().
-  const [themes, setThemes] = useState<any[]>([]);
-  const [themesLoading, setThemesLoading] = useState(true);
+const StepDots = memo(function StepDots({
+  total,
+  current,
+}: {
+  total: number;
+  current: number;
+}) {
+  return (
+    <div className="flex items-center justify-center gap-2">
+      {Array.from({ length: total }).map((_, i) => {
+        const active = i === current;
+        return (
+          <span
+            key={i}
+            className={cn(
+              "h-2 w-2 rounded-full transition",
+              active ? "bg-white" : "bg-white/20"
+            )}
+          />
+        );
+      })}
+    </div>
+  );
+});
 
-  /* =========================================================
-   ✅ AUTH SOFT-LOCK (UNCHANGED)
-   ========================================================= */
-  const AUTH_ME_ENDPOINT = "/api/me";
-  const [authChecked, setAuthChecked] = useState(false);
-  const [authUser, setAuthUser] = useState<any>(null);
-  const isAuthed = !!authUser;
+function CardSelect({
+  active,
+  title,
+  desc,
+  icon,
+  badge,
+  onClick,
+}: {
+  active: boolean;
+  title: string;
+  desc: string;
+  icon: React.ReactNode;
+  badge?: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "group relative w-full overflow-hidden rounded-3xl border p-5 text-left transition",
+        "bg-white/[0.04] hover:bg-white/[0.06]",
+        active
+          ? "border-indigo-300/60 shadow-[0_20px_80px_rgba(94,169,255,0.18)]"
+          : "border-white/10"
+      )}
+    >
+      <div className="pointer-events-none absolute inset-0 opacity-0 transition group-hover:opacity-100">
+        <div className="absolute -left-24 top-0 h-48 w-48 rounded-full bg-indigo-500/18 blur-[50px]" />
+        <div className="absolute -right-24 bottom-0 h-48 w-48 rounded-full bg-sky-500/14 blur-[60px]" />
+      </div>
 
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const res = await fetch(AUTH_ME_ENDPOINT, { cache: "no-store" });
-        const data = await res.json().catch(() => ({}));
-        if (!mounted) return;
-        setAuthUser(data?.user || null);
-      } catch {
-        if (!mounted) return;
-        setAuthUser(null);
-      } finally {
-        if (!mounted) return;
-        setAuthChecked(true);
-      }
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, []);
+      <div className="relative flex items-start gap-4">
+        <div
+          className={cn(
+            "flex h-12 w-12 items-center justify-center rounded-2xl border",
+            active
+              ? "border-indigo-300/50 bg-indigo-500/15 text-indigo-200"
+              : "border-white/10 bg-black/30 text-white/70"
+          )}
+        >
+          {icon}
+        </div>
 
-  const isLocked = authChecked && !authUser;
+        <div className="min-w-0">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="truncate text-base font-semibold text-white/90">
+                {title}
+              </p>
+              <p className="mt-1 text-sm text-white/55">{desc}</p>
+            </div>
 
-  const goLogin = () => {
-    window.location.href = "/login";
+            {badge ? (
+              <span className="shrink-0 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] text-white/70">
+                {badge}
+              </span>
+            ) : null}
+          </div>
+
+          <div className="mt-4 flex items-center gap-2 text-[11px] text-white/55">
+            <span
+              className={cn(
+                "inline-flex h-5 w-5 items-center justify-center rounded-full border",
+                active
+                  ? "border-indigo-300/50 bg-indigo-500/15 text-indigo-200"
+                  : "border-white/10 bg-white/5 text-white/50"
+              )}
+            >
+              {active ? <Check size={13} /> : null}
+            </span>
+            <span>{active ? "Selected" : "Tap to select"}</span>
+          </div>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+export default function Page() {
+  const TOTAL = 8;
+  const [step, setStep] = useState(0);
+
+  const [goal, setGoal] = useState<GoalKey>("business");
+  const [experience, setExperience] = useState<ExperienceKey>("new");
+  const [method, setMethod] = useState<CreateMethodKey>("market");
+  const [influencerId, setInfluencerId] = useState<string>("inf-2");
+
+  const [aiName, setAiName] = useState("Audrey");
+  const [aiNameManuallyEdited, setAiNameManuallyEdited] = useState(false);
+
+  const [niche, setNiche] = useState<
+    | "fashion"
+    | "fitness"
+    | "travel"
+    | "tech"
+    | "food"
+    | "art"
+    | "finance"
+    | "other"
+  >("fitness");
+
+  const [visualStyle, setVisualStyle] = useState<VisualStyleKey>("ultra");
+  const [platforms, setPlatforms] = useState({
+    instagram: true,
+    youtube: false,
+    tiktok: false,
+  });
+  const [frequency, setFrequency] = useState<FrequencyKey>("daily");
+  const [contentTypes, setContentTypes] = useState({
+    photos: true,
+    videos: false,
+  });
+
+  const [billing, setBilling] = useState<BillingKey>("monthly");
+  const [plan, setPlan] = useState<PlanKey>("pro");
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+
+  const CHECKOUT_URLS: Record<BillingKey, Record<PlanKey, string>> = {
+    monthly: {
+      basic: "https://example.com/checkout/basic-monthly",
+      pro: "https://example.com/checkout/pro-monthly",
+      elite: "https://example.com/checkout/elite-monthly",
+    },
+    yearly: {
+      basic: "https://example.com/checkout/basic-yearly",
+      pro: "https://example.com/checkout/pro-yearly",
+      elite: "https://example.com/checkout/elite-yearly",
+    },
   };
 
-  const requireAuth = (fn: () => void) => {
-    if (isLocked) {
-      goLogin();
-      return;
-    }
-    fn();
-  };
-
-  /* =========================================================
-   ✅ LOAD THEMES (FIXED)
-   ========================================================= */
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const out: any = await (getArtThemes as any)();
-        const next = Array.isArray(out)
-          ? out
-          : Array.isArray(out?.themes)
-          ? out.themes
-          : [];
-        if (!mounted) return;
-        setThemes(next);
-      } catch {
-        if (!mounted) return;
-        setThemes([]);
-      } finally {
-        if (!mounted) return;
-        setThemesLoading(false);
-      }
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  /* =========================================================
-   ✅ RESTORE RESULTS AFTER REFRESH (UNCHANGED)
-   ========================================================= */
-  useEffect(() => {
-    (async () => {
-      const dbResults = await loadResults();
-      let localResults: any[] = [];
-      try {
-        const raw = localStorage.getItem("mitux_jobs_results");
-        const parsed = raw ? JSON.parse(raw) : [];
-        localResults = Array.isArray(parsed) ? parsed : [];
-      } catch (e) {
-        console.warn("Failed to restore local results:", e);
-      }
-      const map = new Map<string, any>();
-      for (const item of localResults) {
-        if (item?.id) map.set(item.id, item);
-      }
-      for (const item of dbResults as any[]) {
-        if (item?.id && !map.has(item.id)) map.set(item.id, item);
-      }
-      setResults(Array.from(map.values()));
-    })();
-  }, []);
-
-  useEffect(() => {
-    if (!loadMoreRef.current) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          setVisibleCount((prev) => prev + 12);
-        }
-      },
-      { rootMargin: "200px" }
-    );
-    observer.observe(loadMoreRef.current);
-    return () => observer.disconnect();
-  }, []);
-
-  async function toBase64(file: File): Promise<string> {
-    return await new Promise((resolve, reject) => {
-      try {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      } catch (e) {
-        reject(e);
-      }
-    });
-  }
-
-  /**
-   * ✅ FIXED DOWNLOAD:
-   * - For cross-origin signed URLs (Cloudflare R2), browser won't allow forced download.
-   * - So we download via SAME-ORIGIN proxy: /api/download?url=...
-   * - That route sets Content-Disposition: attachment.
-   */
-  async function downloadResult(item: any) {
-    if (isLocked) return goLogin();
-    const url = item?.url;
-    if (!url) return;
-
-    const ext = guessExtFromUrl(url);
-    const filename =
-      item?.meta?.type === "ai-generate"
-        ? `ai-${item.id}.${ext}`
-        : `theme-${item.id}.${ext}`;
-
-    try {
-      if (url.startsWith("data:")) {
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        return;
-      }
-
-      const proxyUrl = `/api/download?url=${encodeURIComponent(
-        url
-      )}&filename=${encodeURIComponent(filename)}`;
-      const res = await fetch(proxyUrl, { cache: "no-store" });
-      if (!res.ok) throw new Error("proxy fetch failed");
-
-      const blob = await res.blob();
-      const blobUrl = URL.createObjectURL(blob);
-
-      const a = document.createElement("a");
-      a.href = blobUrl;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 1500);
-    } catch (e) {
-      console.warn("Download failed. Opening image instead.", e);
-      window.open(url, "_blank", "noopener,noreferrer");
-    }
-  }
-
-  /* ---------------------------------------------------
-   ✅ RESTORE SELECTED THEME FROM LOCAL STORAGE (UNCHANGED behavior)
-   ---------------------------------------------------- */
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      const saved = window.localStorage.getItem("mitux_selected_theme");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed?.id) setSelectedThemeId(parsed.id);
-        if (parsed?.imageUrl) {
-          setTarget({
-            file: null,
-            preview: absoluteUrl(parsed.imageUrl),
-            themeId: parsed.id,
-          });
-        }
-      }
-    } catch (e) {
-      console.error("Theme restore (target) error:", e);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (themesLoading) return;
-    if (!Array.isArray(themes)) return;
-    try {
-      const saved =
-        typeof window !== "undefined"
-          ? window.localStorage.getItem("mitux_selected_theme")
-          : null;
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        const selected = themes.find((t: any) => t?.id === parsed?.id) || null;
-        const others = themes
-          .filter((t: any) => t?.id !== parsed?.id)
-          .sort(() => Math.random() - 0.5)
-          .slice(0, 3);
-        const next = [selected, ...others].filter(Boolean);
-        setHeroThemes(next.length ? next : themes.slice(0, 4));
-        return;
-      }
-      const shuffled = shuffleAnyArray(themes);
-      setHeroThemes(shuffled.slice(0, 4));
-    } catch (e) {
-      console.error("Theme restore (heroThemes) error:", e);
-      setHeroThemes(Array.isArray(themes) ? themes.slice(0, 4) : []);
-    }
-  }, [themesLoading, themes]);
-
-  /* ---------------------------------------------------
-   SELECT THEME (UNCHANGED behavior)
-   ---------------------------------------------------- */
-  const handleThemeSelect = (themeId: number) => {
-    if (isLocked) return goLogin();
-    const theme = (Array.isArray(themes) ? themes : []).find(
-      (t: any) => t?.id === themeId
-    );
-    if (!theme) return;
-
-    const raw =
-      theme.imageUrls?.[
-        Math.floor(Math.random() * (theme.imageUrls?.length || 1))
-      ];
-    const abs = encodeURI(raw || "");
-
-    setTarget({ file: null, preview: abs, themeId });
-    setSelectedThemeId(themeId);
-    setCopiedThemeId(themeId);
-
-    window.localStorage.setItem(
-      "mitux_selected_theme",
-      JSON.stringify({ id: themeId, imageUrl: abs })
-    );
-
-    const label = theme.label || "Mitux AI Theme";
-    navigator.clipboard?.writeText(label).catch(() => {});
-    setTimeout(() => {
-      setCopiedThemeId((v) => (v === themeId ? null : v));
-    }, 1500);
-  };
-
-  /* ---------------------------------------------------
-   FACE SWAP (UNCHANGED logic)
-   ---------------------------------------------------- */
-  const urlToBase64 = async (url: string) => {
-    const res = await fetch(url);
-    const blob = await res.blob();
-    return await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-  };
-
-  function randomizeThemeTargetSafe() {
-    if (isLocked) {
-      goLogin();
-      return Promise.resolve();
-    }
-    return new Promise<void>((resolve) => {
-      if (!selectedThemeId) return resolve();
-      const theme = (Array.isArray(themes) ? themes : []).find(
-        (t: any) => t?.id === selectedThemeId
-      );
-      if (!theme) return resolve();
-
-      const randomImg =
-        theme.imageUrls?.[
-          Math.floor(Math.random() * (theme.imageUrls?.length || 1))
-        ];
-      const encoded = encodeURI(randomImg || "");
-
-      setTarget({
-        file: null,
-        preview: encoded,
-        themeId: selectedThemeId,
-      });
-
-      window.localStorage.setItem(
-        "mitux_selected_theme",
-        JSON.stringify({ id: selectedThemeId, imageUrl: encoded })
-      );
-
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => resolve());
-      });
-    });
-  }
-
-  async function startFaceSwap() {
-    if (isLocked) return goLogin();
-    console.log("🚀 startFaceSwap CALLED");
-    let interval: any = null;
-
-    try {
-      if (!source) return alert("Upload your face photo.");
-      if (!selectedThemeId) return alert("Select a theme.");
-
-      const theme = (Array.isArray(themes) ? themes : []).find(
-        (t: any) => t?.id === selectedThemeId
-      );
-      if (!theme) return alert("Invalid theme selected.");
-
-      const theme_name = theme.folder;
-
-      setProcessing(true);
-      setProgress(0);
-
-      const placeholderId = crypto.randomUUID();
-      setResults((prev) => [
-        { id: placeholderId, url: null, isLoading: true } as any,
-        ...(Array.isArray(prev) ? prev : []),
-      ]);
-
-      let p = 0;
-      interval = setInterval(() => {
-        p += Math.random() * 6;
-        if (p >= 90) p = 90;
-        setProgress(Math.floor(p));
-      }, 150);
-
-      let sourceFile: File | null = null;
-      try {
-        if (source.file) {
-          sourceFile = source.file;
-        } else if (source.preview?.startsWith("data:")) {
-          sourceFile = dataURLtoFile(source.preview, "source.jpg");
-        } else if (source.preview?.startsWith("http")) {
-          const blob = await fetch(source.preview).then((r) => r.blob());
-          sourceFile = new File([blob], "source.jpg", { type: blob.type });
-        }
-      } catch (e) {
-        console.error("❌ Failed converting preview to file", e);
-      }
-
-      if (!sourceFile) {
-        if (interval) clearInterval(interval);
-        setProcessing(false);
-        return alert("Invalid source image.");
-      }
-
-      const form = new FormData();
-      form.append("source_img", sourceFile);
-      form.append("theme_name", theme_name);
-
-      const res = await fetch("/api/faceswap", {
-        method: "POST",
-        body: form,
-      });
-
-      const raw = await res.text();
-      console.log("📦 RAW backend response:", raw);
-
-      let data: any;
-      try {
-        data = JSON.parse(raw);
-      } catch (e) {
-        console.error("❌ Backend JSON parse failed", raw);
-        throw new Error("Invalid JSON from backend");
-      }
-
-      if (!res.ok) {
-        console.error("Faceswap failed:", data);
-        throw new Error(data?.error || data?.detail || "Backend error");
-      }
-
-      const finalSrc = pickFinalImageSrcFromBackend(data);
-      if (!finalSrc) {
-        console.error("Faceswap response missing image:", data);
-        throw new Error("Backend returned no image");
-      }
-
-      const finalItem: any = {
-        id: crypto.randomUUID(),
-        url: finalSrc,
-        createdAt: Date.now(),
-        meta: {
-          type: "Theme-gen",
-          gender: data?.gender,
-          hair: data?.hair,
-          target_used: data?.used_target ?? data?.target_used,
-          theme: data?.theme ?? data?.resolved_theme ?? theme_name,
-          size: data?.result_size,
-          similarity: data?.similarity,
-          mime: data?.mime,
-        },
-      };
-
-      await saveResult(finalItem);
-      setResults((prev) =>
-        (Array.isArray(prev) ? prev : []).map((x: any) =>
-          x.id === placeholderId ? finalItem : x
-        )
-      );
-
-      setResultImage(finalSrc);
-      setProgress(100);
-
-      if (interval) clearInterval(interval);
-      setProcessing(false);
-    } catch (err: any) {
-      console.error("🔥 FACE SWAP ERROR:", err);
-      alert(err?.message || "Unknown error");
-      if (interval) clearInterval(interval);
-      setResults((prev) =>
-        (Array.isArray(prev) ? prev : []).filter((x: any) => x?.isLoading !== true)
-      );
-      setProcessing(false);
-    }
-  }
-
-  function handleRegen(item: any) {
-    if (isLocked) return goLogin();
-    if (!item?.meta) return;
-
-    if (item.meta.type === "Theme-gen") {
-      startFaceSwap();
-      return;
-    }
-
-    if (item.meta.type === "ai-generate") {
-      if (!item.meta.prompt) {
-        alert("No prompt found for this image.");
-        return;
-      }
-      if (!aiGenerateRef?.current) {
-        alert("AI generator not ready yet.");
-        return;
-      }
-
-      const regenPrompt = `
-${item.meta.prompt},
-same person,
-new pose,
-different camera angle,
-ultra realistic,
-high detail,
-sharp focus
-`
-        .replace(/\s+/g, " ")
-        .trim();
-
-      aiGenerateRef.current({
-        overridePrompt: regenPrompt,
-      });
-    }
-  }
-
-  /* ---------------------------------------------------
-   ✅ ADVANCED PAYWALL (unchanged logic)
-   ---------------------------------------------------- */
-  const packs = useMemo(
+  const influencers: Influencer[] = useMemo(
     () => [
-      { c: 2000, p: 19, name: "Starter", desc: "Try it out", badge: "" },
-      { c: 5000, p: 39, name: "Most popular", desc: "Best value", badge: "Most popular" },
-      { c: 12999, p: 79, name: "Pro", desc: "For power users", badge: "Best value" },
+      {
+        id: "inf-1",
+        name: "Adriana Perez",
+        subtitle: "Lifestyle • UGC-ready",
+        src: "/model/face-1.jpg",
+        badge: "V2",
+        claimed: "3/5 claimed",
+      },
+      {
+        id: "inf-2",
+        name: "Veronica Millsap",
+        subtitle: "Fitness • High engagement",
+        src: "/model/face-2.jpg",
+        badge: "V2",
+        claimed: "1/5 claimed",
+      },
+      {
+        id: "inf-3",
+        name: "Luna Williams",
+        subtitle: "Creator • Brand-friendly",
+        src: "/model/face-3.jpg",
+        badge: "V2",
+        claimed: "2/5 claimed",
+      },
+      {
+        id: "inf-4",
+        name: "Sofia Lane",
+        subtitle: "Travel • Aesthetic reels",
+        src: "/model/face-1.jpg",
+        badge: "V2",
+        claimed: "0/5 claimed",
+      },
+      {
+        id: "inf-5",
+        name: "Mia Carter",
+        subtitle: "Fashion • Studio look",
+        src: "/model/face-2.jpg",
+        badge: "V2",
+        claimed: "4/5 claimed",
+      },
+      {
+        id: "inf-6",
+        name: "Noah Reed",
+        subtitle: "Tech • Clean creator",
+        src: "/model/face-3.jpg",
+        badge: "V2",
+        claimed: "2/5 claimed",
+      },
     ],
     []
   );
 
-  const [selectedPackCredits, setSelectedPackCredits] = useState<number>(() => {
-    if (typeof window === "undefined") return 10;
-    try {
-      const raw = localStorage.getItem("mitux_selected_pack");
-      if (!raw) return 10;
-      const parsed = JSON.parse(raw);
-      return Number(parsed?.credits) || 10;
-    } catch {
-      return 10;
-    }
-  });
+  const selectedInfluencer =
+    influencers.find((x) => x.id === influencerId) ?? influencers[0];
 
   useEffect(() => {
-    if (!isPaywallOpen) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [isPaywallOpen]);
-
-  const persistSelectedPack = (credits: number) => {
-    const pack = packs.find((x) => x.c === credits) || packs[0];
-    try {
-      localStorage.setItem(
-        "mitux_selected_pack",
-        JSON.stringify({
-          credits: pack.c,
-          price: pack.p,
-          at: Date.now(),
-        })
-      );
-    } catch {}
-  };
-
-  const selectPack = (credits: number) => {
-    setSelectedPackCredits(credits);
-    persistSelectedPack(credits);
-  };
-
-  const continueToBilling = () => {
-    if (isLocked) return goLogin();
-    persistSelectedPack(selectedPackCredits);
-    setPaywallOpen(false);
-    router.push(`/billing?pack=${encodeURIComponent(String(selectedPackCredits))}`);
-  };
-
-  // ✅ helper: keep localStorage sync for results (stable)
-  const persistResultsToLocal = useCallback((arr: any[]) => {
-    try {
-      const finals = (Array.isArray(arr) ? arr : []).filter((x) => x?.isLoading !== true);
-      localStorage.setItem("mitux_jobs_results", JSON.stringify(finals));
-    } catch (e) {
-      console.warn("Failed to persist results:", e);
+    if (!aiNameManuallyEdited && selectedInfluencer?.name) {
+      setAiName(selectedInfluencer.name);
     }
+  }, [selectedInfluencer, aiNameManuallyEdited]);
+
+  const next = useCallback(() => {
+    setStep((s) => Math.min(TOTAL - 1, s + 1));
+  }, []);
+  const back = useCallback(() => {
+    setStep((s) => Math.max(0, s - 1));
   }, []);
 
-  // ✅ prevent infinite loop + merge AI results into unified list
-  const areResultsSame = (a: any[], b: any[]) => {
-    if (a === b) return true;
-    if (!Array.isArray(a) || !Array.isArray(b)) return false;
-    if (a.length !== b.length) return false;
-    for (let i = 0; i < a.length; i++) {
-      const x = a[i];
-      const y = b[i];
-      if ((x?.id ?? "") !== (y?.id ?? "")) return false;
-      if ((x?.url ?? "") !== (y?.url ?? "")) return false;
-      if ((x?.isLoading ?? false) !== (y?.isLoading ?? false)) return false;
-    }
-    return true;
-  };
+  function Shell({
+    title,
+    subtitle,
+    children,
+    topPill,
+  }: {
+    title: string;
+    subtitle?: string;
+    children: React.ReactNode;
+    topPill?: string;
+  }) {
+    return (
+      <div className="mx-auto w-full max-w-6xl px-4 pb-28 pt-10 sm:px-6 sm:pt-12">
+        <div className="flex min-w-0 flex-col items-center">
+          <div className="flex min-w-0 flex-col items-center gap-3">
+            <StepDots total={TOTAL} current={step} />
+            <p className="text-[12px] text-white/50">
+              Step {step + 1} of {TOTAL}
+            </p>
 
-  const handleResultsChange = useCallback(
-    (updaterOrNext: any) => {
-      setResults((prevAll) => {
-        const safePrev = Array.isArray(prevAll) ? prevAll : [];
-        if (typeof updaterOrNext === "function") {
-          const maybeNext = updaterOrNext(safePrev);
-          const safeNext = Array.isArray(maybeNext) ? maybeNext : safePrev;
-          if (areResultsSame(safePrev, safeNext)) return safePrev;
-          persistResultsToLocal(safeNext);
-          return safeNext;
-        }
+            {topPill ? (
+              <span className="rounded-full border border-white/10 bg-white/5 px-4 py-1 text-[12px] text-white/80">
+                {topPill}
+              </span>
+            ) : null}
 
-        const incoming = Array.isArray(updaterOrNext) ? updaterOrNext : [];
-        const incomingIds = new Set(incoming.map((x: any) => x?.id).filter(Boolean));
+            <h1 className="mt-2 text-center text-[clamp(30px,5.2vw,64px)] font-semibold leading-[1.02] text-white">
+              {title}
+            </h1>
 
-        const kept = safePrev.filter((x: any) => {
-          if (x?.isLoading === true) return true;
-          const t = x?.meta?.type;
-          if (t === "ai-generate") return incomingIds.has(x?.id);
-          return true;
-        });
+            {subtitle ? (
+              <p className="max-w-2xl text-center text-sm text-white/60 sm:text-base">
+                {subtitle}
+              </p>
+            ) : null}
+          </div>
 
-        const map = new Map<string, any>();
-        for (const item of kept) if (item?.id) map.set(item.id, item);
-        for (const item of incoming) if (item?.id) map.set(item.id, item);
+          <div className="mt-10 w-full min-w-0">{children}</div>
+        </div>
+      </div>
+    );
+  }
 
-        const merged = Array.from(map.values()).sort(
-          (a: any, b: any) => (b?.createdAt ?? 0) - (a?.createdAt ?? 0)
-        );
+  function FooterNav() {
+    const isLast = step === TOTAL - 1;
 
-        if (areResultsSame(safePrev, merged)) return safePrev;
-        persistResultsToLocal(merged);
-        return merged;
-      });
-    },
-    [persistResultsToLocal]
-  );
+    return (
+      <div className="fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-black/35 backdrop-blur-[40px]">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
+          {step === 0 ? (
+            <button
+              type="button"
+              disabled
+              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 py-2.5 text-sm font-semibold text-white/35"
+            >
+              <ArrowLeft size={16} />
+              Back
+            </button>
+          ) : (
+            <GradientOutlineButton onClick={back} className="min-w-[112px]">
+              <ArrowLeft size={16} />
+              Back
+            </GradientOutlineButton>
+          )}
 
-  const handleResultGenerated = useCallback(
-    (item: any) => {
-      setResults((prev) => {
-        const safePrev = Array.isArray(prev) ? prev : [];
-        if (item?.__remove === true) {
-          const next = safePrev.filter((x: any) => x.id !== item.id);
-          persistResultsToLocal(next);
-          return next;
-        }
+          <div className="hidden items-center gap-2 text-[12px] text-white/60 sm:flex">
+            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
+              Step {step + 1} of {TOTAL}
+            </span>
+            <span className="text-white/35">•</span>
+            <span className="rounded-full border border-indigo-300/25 bg-indigo-500/10 px-3 py-1 text-indigo-200">
+              Fast setup
+            </span>
+          </div>
 
-        const idx = safePrev.findIndex((x: any) => x.id === item.id);
-        let nextArr: any[];
-        if (idx !== -1) {
-          const copy = [...safePrev];
-          copy[idx] = item;
-          nextArr = copy;
-        } else {
-          nextArr = [item, ...safePrev];
-        }
+          <GradientButton
+            type="button"
+            onClick={() => {
+              if (isLast) setCheckoutOpen(true);
+              else next();
+            }}
+            className="min-w-[175px]"
+            innerClassName="px-6 py-2.5"
+          >
+            {isLast
+              ? "Complete Purchase"
+              : step === TOTAL - 2
+              ? "Choose Plan"
+              : "Continue"}
+            <ArrowRight size={16} />
+          </GradientButton>
+        </div>
+      </div>
+    );
+  }
 
-        persistResultsToLocal(nextArr);
-        return nextArr;
-      });
-    },
-    [persistResultsToLocal]
-  );
+  const planMeta = useMemo(() => {
+    const monthly = {
+      basic: {
+        price: 15,
+        label: "Basic",
+        desc: "Starter credits",
+        highlight: false,
+      },
+      pro: { price: 29, label: "Pro", desc: "Most popular", highlight: true },
+      elite: {
+        price: 79,
+        label: "Elite",
+        desc: "Unlimited power",
+        highlight: false,
+      },
+    } as const;
 
-  const registerAIGenerate = useCallback((fn: any) => {
-    aiGenerateRef.current = fn;
+    const yearly = {
+      basic: {
+        price: 2.99,
+        label: "Basic",
+        desc: "Billed yearly",
+        highlight: false,
+      },
+      pro: { price: 7.99, label: "Pro", desc: "Best value", highlight: true },
+      elite: {
+        price: 15.99,
+        label: "Elite",
+        desc: "Premium tier",
+        highlight: false,
+      },
+    } as const;
+
+    return billing === "monthly" ? monthly : yearly;
+  }, [billing]);
+
+  const chosen = planMeta[plan];
+
+  const onSetBilling = useCallback((k: BillingKey) => {
+    startTransition(() => setBilling(k));
+  }, []);
+  const onSetPlan = useCallback((k: PlanKey) => {
+    startTransition(() => setPlan(k));
   }, []);
 
-  /* ---------------------------------------------------
-   ✅ NEW: Jobs-only processing UI + “Queue 3→2→1”
-   - NO whole-page overlay
-   - Only shows inside Jobs card
-   ---------------------------------------------------- */
-  const [queuePhase, setQueuePhase] = useState<QueuePhase>("idle");
-  const [queuePos, setQueuePos] = useState<number>(3);
-  const [startedAt, setStartedAt] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (!isProcessing) {
-      setQueuePhase("idle");
-      setQueuePos(3);
-      setStartedAt(null);
-      return;
-    }
-    if (!startedAt) setStartedAt(Date.now());
-    setQueuePhase("queued");
-    setQueuePos(3);
-  }, [isProcessing, startedAt]);
-
-  useEffect(() => {
-    if (!isProcessing) return;
-    if (progress >= 10) setQueuePhase("generating");
-    if (progress >= 100) setQueuePhase("idle");
-  }, [isProcessing, progress]);
-
-  useEffect(() => {
-    if (!isProcessing) return;
-    if (queuePhase !== "queued") return;
-    const t = setInterval(() => {
-      setQueuePos((p) => (p > 1 ? p - 1 : 1));
-    }, 2200);
-    return () => clearInterval(t);
-  }, [isProcessing, queuePhase]);
-
-  const etaSeconds = useMemo(() => {
-    if (!isProcessing || !startedAt) return 0;
-    const elapsed = (Date.now() - startedAt) / 1000;
-    const base = Math.max(8, 30 - Math.floor(progress / 4));
-    const sticky = progress >= 85 && progress < 100 ? 18 : 0;
-    return Math.max(3, Math.floor(base + sticky - elapsed / 2));
-  }, [isProcessing, startedAt, progress]);
-
-  /* ---------------------------------------------------
-   UI (Responsive fixes added; logic same)
-   ---------------------------------------------------- */
   return (
-    <AuthWall mode="soft">
-      <div className="relative min-h-screen bg-[#07070B] text-white pb-20 overflow-hidden">
-        {/* Ambient */}
-        <div className="absolute inset-0">
-          <div className="absolute -top-48 left-1/2 h-[560px] w-[980px] -translate-x-1/2 rounded-full bg-purple-600/20 blur-[140px]" />
-          <div className="absolute bottom-[-240px] right-[-140px] h-[560px] w-[560px] rounded-full bg-indigo-500/18 blur-[140px]" />
-          <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.04]" />
-          <div className="absolute inset-0 bg-gradient-to-b from-white/[0.04] via-transparent to-black/50" />
+    <div className="relative min-h-screen w-full overflow-x-hidden bg-[#05030a] text-white">
+      <BackgroundFX />
+
+      <div className="relative z-10 mx-auto flex w-full max-w-6xl min-w-0 items-center justify-between px-4 pt-4 sm:px-6">
+        <div className="flex min-w-0 items-center gap-3 text-[12px] text-white/55">
+          <span className="inline-flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-indigo-300" />
+            Final Setup
+          </span>
+          <ChevronRight size={14} className="text-white/30" />
+          <span className="truncate text-indigo-200">
+            {step === TOTAL - 1 ? "Choose Plan" : "Build your AI"}
+          </span>
         </div>
 
-        {/* ✅ Single container for navbar + workspace */}
-        <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pt-6">
-          {/* Top bar */}
-          <header className="relative z-10">
-            <MotionCard
-              className="rounded-3xl border border-white/10 bg-white/[0.05] backdrop-blur-xl shadow-[0_20px_80px_rgba(0,0,0,0.35)]"
-              delay={0.02}
-            >
-              <div className="flex flex-col gap-4 p-4 sm:p-5">
-                {/* Row 1 */}
-                <div className="flex items-center justify-between gap-3">
-                  {/* Brand */}
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="h-11 w-11 shrink-0 rounded-2xl overflow-hidden bg-white/10 border border-white/10 flex items-center justify-center">
-                      <img
-                        src="/logo.jpeg"
-                        alt="Gerox"
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="text-base font-semibold">Gerox</p>
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/10 border border-white/10 text-white/70">
-                          Workspace
-                        </span>
-                      </div>
-                      <p className="text-[12px] text-white/55 truncate">
-                        Trending Ai Themes · Private photoshoot
+        <div className="hidden items-center gap-2 sm:flex">
+          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] text-white/70">
+            Secure • Private
+          </span>
+          <span className="rounded-full border border-indigo-300/20 bg-indigo-500/10 px-3 py-1 text-[11px] text-indigo-200">
+            Optimized onboarding
+          </span>
+        </div>
+      </div>
+
+      <div className="relative z-10">
+        {step === 0 && (
+          <Shell
+            topPill="✨ 5-minute setup"
+            title="Create Your AI Influencer"
+            subtitle="Join thousands of creators building unique AI models — we’ll guide you through every step."
+          >
+            <div className="mx-auto max-w-4xl">
+              <div className="grid gap-4 sm:grid-cols-3">
+                {[
+                  { k: "5 min", v: "Setup time" },
+                  { k: "70+", v: "Ready models" },
+                  { k: "5K+", v: "Active creators" },
+                ].map((x) => (
+                  <div
+                    key={x.v}
+                    className="rounded-3xl border border-white/10 bg-white/[0.04] p-6 text-center shadow-[0_24px_90px_rgba(0,0,0,0.45)]"
+                  >
+                    <p className="text-3xl font-semibold">{x.k}</p>
+                    <p className="mt-2 text-sm text-white/55">{x.v}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-8 flex justify-center">
+                <GradientButton
+                  type="button"
+                  onClick={next}
+                  innerClassName="px-8 py-3"
+                >
+                  Start Creating{" "}
+                  <ArrowRight className="ml-2 inline" size={16} />
+                </GradientButton>
+              </div>
+            </div>
+          </Shell>
+        )}
+
+        {step === 1 && (
+          <Shell
+            title="What’s your goal?"
+            subtitle="Choose your path — we’ll tailor the setup for your workflow."
+          >
+            <div className="grid gap-4 md:grid-cols-2">
+              <CardSelect
+                active={goal === "business"}
+                title="Build a Business"
+                desc="Create and monetize AI influencers."
+                icon={<BriefcaseBusiness size={20} />}
+                onClick={() => setGoal("business")}
+              />
+              <CardSelect
+                active={goal === "content"}
+                title="Content Creation"
+                desc="Generate content for social media."
+                icon={<Palette size={20} />}
+                onClick={() => setGoal("content")}
+              />
+              <CardSelect
+                active={goal === "agency"}
+                title="Agency Services"
+                desc="Build AI models for clients."
+                icon={<Store size={20} />}
+                onClick={() => setGoal("agency")}
+              />
+              <CardSelect
+                active={goal === "tech"}
+                title="Explore Technology"
+                desc="Learn cutting-edge AI capabilities."
+                icon={<Gamepad2 size={20} />}
+                onClick={() => setGoal("tech")}
+              />
+            </div>
+
+            <div className="mt-10">
+              <p className="text-sm font-semibold text-white/80">
+                Your experience level
+              </p>
+              <div className="mt-3 grid gap-3">
+                <button
+                  type="button"
+                  onClick={() => setExperience("new")}
+                  className={cn(
+                    "rounded-3xl border p-5 text-left transition",
+                    experience === "new"
+                      ? "border-indigo-300/60 bg-indigo-500/10 shadow-[0_18px_70px_rgba(94,169,255,0.14)]"
+                      : "border-white/10 bg-white/[0.04] hover:bg-white/[0.06]"
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={cn(
+                        "flex h-6 w-6 items-center justify-center rounded-full border",
+                        experience === "new"
+                          ? "border-indigo-300/50 bg-indigo-500/15 text-indigo-200"
+                          : "border-white/10 bg-white/5 text-white/40"
+                      )}
+                    >
+                      {experience === "new" ? <Check size={14} /> : null}
+                    </span>
+                    <div>
+                      <p className="font-semibold">I’m new to AI content</p>
+                      <p className="mt-0.5 text-sm text-white/55">
+                        We’ll recommend the simplest flow.
                       </p>
                     </div>
                   </div>
+                </button>
 
-                  {/* Desktop actions */}
-                  <div className="hidden md:flex items-center gap-3">
-                    {isAuthed ? (
-                      <>
-                        <div className="hidden lg:block">
-                          <CreditsBar />
-                        </div>
-                        <motion.button
-                          whileTap={{ scale: 0.98 }}
-                          whileHover={{ scale: 1.01 }}
-                          onClick={() => setPaywallOpen(true)}
-                          className="px-4 py-2 rounded-2xl bg-white text-black font-semibold shadow hover:bg-gray-200 transition"
-                        >
-                          Buy Credits
-                        </motion.button>
-                        <ProfileAvatar />
-                      </>
-                    ) : (
-                      <motion.button
-                        whileTap={{ scale: 0.98 }}
-                        whileHover={{ scale: 1.01 }}
-                        onClick={goLogin}
-                        className="px-4 py-2 rounded-2xl bg-white/10 border border-white/15 text-white font-semibold hover:bg-white/15 transition"
-                      >
-                        Login
-                      </motion.button>
-                    )}
+                <button
+                  type="button"
+                  onClick={() => setExperience("some")}
+                  className={cn(
+                    "rounded-3xl border p-5 text-left transition",
+                    experience === "some"
+                      ? "border-indigo-300/60 bg-indigo-500/10 shadow-[0_18px_70px_rgba(94,169,255,0.14)]"
+                      : "border-white/10 bg-white/[0.04] hover:bg-white/[0.06]"
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={cn(
+                        "flex h-6 w-6 items-center justify-center rounded-full border",
+                        experience === "some"
+                          ? "border-indigo-300/50 bg-indigo-500/15 text-indigo-200"
+                          : "border-white/10 bg-white/5 text-white/40"
+                      )}
+                    >
+                      {experience === "some" ? <Check size={14} /> : null}
+                    </span>
+                    <div>
+                      <p className="font-semibold">
+                        I’ve created AI content before
+                      </p>
+                      <p className="mt-0.5 text-sm text-white/55">
+                        Show me more controls.
+                      </p>
+                    </div>
                   </div>
+                </button>
+              </div>
+            </div>
+          </Shell>
+        )}
 
-                  {/* Mobile top-right */}
-                  <div className="md:hidden shrink-0">
-                    {isAuthed ? (
-                      <ProfileAvatar />
-                    ) : (
-                      <motion.button
-                        whileTap={{ scale: 0.98 }}
-                        onClick={goLogin}
-                        className="px-4 py-2 rounded-2xl bg-white/10 border border-white/15 text-white font-semibold hover:bg-white/15 transition"
-                      >
-                        Login
-                      </motion.button>
+        {step === 2 && (
+          <Shell
+            title="Choose creation method"
+            subtitle="Pick the fastest route — you can switch later anytime."
+          >
+            <div className="grid gap-4">
+              <CardSelect
+                active={method === "market"}
+                title="Pick from Marketplace"
+                desc="Choose from professionally tuned models (instant results)."
+                icon={<Store size={20} />}
+                badge="RECOMMENDED"
+                onClick={() => setMethod("market")}
+              />
+              <CardSelect
+                active={method === "custom"}
+                title="Create a Custom Model"
+                desc="Upload your own images and build a unique influencer."
+                icon={<Upload size={20} />}
+                onClick={() => setMethod("custom")}
+              />
+            </div>
+
+            <div className="mt-6 rounded-3xl border border-white/10 bg-white/[0.03] p-5 text-sm text-white/60">
+              <span className="font-semibold text-white/80">Pro tip:</span>{" "}
+              Start with marketplace to validate your niche, then upgrade to
+              custom for maximum uniqueness.
+            </div>
+          </Shell>
+        )}
+
+        {step === 3 && (
+          <Shell
+            title="Pick your AI influencer"
+            subtitle="Select a high-performing base model — no training required for this path."
+          >
+            <div className="grid gap-4 md:grid-cols-3">
+              {influencers.map((inf) => {
+                const active = inf.id === influencerId;
+
+                return (
+                  <button
+                    key={inf.id}
+                    type="button"
+                    onClick={() => setInfluencerId(inf.id)}
+                    className={cn(
+                      "group relative overflow-hidden rounded-3xl border text-left",
+                      "bg-white/[0.03] transition-all duration-300",
+                      "focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300/60 focus-visible:ring-offset-0",
+                      "hover:-translate-y-1 hover:shadow-[0_34px_140px_rgba(0,0,0,0.6)]",
+                      active
+                        ? "border-indigo-300/70 shadow-[0_32px_150px_rgba(94,169,255,0.18)]"
+                        : "border-white/10 hover:border-white/25"
                     )}
+                  >
+                    {/* ✅ Selected tick badge (FIX) */}
+                    <div
+                      className={cn(
+                        "absolute right-4 top-4 z-20 flex h-9 w-9 items-center justify-center rounded-full border backdrop-blur-xl transition",
+                        active
+                          ? "border-white/20 bg-black/45 text-emerald-300 shadow-[0_12px_45px_rgba(0,0,0,0.45)]"
+                          : "border-white/12 bg-black/25 text-white/35 opacity-0 group-hover:opacity-100"
+                      )}
+                      aria-hidden="true"
+                    >
+                      {active ? <Check size={18} /> : <Check size={18} />}
+                    </div>
+
+                    <div className="relative">
+                      <div className="relative aspect-[4/5] w-full">
+                        <Image
+                          src={inf.src}
+                          alt={inf.name}
+                          fill
+                          sizes="(max-width: 768px) 100vw, 33vw"
+                          className={cn(
+                            "object-cover transition-transform duration-700 will-change-transform",
+                            active ? "scale-[1.02]" : "group-hover:scale-[1.06]"
+                          )}
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
+
+                        <div className="absolute bottom-0 left-0 right-0 p-4">
+                          <div
+                            className={cn(
+                              "rounded-2xl border px-4 py-3 backdrop-blur-xl transition-all duration-300",
+                              active
+                                ? "border-indigo-300/30 bg-black/50 shadow-[0_18px_70px_rgba(94,169,255,0.14)]"
+                                : "border-white/10 bg-black/35 group-hover:border-white/20 group-hover:bg-black/45"
+                            )}
+                          >
+                            <p className="text-sm font-semibold text-white/95">
+                              {inf.name}
+                            </p>
+                            <p className="mt-1 text-[12px] text-white/60">
+                              {inf.subtitle}
+                            </p>
+
+                            <div className="mt-3 flex items-center justify-between text-[11px] text-white/55">
+                              <span className="inline-flex items-center gap-2">
+                                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-300">
+                                  <BadgeCheck size={13} />
+                                </span>
+                                Tuned preset
+                              </span>
+
+                              <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-white/60">
+                                {inf.claimed}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </Shell>
+        )}
+
+        {step === 4 && (
+          <Shell
+            title="Create your AI persona"
+            subtitle="Give your influencer a unique identity so the content stays consistent."
+          >
+            <div className="rounded-[34px] border border-white/10 bg-white/[0.04] p-5 sm:p-7">
+              <div className="grid gap-6">
+                <div>
+                  <p className="text-sm font-semibold text-white/80">AI Name</p>
+                  <div className="mt-3 flex items-center gap-3 rounded-2xl border border-white/10 bg-black/30 px-4 py-3">
+                    <input
+                      value={aiName}
+                      onChange={(e) => {
+                        setAiNameManuallyEdited(true);
+                        setAiName(e.target.value);
+                      }}
+                      className="w-full bg-transparent text-sm text-white outline-none placeholder:text-white/35"
+                      placeholder="e.g. Audrey"
+                    />
+                    <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-indigo-300/20 bg-indigo-500/10 text-indigo-200">
+                      <Sparkles size={18} />
+                    </span>
                   </div>
                 </div>
 
-                {/* Row 2: Mobile actions */}
-                <div className="md:hidden w-full">
-                  {isAuthed ? (
-                    <div className="grid grid-cols-1 gap-3">
-                      <div className="w-full">
-                        <CreditsBar />
-                      </div>
-                      <motion.button
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => setPaywallOpen(true)}
-                        className="w-full py-3 rounded-2xl bg-white text-black font-semibold shadow hover:bg-gray-200 transition"
-                      >
-                        Buy Credits
-                      </motion.button>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 gap-3" />
-                  )}
+                <div>
+                  <p className="text-sm font-semibold text-white/80">
+                    Choose a niche
+                  </p>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-4">
+                    {[
+                      {
+                        k: "fashion",
+                        label: "Fashion & Beauty",
+                        icon: <Palette size={18} />,
+                      },
+                      {
+                        k: "fitness",
+                        label: "Fitness & Health",
+                        icon: <Dumbbell size={18} />,
+                      },
+                      {
+                        k: "travel",
+                        label: "Travel & Lifestyle",
+                        icon: <Globe size={18} />,
+                      },
+                      {
+                        k: "tech",
+                        label: "Gaming & Tech",
+                        icon: <Gamepad2 size={18} />,
+                      },
+                      {
+                        k: "food",
+                        label: "Food & Cooking",
+                        icon: <Sparkles size={18} />,
+                      },
+                      {
+                        k: "art",
+                        label: "Art & Creativity",
+                        icon: <Palette size={18} />,
+                      },
+                      {
+                        k: "finance",
+                        label: "Business & Finance",
+                        icon: <BriefcaseBusiness size={18} />,
+                      },
+                      {
+                        k: "other",
+                        label: "Something Else",
+                        icon: <Wand2 size={18} />,
+                      },
+                    ].map((x) => {
+                      const active = niche === (x.k as any);
+                      return (
+                        <button
+                          key={x.k}
+                          type="button"
+                          onClick={() => setNiche(x.k as any)}
+                          className={cn(
+                            "flex flex-col items-center justify-center gap-2 rounded-2xl border px-3 py-4 text-center transition",
+                            active
+                              ? "border-indigo-300/60 bg-indigo-500/10 text-white shadow-[0_18px_70px_rgba(94,169,255,0.12)]"
+                              : "border-white/10 bg-black/30 text-white/75 hover:bg-white/[0.05]"
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              "flex h-10 w-10 items-center justify-center rounded-xl border",
+                              active
+                                ? "border-indigo-300/40 bg-indigo-500/15 text-indigo-200"
+                                : "border-white/10 bg-white/5 text-white/60"
+                            )}
+                          >
+                            {x.icon}
+                          </span>
+                          <span className="text-[12px] font-semibold">
+                            {x.label}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-sm font-semibold text-white/80">
+                    Visual style
+                  </p>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    {[
+                      {
+                        k: "ultra",
+                        t: "Ultra Realistic",
+                        d: "Photoreal creator look",
+                      },
+                      {
+                        k: "stylized",
+                        t: "Stylized",
+                        d: "Creative art direction",
+                      },
+                      { k: "fantasy", t: "Fantasy", d: "Cinematic worlds" },
+                      {
+                        k: "anime",
+                        t: "Anime-inspired",
+                        d: "Clean illustrated vibe",
+                      },
+                    ].map((x) => {
+                      const active = visualStyle === (x.k as any);
+                      return (
+                        <button
+                          key={x.k}
+                          type="button"
+                          onClick={() => setVisualStyle(x.k as any)}
+                          className={cn(
+                            "rounded-3xl border bg-black/30 p-5 text-left transition",
+                            active
+                              ? "border-indigo-300/60 bg-indigo-500/10 shadow-[0_18px_80px_rgba(94,169,255,0.14)]"
+                              : "border-white/10 hover:bg-white/[0.05]"
+                          )}
+                        >
+                          <p className="font-semibold">{x.t}</p>
+                          <p className="mt-1 text-sm text-white/55">{x.d}</p>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
-              <div className="h-px bg-white/10" />
-            </MotionCard>
-          </header>
-
-          {/* content */}
-          <div className="mt-6 sm:mt-8">
-            <div className="grid grid-cols-12 gap-6">
-              {/* Sidebar */}
-              <aside className="col-span-12 md:col-span-4 space-y-6">
-                <MotionCard
-                  className="rounded-[28px] border border-white/10 bg-white/[0.05] backdrop-blur-xl p-6 shadow-[0_30px_120px_rgba(0,0,0,0.45)]"
-                  delay={0.06}
-                >
-                  <p className="text-[11px] uppercase tracking-[0.22em] text-white/45 mb-4">
-                    Workspace
-                  </p>
-                  <div className="flex gap-3 mb-6">
-                    <motion.button
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => setTab("face-swap")}
-                      className={`flex-1 py-2.5 text-sm rounded-2xl font-semibold transition border ${
-                        tab === "face-swap"
-                          ? "bg-white text-black border-transparent shadow"
-                          : "bg-black/20 text-white/80 border-white/10 hover:bg-white/5"
-                      }`}
-                    >
-                      Trending Art
-                    </motion.button>
-                    <motion.button
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => setTab("ai-generate")}
-                      className={`flex-1 py-2.5 text-sm rounded-2xl font-semibold transition border ${
-                        tab === "ai-generate"
-                          ? "bg-white text-black border-transparent shadow"
-                          : "bg-black/20 text-white/80 border-white/10 hover:bg-white/5"
-                      }`}
-                    >
-                      Private Photoshoot
-                    </motion.button>
-                  </div>
-
-                  {isLocked && (
-                    <div className="mt-4 rounded-2xl border border-white/10 bg-black/25 p-5">
-                      <div className="flex items-center gap-2 text-white/85">
-                        <Lock size={16} />
-                        <p className="text-sm font-semibold">Login required</p>
-                      </div>
-                      <p className="text-[12px] text-white/55 mt-1 leading-snug">
-                        Browse freely — but to generate, download, regen, or save
-                        history, please login.
-                      </p>
-                      <button
-                        onClick={goLogin}
-                        className="mt-3 w-full py-2.5 rounded-2xl bg-white text-black font-semibold text-sm hover:bg-gray-200 transition"
-                      >
-                        Login to unlock
-                      </button>
-                    </div>
-                  )}
-                </MotionCard>
-              </aside>
-
-              {/* Main panel */}
-              <section className="col-span-12 md:col-span-8 space-y-6">
-                {/* Generator card */}
-                <MotionCard
-                  className="relative rounded-[28px] border border-white/10 bg-white/[0.05] backdrop-blur-xl p-5 sm:p-6 shadow-[0_30px_120px_rgba(0,0,0,0.45)]"
-                  delay={0.09}
-                >
-                  {isLocked && (
-                    <div className="absolute inset-0 z-20 rounded-[28px] bg-black/55 backdrop-blur-[2px] flex items-center justify-center p-6">
-                      <div className="max-w-md w-full rounded-[24px] border border-white/10 bg-black/40 p-6 shadow-2xl">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center">
-                            <Lock size={18} />
-                          </div>
-                          <div>
-                            <p className="text-base font-semibold">
-                              Login to use Gerox
-                            </p>
-                            <p className="text-[12px] text-white/60">
-                              Themes are visible, generation is locked.
-                            </p>
-                          </div>
-                        </div>
-                        <div className="mt-4 flex gap-3">
-                          <button
-                            onClick={goLogin}
-                            className="flex-1 py-2.5 rounded-2xl bg-white text-black font-semibold hover:bg-gray-200 transition"
-                          >
-                            Login
-                          </button>
-                          <Link
-                            href="/themes"
-                            className="flex-1 py-2.5 rounded-2xl bg-white/5 border border-white/15 text-white/90 font-semibold hover:bg-white/10 transition text-center"
-                          >
-                            Browse themes
-                          </Link>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* ✅ Responsive header block (prevents overflow on mobile) */}
-                  <div className="flex flex-col sm:flex-row sm:items-center items-start justify-between gap-3 sm:gap-4 mb-4">
-                    <div className="min-w-0">
-                      <p className="text-[11px] uppercase tracking-[0.22em] text-white/45">
-                        STEP 1
-                      </p>
-                      <h2 className="mt-1 text-xl sm:text-2xl font-semibold leading-tight break-words">
-                        {tab === "face-swap"
-                          ? "Realistic Portrait Generator"
-                          : "Ultra Realistic Photoshoot"}
-                      </h2>
-                      <p className="mt-1 text-[12px] text-white/55 leading-snug break-words">
-                        {tab === "face-swap"
-                          ? "Pick a trending AI art theme, then drop your face into it with one click."
-                          : "High-quality AI image generation is available here (your existing logic stays)."}
-                      </p>
-                    </div>
-
-                    <div className="hidden md:flex items-center gap-2 text-[11px] px-3 py-1 rounded-full bg-black/25 border border-white/10 text-white/60 whitespace-nowrap">
-                      <Sparkles size={14} />
-                      Live preview
-                    </div>
-                  </div>
-
-                  {/* Face swap tab */}
-                  {tab === "face-swap" && (
-                    <div className="mt-4 space-y-6">
-                      {/* ✅ Responsive row: stacks on mobile */}
-                      <div className="flex flex-col sm:flex-row sm:items-center items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="text-base sm:text-lg font-semibold leading-tight break-words">
-                            Trending AI art themes
-                          </p>
-                          <p className="text-[12px] text-white/55 leading-snug break-words">
-                            Tap a theme or browse the full library.
-                          </p>
-                        </div>
-                        <Link
-                          href="/themes"
-                          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/15 text-[12px] text-white/85 hover:bg-white/10 transition whitespace-nowrap"
-                        >
-                          Browse more AI art <span aria-hidden>→</span>
-                        </Link>
-                      </div>
-
-                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                        {heroThemes.map((theme) => {
-                          if (!theme) return null;
-                          const isActive = selectedThemeId === theme.id;
-                          const isCopied = copiedThemeId === theme.id;
-                          return (
-                            <motion.button
-                              key={theme.id}
-                              type="button"
-                              whileTap={{ scale: 0.98 }}
-                              onClick={() => handleThemeSelect(theme.id)}
-                              className={[
-                                "relative overflow-hidden rounded-3xl cursor-pointer bg-black/25 border transition-all duration-300 group text-left",
-                                isActive
-                                  ? "border-purple-400/60 ring-2 ring-purple-500/40"
-                                  : "border-white/10 hover:border-white/20",
-                              ].join(" ")}
-                            >
-                              <img
-                                src={encodeURI(theme.imageUrls?.[0] || "")}
-                                alt={theme.label}
-                                className="w-full h-[210px] sm:h-[240px] object-cover transition-transform duration-500 group-hover:scale-105"
-                              />
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
-
-                              {isActive && (
-                                <div className="absolute top-3 left-3 z-20 w-8 h-8 rounded-full bg-purple-500/90 flex items-center justify-center text-white shadow-lg">
-                                  ✓
-                                </div>
-                              )}
-                              {isActive && isCopied && (
-                                <div className="absolute top-3 right-3 z-20 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/90 text-black font-semibold animate-pulse">
-                                  Selected
-                                </div>
-                              )}
-
-                              {/* ✅ Clamp text to avoid overflow on mobile */}
-                              <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 z-10">
-                                <h3
-                                  className="text-sm font-semibold text-white leading-snug"
-                                  style={clamp2}
-                                >
-                                  {theme.label}
-                                </h3>
-                                <p
-                                  className="text-xs text-white/60 mt-0.5 leading-snug"
-                                  style={clamp2}
-                                >
-                                  {theme.tag || "Creative imagination"}
-                                </p>
-                              </div>
-                            </motion.button>
-                          );
-                        })}
-                      </div>
-
-                      {/* Step 2 */}
-                      <div className="rounded-[28px] border border-white/10 bg-white/[0.05] backdrop-blur-xl p-5 sm:p-6 shadow-[0_30px_120px_rgba(0,0,0,0.45)]">
-                        <p className="text-[11px] uppercase tracking-[0.22em] text-white/45 mb-2">
-                          Step 2
-                        </p>
-                        <p className="text-lg sm:text-xl font-semibold leading-tight">
-                          Your photo
-                        </p>
-                        <p className="text-[12px] text-white/55 mt-1 leading-snug">
-                          Upload a face photo or pick a prototype.
-                        </p>
-
-                        {/* ✅ FIX: keep Step 2 in FLEX ROW even on mobile (smaller sizes, wrap safely) */}
-                        <div className="mt-5 flex items-center gap-3 flex-wrap">
-                          <label
-                            className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-full border border-white/18 bg-black/25 flex items-center justify-center overflow-hidden cursor-pointer group shrink-0"
-                            onClick={(e) => {
-                              if (isLocked) {
-                                e.preventDefault();
-                                goLogin();
-                              }
-                            }}
-                          >
-                            {source?.preview ? (
-                              <>
-                                <img
-                                  src={source.preview}
-                                  alt="Your photo"
-                                  className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform"
-                                />
-                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-[10px] font-medium text-white/90 transition-opacity">
-                                  Change
-                                </div>
-                              </>
-                            ) : (
-                              <div className="flex flex-col items-center justify-center gap-1 text-[10px] text-white/55">
-                                <span className="text-xl leading-none">＋</span>
-                                <span>Upload</span>
-                              </div>
-                            )}
-
-                            <input
-                              ref={fileInputRef}
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              disabled={isLocked}
-                              onChange={async (e) => {
-                                if (isLocked) return goLogin();
-                                const file = e.target.files?.[0];
-                                if (!file) return;
-                                try {
-                                  const dataUrl = await toBase64(file);
-                                  setSource({
-                                    file,
-                                    preview: dataUrl,
-                                    type: "base64",
-                                  });
-                                } catch (err) {
-                                  console.error("File -> base64 error:", err);
-                                  alert("Failed to read file. Try another photo.");
-                                } finally {
-                                  if (fileInputRef.current)
-                                    fileInputRef.current.value = "";
-                                }
-                              }}
-                            />
-                          </label>
-
-                          <div className="flex items-center gap-3 flex-wrap">
-                            {prototypeFaces.map((p: any) => (
-                              <motion.button
-                                key={p.id}
-                                type="button"
-                                whileTap={{ scale: 0.98 }}
-                                onClick={async () => {
-                                  if (isLocked) return goLogin();
-                                  try {
-                                    const imgBase64 = await urlToBase64(
-                                      absoluteUrl(p.imageUrl)
-                                    );
-                                    setSource({
-                                      file: null,
-                                      preview: imgBase64,
-                                      type: "base64",
-                                    });
-                                  } catch (err) {
-                                    console.error("URL -> base64 failed:", err);
-                                    alert(
-                                      "Failed to load prototype face. Try again."
-                                    );
-                                  }
-                                }}
-                                className="group relative w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border border-white/15 bg-black/25 hover:border-white/40 hover:scale-105 transition"
-                              >
-                                <img
-                                  src={p.imageUrl}
-                                  alt={p.label}
-                                  className="w-full h-full object-cover"
-                                />
-                                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-[9px] text-white/85 px-2 text-center">
-                                  {p.label}
-                                </div>
-                              </motion.button>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="mt-4 text-[11px] text-white/55 leading-snug break-words">
-                          <span className="text-white/80 font-semibold">
-                            Best results:
-                          </span>{" "}
-                          good lighting · face centered · minimal blur · no heavy
-                          filters
-                          {source && target && (
-                            <div className="mt-2 text-emerald-300 flex items-center gap-2">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                              Ready — press Start Image Generation
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Main action */}
-                      {isLocked ? (
-                        <button
-                          onClick={goLogin}
-                          className="w-full mt-2 py-4 rounded-2xl font-semibold bg-white/10 border border-white/15 text-white/80 hover:bg-white/15 transition flex items-center justify-center gap-2"
-                        >
-                          <Lock size={16} /> Login to Start Image Generation
-                        </button>
-                      ) : (
-                        <StartGenerationButton
-                          randomizeThemeTargetSafe={randomizeThemeTargetSafe}
-                          startFaceSwap={startFaceSwap}
-                          isProcessing={isProcessing}
-                          setProcessing={setProcessing}
-                        />
-                      )}
-                    </div>
-                  )}
-
-                  {/* AI generate tab */}
-                  {tab === "ai-generate" && (
-                    <div className="mt-4">
-                      {isLocked ? (
-                        <div className="mt-2 rounded-2xl border border-white/10 bg-black/25 p-6">
-                          <div className="flex items-center gap-2">
-                            <Lock size={16} />
-                            <p className="text-sm font-semibold">
-                              Private Photoshoot is locked
-                            </p>
-                          </div>
-                          <p className="text-[12px] text-white/60 mt-1">
-                            Login to generate, save results, regen, download, and
-                            keep history.
-                          </p>
-                          <button
-                            onClick={goLogin}
-                            className="mt-4 w-full py-3 rounded-2xl bg-white text-black font-semibold hover:bg-gray-200 transition"
-                          >
-                            Login to unlock
-                          </button>
-                        </div>
-                      ) : (
-                        <AIGenerateTab
-                          onResultGenerated={handleResultGenerated}
-                          registerAIGenerate={registerAIGenerate}
-                          setProcessing={setProcessing}
-                          setProgress={setProgress}
-                          onResultsChange={handleResultsChange}
-                        />
-                      )}
-                    </div>
-                  )}
-                </MotionCard>
-
-                {/* Jobs */}
-                <MotionCard
-                  className="rounded-[28px] border border-white/10 bg-white/[0.05] backdrop-blur-xl p-5 sm:p-6 shadow-[0_30px_120px_rgba(0,0,0,0.45)]"
-                  delay={0.12}
-                >
-                  <div className="flex items-center justify-between mb-4 gap-3">
-                    <div className="min-w-0">
-                      <p className="text-[11px] uppercase tracking-[0.22em] text-white/45">
-                        Library
-                      </p>
-                      <h3 className="text-lg sm:text-xl font-semibold mt-1">
-                        Jobs
-                      </h3>
-                      <p className="text-[12px] text-white/55 mt-1">
-                        Playground history
-                      </p>
-                    </div>
-                    <motion.button
-                      whileTap={{ scale: 0.98 }}
-                      onClick={async () => {
-                        if (isLocked) return goLogin();
-                        await clearResults();
-                        setResults([]);
-                        try {
-                          localStorage.removeItem("mitux_jobs_results");
-                        } catch {}
-                      }}
-                      className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold rounded-2xl bg-red-600 text-white hover:bg-red-500 transition shadow whitespace-nowrap"
-                    >
-                      Clear History
-                    </motion.button>
-                  </div>
-
-                  {/* ✅ Jobs-only processing UI (no whole page) */}
-                  <AnimatePresence>
-                    {isProcessing && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -8, filter: "blur(6px)" }}
-                        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                        exit={{ opacity: 0, y: -8, filter: "blur(6px)" }}
-                        transition={{ duration: 0.25, ease: "easeOut" }}
-                        className="mb-5 rounded-3xl border border-white/10 bg-black/25 p-4 sm:p-5"
-                      >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="min-w-0">
-                            <p className="text-[11px] uppercase tracking-[0.22em] text-white/55">
-                              Processing
-                            </p>
-                            <p className="text-base sm:text-lg font-semibold mt-1 break-words">
-                              {queuePhase === "queued"
-                                ? `Queued • position ${queuePos}`
-                                : "Generating… please keep this tab open"}
-                            </p>
-                            <p className="text-xs text-white/55 mt-1 break-words">
-                              You can continue browsing — results will appear in
-                              Jobs.
-                              {etaSeconds > 0 ? (
-                                <>
-                                  {" "}
-                                  <span className="text-white/75 font-semibold">
-                                    ETA ~ {formatEta(etaSeconds)}
-                                  </span>
-                                </>
-                              ) : null}
-                            </p>
-                          </div>
-                          <div className="text-white/70 text-sm font-semibold shrink-0">
-                            {Math.min(99, Math.max(0, progress))}%
-                          </div>
-                        </div>
-
-                        <div className="mt-3">
-                          <div className="w-full h-2.5 bg-white/10 rounded-full overflow-hidden">
-                            <div
-                              style={{ width: `${progress}%` }}
-                              className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 transition-all duration-200 shadow-[0_0_10px_rgba(168,85,247,0.55)]"
-                            />
-                          </div>
-                          <div className="mt-2 flex items-center justify-between text-[11px] text-white/55 gap-3">
-                            <span>
-                              {queuePhase === "queued"
-                                ? "Waiting for a worker…"
-                                : "Running model…"}
-                            </span>
-                            <span className="text-white/45 whitespace-nowrap">
-                              Don’t refresh
-                            </span>
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  {results.length > 0 && (
-                    <div className="mt-4 grid gap-6 grid-cols-[repeat(auto-fit,minmax(260px,1fr))]">
-                      {results.slice(0, visibleCount).map((item: any, index: number) =>
-                        item.isLoading ? (
-                          <div
-                            key={`${item.id || "loading"}-${index}`}
-                            className="animate-pulse bg-black/25 rounded-3xl border border-white/10 p-5 shadow-xl"
-                          >
-                            <div className="w-full flex justify-center mb-4">
-                              <div className="w-full max-w-[340px] aspect-[4/5] rounded-2xl border border-white/10 bg-white/5" />
-                            </div>
-                            <div className="flex items-center justify-center gap-3 mt-auto">
-                              <div className="h-9 w-24 rounded-2xl bg-white/5 border border-white/10" />
-                              <div className="h-9 w-24 rounded-2xl bg-white/5 border border-white/10" />
-                              <div className="h-9 w-10 rounded-2xl bg-white/5 border border-white/10" />
-                            </div>
-                          </div>
-                        ) : (
-                          <motion.div
-                            key={`${item.id}-${index}`}
-                            id={`card-${item.id}`}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.25, ease: "easeOut" }}
-                            className="bg-black/25 border border-white/10 rounded-3xl p-5 shadow-xl flex flex-col transition-all duration-300"
-                          >
-                            <div className="w-full flex justify-center mb-5">
-                              <div className="w-full max-w-[340px] aspect-[4/5] rounded-2xl overflow-hidden border border-white/10 shadow-md">
-                                <img
-                                  loading="lazy"
-                                  src={item.url}
-                                  alt="Result"
-                                  className="w-full h-full object-cover"
-                                />
-                              </div>
-                            </div>
-
-                            <div className="flex justify-center gap-3 pt-4 border-t border-white/10 flex-wrap">
-                              <RegenButton
-                                item={item}
-                                handleRegen={(x: any) => {
-                                  if (isLocked) return goLogin();
-                                  handleRegen(x);
-                                }}
-                              />
-
-                              <motion.button
-                                whileTap={{ scale: 0.98 }}
-                                onClick={() => {
-                                  setFullscreenImage(item.url);
-                                  setFullscreen(true);
-                                }}
-                                className="px-4 py-2 text-xs sm:text-sm bg-white/5 text-white rounded-2xl border border-white/10 shadow hover:bg-white/10 transition flex items-center gap-2"
-                              >
-                                <Maximize2 size={16} /> Full
-                              </motion.button>
-
-                              <motion.button
-                                whileTap={{ scale: 0.98 }}
-                                onClick={() => downloadResult(item)}
-                                className="p-2.5 rounded-2xl bg-emerald-500 text-black shadow hover:bg-emerald-400 transition"
-                                aria-label="Download"
-                              >
-                                <Download size={16} />
-                              </motion.button>
-
-                              <motion.button
-                                whileTap={{ scale: 0.98 }}
-                                onClick={async () => {
-                                  if (isLocked) return goLogin();
-                                  const el = document.getElementById(`card-${item.id}`);
-                                  if (el) el.classList.add("opacity-50");
-                                  setTimeout(async () => {
-                                    await deleteResult(item.id);
-                                    setResults((prev) =>
-                                      (Array.isArray(prev) ? prev : []).filter(
-                                        (r: any) => r.id !== item.id
-                                      )
-                                    );
-                                  }, 200);
-                                }}
-                                className="p-2.5 rounded-2xl bg-red-500/80 text-white shadow hover:bg-red-500 transition"
-                                aria-label="Delete"
-                              >
-                                <Trash2 size={16} />
-                              </motion.button>
-                            </div>
-                          </motion.div>
-                        )
-                      )}
-                    </div>
-                  )}
-
-                  <div ref={loadMoreRef} className="w-full h-10" />
-                </MotionCard>
-
-                {/* Fullscreen viewer */}
-                {fullscreen && fullscreenImage && (
-                  <ZoomViewer
-                    image={fullscreenImage}
-                    onClose={() => {
-                      setFullscreen(false);
-                      setFullscreenImage(null);
-                    }}
-                  />
-                )}
-              </section>
             </div>
-          </div>
-        </main>
+          </Shell>
+        )}
 
-        {/* ✅ ADVANCED PAYWALL MODAL (unchanged, kept) */}
-        {isPaywallOpen && (
-          <div
-            className="fixed inset-0 z-[999] flex items-end sm:items-center justify-center"
-            role="dialog"
-            aria-modal="true"
+        {step === 5 && (
+          <Shell
+            title="Choose your strategy"
+            subtitle="Tell us how you want to grow — we’ll optimize recommendations."
           >
-            <div
-              className="absolute inset-0 bg-black/70 backdrop-blur-[2px]"
-              onClick={() => setPaywallOpen(false)}
-            />
-            <div
-              className={[
-                "relative w-full sm:max-w-3xl",
-                "sm:rounded-[28px] rounded-t-[28px]",
-                "border border-white/10 bg-[#0B0B10]/90 backdrop-blur-xl",
-                "shadow-[0_40px_140px_rgba(0,0,0,0.65)]",
-                "max-h-[88vh] sm:max-h-[85vh]",
-                "overflow-y-auto overscroll-contain",
-                "touch-pan-y",
-              ].join(" ")}
-            >
-              <div className="sticky top-0 z-10 bg-[#0B0B10]/85 backdrop-blur-xl border-b border-white/10">
-                <div className="p-4 sm:p-6 flex items-start justify-between gap-4">
-                  <div className="min-w-0">
-                    <div className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-white/55">
-                      <ShieldCheck size={14} />
-                      Secure checkout
-                    </div>
-                    <h3 className="mt-1 text-xl sm:text-2xl font-semibold">
-                      Buy credits
-                    </h3>
-                    <p className="text-[12px] sm:text-sm text-white/60 mt-1">
-                      Credits are used for image generation and re-generation.
+            <div className="rounded-[34px] border border-white/10 bg-white/[0.04] p-5 sm:p-7">
+              <div className="grid gap-7">
+                <div>
+                  <p className="text-sm font-semibold text-white/80">
+                    Select platforms
+                  </p>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    {[
+                      {
+                        k: "instagram",
+                        label: "Instagram",
+                        icon: <Instagram size={20} />,
+                      },
+                      {
+                        k: "youtube",
+                        label: "YouTube",
+                        icon: <Youtube size={20} />,
+                      },
+                      { k: "tiktok", label: "TikTok", icon: <Film size={20} /> },
+                    ].map((x) => {
+                      const active = (platforms as any)[x.k];
+                      return (
+                        <button
+                          key={x.k}
+                          type="button"
+                          onClick={() =>
+                            setPlatforms((p) => ({ ...p, [x.k]: !active }))
+                          }
+                          className={cn(
+                            "flex items-center justify-between rounded-3xl border px-5 py-4 transition",
+                            active
+                              ? "border-indigo-300/60 bg-indigo-500/10 shadow-[0_16px_70px_rgba(94,169,255,0.12)]"
+                              : "border-white/10 bg-black/30 hover:bg-white/[0.05]"
+                          )}
+                        >
+                          <span className="inline-flex items-center gap-3">
+                            <span
+                              className={cn(
+                                "flex h-11 w-11 items-center justify-center rounded-2xl border",
+                                active
+                                  ? "border-indigo-300/40 bg-indigo-500/15 text-indigo-200"
+                                  : "border-white/10 bg-white/5 text-white/60"
+                              )}
+                            >
+                              {x.icon}
+                            </span>
+                            <span className="font-semibold">{x.label}</span>
+                          </span>
+
+                          <span
+                            className={cn(
+                              "flex h-7 w-7 items-center justify-center rounded-full border",
+                              active
+                                ? "border-indigo-300/50 bg-indigo-500/15 text-indigo-200"
+                                : "border-white/10 bg-white/5 text-white/35"
+                            )}
+                          >
+                            {active ? <Check size={14} /> : null}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-sm font-semibold text-white/80">
+                    Posting frequency
+                  </p>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    {[
+                      { k: "daily", t: "Daily", d: "Best for fastest growth" },
+                      { k: "3x", t: "3–4x per week", d: "Balanced schedule" },
+                      { k: "weekly", t: "Weekly", d: "Low effort" },
+                      {
+                        k: "occasionally",
+                        t: "Occasionally",
+                        d: "Just testing",
+                      },
+                    ].map((x) => {
+                      const active = frequency === (x.k as any);
+                      return (
+                        <button
+                          key={x.k}
+                          type="button"
+                          onClick={() => setFrequency(x.k as any)}
+                          className={cn(
+                            "rounded-3xl border bg-black/30 p-5 text-left transition",
+                            active
+                              ? "border-indigo-300/60 bg-indigo-500/10 shadow-[0_16px_70px_rgba(94,169,255,0.12)]"
+                              : "border-white/10 hover:bg-white/[0.05]"
+                          )}
+                        >
+                          <div className="flex items-center justify-between">
+                            <p className="font-semibold">{x.t}</p>
+                            <span
+                              className={cn(
+                                "flex h-7 w-7 items-center justify-center rounded-full border",
+                                active
+                                  ? "border-indigo-300/50 bg-indigo-500/15 text-indigo-200"
+                                  : "border-white/10 bg-white/5 text-white/35"
+                              )}
+                            >
+                              {active ? <Check size={14} /> : null}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-sm text-white/55">{x.d}</p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-sm font-semibold text-white/80">
+                    Content types
+                  </p>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    {[
+                      { k: "photos", t: "Photos", icon: <Camera size={20} /> },
+                      { k: "videos", t: "Videos", icon: <Film size={20} /> },
+                    ].map((x) => {
+                      const active = (contentTypes as any)[x.k];
+                      return (
+                        <button
+                          key={x.k}
+                          type="button"
+                          onClick={() =>
+                            setContentTypes((p) => ({ ...p, [x.k]: !active }))
+                          }
+                          className={cn(
+                            "flex items-center justify-between rounded-3xl border px-5 py-4 transition",
+                            active
+                              ? "border-indigo-300/60 bg-indigo-500/10 shadow-[0_16px_70px_rgba(94,169,255,0.12)]"
+                              : "border-white/10 bg-black/30 hover:bg-white/[0.05]"
+                          )}
+                        >
+                          <span className="inline-flex items-center gap-3">
+                            <span
+                              className={cn(
+                                "flex h-11 w-11 items-center justify-center rounded-2xl border",
+                                active
+                                  ? "border-indigo-300/40 bg-indigo-500/15 text-indigo-200"
+                                  : "border-white/10 bg-white/5 text-white/60"
+                              )}
+                            >
+                              {x.icon}
+                            </span>
+                            <span className="font-semibold">{x.t}</span>
+                          </span>
+
+                          <span
+                            className={cn(
+                              "flex h-7 w-7 items-center justify-center rounded-full border",
+                              active
+                                ? "border-indigo-300/50 bg-indigo-500/15 text-indigo-200"
+                                : "border-white/10 bg-white/5 text-white/35"
+                            )}
+                          >
+                            {active ? <Check size={14} /> : null}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Shell>
+        )}
+
+        {step === 6 && (
+          <Shell
+            title={`${aiName || "Your AI"} is ready to launch!`}
+            subtitle="Review your setup and start generating content instantly."
+          >
+            <div className="grid gap-5 lg:grid-cols-2">
+              <div className="overflow-hidden rounded-[34px] border border-white/10 bg-white/[0.04] shadow-[0_26px_120px_rgba(0,0,0,0.5)]">
+                <div className="relative aspect-[4/3] w-full">
+                  <Image
+                    src={selectedInfluencer?.src || "/model/face-2.jpg"}
+                    alt={selectedInfluencer?.name || "AI influencer"}
+                    fill
+                    className="object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+                  <div className="absolute left-4 top-4 rounded-full bg-emerald-500/90 px-3 py-1 text-[11px] font-semibold text-black">
+                    ✓ ACTIVE
+                  </div>
+                  <div className="absolute bottom-4 left-4 right-4">
+                    <p className="text-sm font-semibold text-white/90">
+                      {selectedInfluencer?.name}
+                    </p>
+                    <p className="text-[12px] text-white/55">
+                      {selectedInfluencer?.subtitle}
                     </p>
                   </div>
-                  <button
-                    onClick={() => setPaywallOpen(false)}
-                    className="shrink-0 p-2 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition"
-                    aria-label="Close"
-                  >
-                    <X size={18} />
-                  </button>
                 </div>
               </div>
 
-              <div className="p-4 sm:p-6">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {packs.map((pk) => {
-                    const active = selectedPackCredits === pk.c;
-                    return (
-                      <button
-                        key={pk.c}
-                        type="button"
-                        onClick={() => selectPack(pk.c)}
-                        className={[
-                          "text-left rounded-[26px] border p-5 transition",
-                          "bg-black/25 hover:bg-black/30",
-                          active
-                            ? "border-purple-400/60 ring-2 ring-purple-500/40"
-                            : "border-white/10 hover:border-white/20",
-                        ].join(" ")}
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="text-[12px] px-2 py-1 rounded-full bg-white/5 border border-white/10 text-white/70">
-                                {pk.name}
-                              </span>
-                              {active && (
-                                <span className="text-[12px] px-2 py-1 rounded-full bg-emerald-500/15 border border-emerald-400/25 text-emerald-200">
-                                  Selected
-                                </span>
-                              )}
-                            </div>
-                            <div className="mt-4">
-                              <p className="text-5xl font-semibold leading-none">
-                                {pk.c}
-                              </p>
-                              <p className="text-lg text-white/70 mt-2">
-                                Credits
-                              </p>
-                            </div>
-                            <div className="mt-5">
-                              <p className="text-2xl font-semibold">${pk.p}</p>
-                              <p className="text-[12px] text-white/50 mt-1">
-                                {pk.desc}
-                              </p>
-                            </div>
+              <div className="rounded-[34px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_26px_120px_rgba(0,0,0,0.5)]">
+                <div className="space-y-5">
+                  {[
+                    {
+                      t: aiName || "AI Persona",
+                      d: `${niche.toUpperCase()} • ${visualStyle.toUpperCase()}`,
+                    },
+                    {
+                      t: "Influencer Ready",
+                      d: `Based on ${selectedInfluencer?.name}`,
+                    },
+                    {
+                      t: "Content Strategy Set",
+                      d: frequency === "3x" ? "3–4x per week" : frequency,
+                    },
+                    {
+                      t: "Ready to publish",
+                      d: `Platforms: ${
+                        Object.entries(platforms)
+                          .filter(([, v]) => v)
+                          .map(([k]) => k)
+                          .join(", ") || "none"
+                      }`,
+                    },
+                  ].map((x) => (
+                    <div key={x.t} className="flex items-start gap-3">
+                      <span className="mt-1 flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-300">
+                        <Check size={16} />
+                      </span>
+                      <div>
+                        <p className="font-semibold text-white/90">{x.t}</p>
+                        <p className="mt-1 text-sm text-white/55">{x.d}</p>
+                      </div>
+                    </div>
+                  ))}
+
+                  <div className="mt-6 rounded-3xl border border-white/10 bg-black/25 p-4 text-sm text-white/60">
+                    <span className="font-semibold text-white/80">Next:</span>{" "}
+                    Choose a plan to activate your AI + unlock generation &
+                    scheduling.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Shell>
+        )}
+
+        {step === 7 && (
+          <Shell
+            title="Final Step → Choose Plan"
+            subtitle="Activate your AI with credits, scheduling, and premium generation."
+          >
+            <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+              <div className="overflow-hidden rounded-[34px] border border-white/10 bg-white/[0.04] shadow-[0_26px_120px_rgba(0,0,0,0.5)]">
+                <div className="relative aspect-[4/3] w-full">
+                  <Image
+                    src={selectedInfluencer?.src || "/model/face-2.jpg"}
+                    alt={selectedInfluencer?.name || "AI influencer"}
+                    fill
+                    className="object-cover"
+                    priority
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-transparent" />
+                  <div className="absolute left-4 top-4 inline-flex items-center gap-2 rounded-full bg-emerald-500/90 px-3 py-1 text-[11px] font-semibold text-black">
+                    <Check size={14} /> ACTIVE
+                  </div>
+                  <div className="absolute bottom-4 left-4 right-4">
+                    <p className="text-lg font-semibold text-white/95">
+                      {aiName || selectedInfluencer?.name}
+                    </p>
+                    <p className="mt-1 text-sm text-white/60">
+                      {selectedInfluencer?.subtitle} • {niche.toUpperCase()} •{" "}
+                      {visualStyle.toUpperCase()}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="min-w-0">
+                <div className="flex items-center justify-end">
+                  <div className="inline-flex rounded-full border border-white/10 bg-black/30 p-1">
+                    {(["monthly", "yearly"] as BillingKey[]).map((k) => {
+                      const active = billing === k;
+                      return (
+                        <button
+                          key={k}
+                          type="button"
+                          onClick={() => onSetBilling(k)}
+                          className={cn(
+                            "rounded-full px-4 py-2 text-sm font-semibold transition",
+                            active
+                              ? "gx-chip-active"
+                              : "text-white/60 hover:text-white"
+                          )}
+                        >
+                          {k === "monthly" ? "Monthly" : "Yearly"}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => onSetPlan("pro")}
+                  className={cn(
+                    "mt-4 w-full overflow-hidden rounded-3xl border text-left transition",
+                    plan === "pro"
+                      ? "border-indigo-300/80 shadow-[0_26px_120px_rgba(94,169,255,0.18)]"
+                      : "border-white/10 hover:border-white/25",
+                    "bg-white/[0.04]"
+                  )}
+                >
+                  <div className="relative p-5">
+                    <div className="pointer-events-none absolute inset-0 opacity-40">
+                      <div className="absolute -left-24 -top-24 h-64 w-64 rounded-full bg-indigo-500/16 blur-[70px]" />
+                      <div className="absolute -right-24 -bottom-24 h-64 w-64 rounded-full bg-sky-500/12 blur-[80px]" />
+                    </div>
+
+                    <div className="relative flex items-start justify-between gap-4">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="text-lg font-semibold">Pro Plan</p>
+                          <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-white/70">
+                            MOST POPULAR
+                          </span>
+                        </div>
+
+                        <div className="mt-2 flex items-end gap-2">
+                          <p className="text-4xl font-semibold">
+                            ${chosen.price}
+                          </p>
+                          <p className="pb-1 text-sm text-white/55">/month</p>
+                        </div>
+
+                        <div className="mt-4 space-y-2 text-sm text-white/70">
+                          <div className="flex items-center gap-2">
+                            <Check className="text-emerald-300" size={16} />
+                            2000 Credits (photos & videos)
                           </div>
-                          <div className="shrink-0 h-12 w-12 rounded-2xl bg-black/30 border border-white/10 flex items-center justify-center">
-                            <CreditCard size={18} className="text-white/70" />
+                          <div className="flex items-center gap-2">
+                            <Check className="text-emerald-300" size={16} />2
+                            Model Tokens/month{" "}
+                            <span className="text-white/40">
+                              (claim or make 2 models)
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Check className="text-emerald-300" size={16} />
+                            60 scheduled posts
                           </div>
                         </div>
-                        <div className="mt-5">
-                          <div
-                            className={[
-                              "w-full py-3 rounded-2xl font-semibold text-center transition border",
-                              active
-                                ? "bg-white text-black border-transparent"
-                                : "bg-white/5 text-white/85 border-white/10 hover:bg-white/10",
-                            ].join(" ")}
-                          >
-                            {active ? "Selected" : "Select pack"}
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
+                      </div>
 
-                <div className="mt-4 rounded-2xl border border-white/10 bg-black/25 p-4 text-[12px] text-white/60">
-                  <span className="text-white/80 font-semibold">Tip:</span> For
-                  the smoothest flow, continue to the Billing page where your
-                  balance & history update instantly.
-                </div>
+                      <div className="mt-1 flex shrink-0 items-center gap-2">
+                        <span
+                          className={cn(
+                            "flex h-9 w-9 items-center justify-center rounded-full border transition",
+                            plan === "pro"
+                              ? "border-white/15 text-white shadow-[0_10px_40px_rgba(109,93,252,0.28)] gx-icon-badge"
+                              : "border-white/10 bg-black/30 text-white/70"
+                          )}
+                        >
+                          <Crown size={18} />
+                        </span>
+                      </div>
+                    </div>
 
-                <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="relative mt-5">
+                      <div className="gx-cta-bar">Get Started</div>
+                    </div>
+                  </div>
+                </button>
+
+                <div className="mt-4 grid gap-4 sm:grid-cols-2">
                   <button
-                    onClick={() => setPaywallOpen(false)}
-                    className="py-3 rounded-2xl bg-white/5 border border-white/10 text-white/85 hover:bg-white/10 transition"
+                    type="button"
+                    onClick={() => onSetPlan("basic")}
+                    className={cn(
+                      "rounded-3xl border bg-white/[0.04] p-5 text-left transition",
+                      plan === "basic"
+                        ? "border-indigo-300/70 shadow-[0_18px_80px_rgba(94,169,255,0.14)]"
+                        : "border-white/10 hover:border-white/25"
+                    )}
                   >
-                    Not now
+                    <p className="text-base font-semibold">Basic Plan</p>
+                    <p className="mt-2 text-2xl font-semibold">
+                      ${planMeta.basic.price}{" "}
+                      <span className="text-sm text-white/55">/mo</span>
+                    </p>
+                    <p className="mt-2 text-sm text-white/55">500 Credits</p>
+                    <p className="mt-1 text-sm text-rose-300/80">No video</p>
+                    <div
+                      className={cn(
+                        "mt-4 gx-mini",
+                        plan === "basic" && "gx-mini-active"
+                      )}
+                    >
+                      Select
+                    </div>
                   </button>
+
                   <button
-                    onClick={continueToBilling}
-                    className="py-3 rounded-2xl bg-white text-black font-semibold hover:bg-gray-200 transition flex items-center justify-center gap-2"
+                    type="button"
+                    onClick={() => onSetPlan("elite")}
+                    className={cn(
+                      "rounded-3xl border bg-white/[0.04] p-5 text-left transition",
+                      plan === "elite"
+                        ? "border-indigo-300/70 shadow-[0_18px_80px_rgba(94,169,255,0.14)]"
+                        : "border-white/10 hover:border-white/25"
+                    )}
                   >
-                    Continue to Billing <ArrowRight size={18} />
+                    <p className="text-base font-semibold">Elite Plan</p>
+                    <p className="mt-2 text-2xl font-semibold">
+                      ${planMeta.elite.price}{" "}
+                      <span className="text-sm text-white/55">/mo</span>
+                    </p>
+                    <p className="mt-2 text-sm text-white/55">
+                      Unlimited credits (photos & videos)
+                    </p>
+                    <p className="mt-1 text-sm text-indigo-200/80">
+                      Premium features
+                    </p>
+                    <div
+                      className={cn(
+                        "mt-4 gx-mini",
+                        plan === "elite" && "gx-mini-active"
+                      )}
+                    >
+                      Select
+                    </div>
                   </button>
                 </div>
 
-                <div className="h-6" />
+                <div className="mt-4 rounded-3xl border border-white/10 bg-black/25 p-5 text-center text-sm text-white/60">
+                  <p className="text-[11px] tracking-wide text-white/45">
+                    SECURE PAYMENT
+                  </p>
+                  <div className="mt-3 flex items-center justify-center gap-6 text-white/70">
+                    <span className="inline-flex items-center gap-2">
+                      <CreditCard size={16} /> Card
+                    </span>
+                    <span className="inline-flex items-center gap-2">
+                      <Lock size={16} /> Private & secure
+                    </span>
+                  </div>
+                  <p className="mt-3 text-[12px] text-white/45">
+                    Instant access • Cancel anytime • No hidden fees
+                  </p>
+                </div>
+
+                <div className="mt-3 text-center text-[11px] text-white/35">
+                  All plans include PPV content generation.
+                </div>
+              </div>
+            </div>
+          </Shell>
+        )}
+      </div>
+
+      {checkoutOpen && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center px-4">
+          <div
+            className="absolute inset-0 bg-black/70"
+            onClick={() => setCheckoutOpen(false)}
+          />
+          <div className="relative w-full max-w-xl overflow-hidden rounded-[34px] border border-white/10 bg-[#07040f]/90 shadow-[0_40px_180px_rgba(0,0,0,0.7)] backdrop-blur-2xl">
+            <div className="pointer-events-none absolute inset-0 opacity-60">
+              <div className="absolute -left-40 -top-40 h-[520px] w-[520px] rounded-full bg-indigo-500/18 blur-[110px]" />
+              <div className="absolute -right-40 -bottom-40 h-[520px] w-[520px] rounded-full bg-sky-500/12 blur-[120px]" />
+            </div>
+
+            <div className="relative px-6 pb-6 pt-5 sm:px-7">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="text-center text-lg font-semibold text-white/95 sm:text-left">
+                    Complete Your Purchase
+                  </p>
+                  <p className="mt-1 text-center text-[12px] text-white/55 sm:text-left">
+                    {planMeta[plan].label} Plan •{" "}
+                    {billing === "monthly" ? "Monthly" : "Annual"} subscription
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setCheckoutOpen(false)}
+                  className="rounded-full border border-white/10 bg-white/5 p-2 text-white/70 transition hover:bg-white/10 hover:text-white"
+                  aria-label="Close"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div className="mt-5 rounded-3xl border border-white/10 bg-black/30 p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-semibold text-white/90">
+                      {planMeta[plan].label} Plan
+                    </p>
+                    <p className="mt-1 text-[12px] text-white/55">
+                      {billing === "monthly"
+                        ? "Monthly billing"
+                        : "Annual billing"}
+                    </p>
+
+                    <div className="mt-4 space-y-2 text-[13px] text-white/70">
+                      <div className="flex items-center gap-2">
+                        <Check className="text-indigo-200" size={16} /> Credits
+                        + scheduling included
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Check className="text-indigo-200" size={16} /> Fast
+                        generation queue
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Check className="text-indigo-200" size={16} /> Private &
+                        secure checkout
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="text-right">
+                    <p className="text-3xl font-semibold">
+                      ${planMeta[plan].price}
+                    </p>
+                    <p className="text-[12px] text-white/55">per month</p>
+                    <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-[11px] text-emerald-200">
+                      <Check size={14} /> Selected
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 rounded-3xl border border-white/10 bg-black/25 p-5">
+                <p className="text-sm font-semibold text-white/85">
+                  Payment Method
+                </p>
+                <div className="mt-3 flex items-start gap-3 rounded-2xl border border-white/10 bg-black/30 p-4">
+                  <span className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-white/80">
+                    <CreditCard size={18} />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-white/90">
+                      Credit Card / PayPal
+                    </p>
+                    <p className="mt-1 text-[12px] text-white/55">
+                      Secure payment via card, debit card, or PayPal
+                    </p>
+                    <div className="mt-3 space-y-1 text-[12px] text-white/60">
+                      <div className="flex items-center gap-2">
+                        <Check className="text-emerald-300" size={14} /> Instant
+                        activation
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Check className="text-emerald-300" size={14} /> Visa,
+                        Mastercard, AmEx, Discover, PayPal
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Check className="text-emerald-300" size={14} /> Secure &
+                        encrypted
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <GradientButton
+                  type="button"
+                  onClick={() => {
+                    const url = CHECKOUT_URLS[billing][plan];
+                    window.location.href = url;
+                  }}
+                  className="mt-5 w-full"
+                  innerClassName="w-full px-4 py-3"
+                >
+                  Continue to Checkout
+                </GradientButton>
+
+                <div className="mt-4 text-center text-[11px] text-white/45">
+                  <span className="inline-flex items-center gap-2">
+                    <Lock size={14} /> Private & Secure
+                  </span>
+                  <span className="mx-2 text-white/25">•</span>
+                  Instant Access
+                  <span className="mx-2 text-white/25">•</span>
+                  Cancel Anytime
+                </div>
+
+                <div className="mt-2 text-center text-[10px] text-white/35">
+                  By continuing, you agree to our Terms of Service and Privacy
+                  Policy.
+                </div>
               </div>
             </div>
           </div>
-        )}
-      </div>
-    </AuthWall>
+        </div>
+      )}
+
+      <FooterNav />
+
+      {/* ✅ Global GX styles (your exact gradient button CSS + mobile rules + scrollbar) */}
+      <style jsx global>{`
+        /* Gradient buttons like your screenshot */
+        .gx-btn {
+          position: relative;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.5rem;
+          border-radius: 9999px;
+          color: #fff;
+          border: 1px solid rgba(255, 255, 255, 0.22);
+          background: linear-gradient(
+            100deg,
+            #2f3340 0%,
+            #6d5dfc 45%,
+            #6aa7ff 100%
+          );
+          box-shadow: 0 18px 60px rgba(109, 93, 252, 0.28);
+          transform: translateZ(0);
+        }
+        .gx-btn::before {
+          content: "";
+          position: absolute;
+          inset: 2px;
+          border-radius: 9999px;
+          background: linear-gradient(
+            180deg,
+            rgba(255, 255, 255, 0.1) 0%,
+            rgba(0, 0, 0, 0.22) 100%
+          );
+          opacity: 0.75;
+          pointer-events: none;
+        }
+        .gx-btn > * {
+          position: relative;
+          z-index: 1;
+        }
+        .gx-btn:hover {
+          filter: brightness(1.06);
+        }
+        .gx-btn:active {
+          transform: translateY(1px);
+        }
+        .gx-btn-sm::before {
+          inset: 1px;
+        }
+
+        /* Outline variant that still feels like the same system */
+        .gx-btn.gx-btn-outline {
+          background: rgba(255, 255, 255, 0.06);
+          box-shadow: 0 18px 60px rgba(109, 93, 252, 0.16);
+          border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+        .gx-btn.gx-btn-outline::before {
+          background: linear-gradient(
+            180deg,
+            rgba(255, 255, 255, 0.12) 0%,
+            rgba(0, 0, 0, 0.28) 100%
+          );
+          opacity: 0.55;
+        }
+
+        /* Small gradient “chips” used for billing toggle active state */
+        .gx-chip-active {
+          color: #fff;
+          border: 1px solid rgba(255, 255, 255, 0.22);
+          background: linear-gradient(
+            100deg,
+            #2f3340 0%,
+            #6d5dfc 45%,
+            #6aa7ff 100%
+          );
+          box-shadow: 0 10px 40px rgba(109, 93, 252, 0.22);
+        }
+
+        /* Pro card CTA bar */
+        .gx-cta-bar {
+          border-radius: 16px;
+          padding: 12px 16px;
+          text-align: center;
+          font-weight: 700;
+          color: #fff;
+          border: 1px solid rgba(255, 255, 255, 0.18);
+          background: linear-gradient(
+            100deg,
+            #2f3340 0%,
+            #6d5dfc 45%,
+            #6aa7ff 100%
+          );
+          box-shadow: 0 14px 48px rgba(109, 93, 252, 0.22);
+          position: relative;
+          overflow: hidden;
+        }
+        .gx-cta-bar::before {
+          content: "";
+          position: absolute;
+          inset: 2px;
+          border-radius: 14px;
+          background: linear-gradient(
+            180deg,
+            rgba(255, 255, 255, 0.1) 0%,
+            rgba(0, 0, 0, 0.22) 100%
+          );
+          opacity: 0.75;
+          pointer-events: none;
+        }
+
+        /* Mini selector bars for Basic/Elite cards */
+        .gx-mini {
+          border-radius: 16px;
+          padding: 10px 16px;
+          text-align: center;
+          font-weight: 700;
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          background: rgba(0, 0, 0, 0.22);
+          color: rgba(255, 255, 255, 0.82);
+        }
+        .gx-mini.gx-mini-active {
+          border: 1px solid rgba(255, 255, 255, 0.18);
+          background: linear-gradient(
+            100deg,
+            #2f3340 0%,
+            #6d5dfc 45%,
+            #6aa7ff 100%
+          );
+          box-shadow: 0 14px 48px rgba(109, 93, 252, 0.18);
+        }
+
+        /* Icon badge (Pro crown) */
+        .gx-icon-badge {
+          background: linear-gradient(
+            100deg,
+            #2f3340 0%,
+            #6d5dfc 45%,
+            #6aa7ff 100%
+          );
+        }
+
+        @media (max-width: 459px) {
+          html,
+          body {
+            overflow-x: hidden !important;
+          }
+          * {
+            max-width: 100%;
+          }
+          .gx-grid {
+            justify-items: center !important;
+          }
+          .gx-hero-section {
+            display: flex !important;
+            justify-content: center !important;
+            width: 100% !important;
+          }
+          .gx-hero-card {
+            width: min(90vw, 720px) !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+          }
+          .gx-hero-title {
+            font-size: 30px !important;
+            line-height: 1.05 !important;
+            letter-spacing: -0.02em !important;
+          }
+          .gx-hero-desc {
+            font-size: 13px !important;
+            line-height: 1.6 !important;
+          }
+        }
+
+        .gx-scrollbar::-webkit-scrollbar {
+          height: 10px;
+        }
+        .gx-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.12);
+          border-radius: 999px;
+        }
+        .gx-scrollbar::-webkit-scrollbar-track {
+          background: rgba(255, 255, 255, 0.06);
+          border-radius: 999px;
+        }
+      `}</style>
+    </div>
   );
 }
