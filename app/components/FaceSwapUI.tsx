@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import ThemePicker from "@/app/components/ThemePicker";
 import DropzoneUploader from "@/app/components/DropzoneUploader";
 import { startFaceSwap } from "@/app/lib/faceswap/startFaceSwap";
+import { saveResult as saveResultToDb } from "@/app/lib/db";
 import { getArtThemes } from "@/app/config/artThemes";
 
 type Theme = {
@@ -50,9 +51,17 @@ export default function FaceSwapUI() {
   const [results, setResults] = useState<any[]>([]);
   const [resultImage, setResultImage] = useState<string | null>(null);
 
-  // keep your existing save logic (placeholder)
   async function saveResult(item: any) {
-    // keep your existing working logic here (API call / local state etc.)
+    try {
+      const payload = {
+        id: item?.id ?? crypto.randomUUID(),
+        url: item?.url ?? "",
+        createdAt: item?.createdAt ?? Date.now(),
+      };
+      await saveResultToDb(payload);
+    } catch (err) {
+      console.error("Failed to persist result", err);
+    }
     return item;
   }
 

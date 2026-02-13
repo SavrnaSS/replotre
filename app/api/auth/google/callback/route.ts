@@ -79,7 +79,7 @@ export async function GET(req: Request) {
         email,
         name: googleUser.name || null,
         image: googleUser.picture || null,
-        credits: 101,
+        credits: 0,
         authProvider: "google",
         passwordHash: null,
       },
@@ -98,6 +98,19 @@ export async function GET(req: Request) {
 
     return res;
   } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    const dbUnavailable =
+      message.includes("PrismaClientInitializationError") ||
+      message.includes("Can't reach database server");
+
+    if (dbUnavailable) {
+      console.warn("Google OAuth Callback Error: database unavailable");
+      const baseUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_BASE_URL);
+      return NextResponse.redirect(
+        new URL("/login?error=db_unavailable", baseUrl).toString()
+      );
+    }
+
     console.error("Google OAuth Callback Error:", error);
     const baseUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_BASE_URL);
     return NextResponse.redirect(new URL("/login", baseUrl).toString());

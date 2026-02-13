@@ -140,9 +140,12 @@ export function getResultsFromStorage() {
  SAMPLE FACES (ONBOARDING)
 ================================================== */
 const SAMPLE_FACES = [
-  "/model/face-1.jpg",
-  "/model/face-2.jpg",
-  "/model/face-3.jpg",
+  "/model/face-1-v2.jpg",
+  "/model/face-2-v2.jpg",
+  "/model/face-3-v2.jpg",
+  "/model/face-4-v2.jpg",
+  "/model/face-5-v2.jpg",
+  "/model/face-6-v2.jpg",
 ];
 
 /* ==================================================

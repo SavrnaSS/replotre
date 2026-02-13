@@ -133,6 +133,11 @@ export async function startFaceSwap({
 
     await saveResult(finalItem);
 
+    setResults((prev: any) => [
+      finalItem,
+      ...(Array.isArray(prev) ? prev.filter((x: any) => x.id !== placeholderId) : []),
+    ]);
+
     setResultImage(finalImage);
   } catch (err) {
     console.error("🔥 ERROR:", err);

@@ -4,7 +4,6 @@ import { getUserFromCookie } from "@/app/lib/auth";
 
 export async function GET(req: Request) {
   const user = await getUserFromCookie(req);
-
   if (!user) {
     return NextResponse.json({ history: [] }, { status: 200 });
   }
@@ -12,6 +11,7 @@ export async function GET(req: Request) {
   const history = await prisma.billingHistory.findMany({
     where: { userId: user.id },
     orderBy: { createdAt: "desc" },
+    take: 10,
   });
 
   return NextResponse.json({ history }, { status: 200 });

@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/app/lib/prisma";
 import { signToken } from "@/app/lib/auth";
+import { claimOnboardingDraft } from "@/app/lib/onboardingDraft";
 
 export async function POST(req: Request) {
   try {
@@ -33,6 +34,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid credentials." }, { status: 401 });
     }
 
+    await claimOnboardingDraft({ email: user.email, userId: user.id });
+
     const token = signToken({ userId: user.id });
 
     const res = NextResponse.json({
@@ -50,6 +53,16 @@ export async function POST(req: Request) {
 
     return res;
   } catch (err) {
+    const message = err instanceof Error ? err.message : "";
+    const dbUnavailable =
+      message.includes("PrismaClientInitializationError") ||
+      message.includes("Can't reach database server");
+
+    if (dbUnavailable) {
+      console.warn("LOGIN ERROR: database unavailable");
+      return NextResponse.json({ error: "Database unavailable." }, { status: 503 });
+    }
+
     console.error("LOGIN ERROR:", err);
     return NextResponse.json({ error: "Login failed." }, { status: 500 });
   }

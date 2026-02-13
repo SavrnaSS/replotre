@@ -6,7 +6,8 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  directUrl = env("DATABASE_URL_LOCAL")
+  schemas   = ["public"]
 }
 
 model User {
@@ -16,9 +17,10 @@ model User {
   emailVerified DateTime?
   image         String?
   createdAt     DateTime @default(now())
-  credits       Int      @default(5)
+  credits       Int      @default(0)
   passwordHash  String?
   authProvider  String?
+  status        String?  @default("Active")
 
   accounts      Account[]
   sessions      Session[]
@@ -26,6 +28,84 @@ model User {
 
   billingHistory BillingHistory[]
   history        History[]
+  onboardingProfile OnboardingProfile?
+  onboardingChangeRequests OnboardingChangeRequest[]
+  subscriptions Subscription[]
+  refunds RefundRequest[]
+  policyCases PolicyCase[]
+  adminNotes AdminNote[]
+  adminActions AdminAction[]
+  scheduledPosts ScheduledPost[]
+
+  @@schema("public")
+}
+
+model ScheduledPost {
+  id           String   @id @default(cuid())
+  userId       String
+  influencerId String
+  imageSrc     String
+  scheduleDate DateTime
+  time         String
+  label        String
+  title        String
+  status       String   @default("scheduled")
+  cancelledAt  DateTime?
+  cancelledBy  String?
+  adminNote    String?
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, influencerId, scheduleDate])
+  @@unique([userId, influencerId, imageSrc])
+  @@unique([userId, influencerId, scheduleDate, time])
+  @@schema("public")
+}
+
+model ScheduleOverride {
+  id              String   @id @default(cuid())
+  userId          String?
+  influencerId    String?
+  disabled        Boolean  @default(false)
+  paused          Boolean  @default(false)
+  overrideDaily   Int?
+  overrideMonthly Int?
+  overrideTime    String?
+  overrideTimeZone String?
+  reason          String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId, influencerId])
+  @@schema("public")
+}
+
+model AdminNote {
+  id        String   @id @default(cuid())
+  userId    String
+  authorId  String?
+  note      String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@schema("public")
+}
+
+model AdminAction {
+  id        String   @id @default(cuid())
+  userId    String
+  adminId   String?
+  action    String
+  detail    String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@schema("public")
 }
 
 model Account {
@@ -45,6 +125,7 @@ model Account {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
+  @@schema("public")
 }
 
 model Session {
@@ -54,6 +135,8 @@ model Session {
   expires      DateTime
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@schema("public")
 }
 
 model VerificationToken {
@@ -62,6 +145,7 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+  @@schema("public")
 }
 
 model Job {
@@ -72,18 +156,29 @@ model Job {
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id])
+
+  @@schema("public")
 }
 
 model BillingHistory {
-  id        String   @id @default(cuid())
-  userId    String
-  credits   Int
-  amount    Int
-  createdAt DateTime @default(now())
+  id         String   @id @default(cuid())
+  userId     String
+  credits    Int
+  amount     Int
+  status     String?
+  planId     String?
+  plan       String?
+  billing    String?
+  receiptId  String?
+  currency   String?
+  provider   String?
+  webhookId  String?  @unique
+  createdAt  DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@schema("public")
 }
 
 model History {
@@ -98,4 +193,107 @@ model History {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@schema("public")
+}
+
+model OnboardingProfile {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  data        Json
+  plan        String?
+  billing     String?
+  allowEdit   Boolean  @default(false)
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@schema("public")
+}
+
+model OnboardingDraft {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  data      Json?
+  plan      String?
+  billing   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@schema("public")
+}
+
+model AnalyticsEvent {
+  id        String   @id @default(cuid())
+  userId    String?
+  name      String
+  payload   Json?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@schema("public")
+}
+
+model OnboardingChangeRequest {
+  id        String   @id @default(cuid())
+  userId    String
+  message   String
+  status    String   @default("pending")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@schema("public")
+}
+
+model Subscription {
+  id         String   @id @default(cuid())
+  userId     String
+  plan       String
+  billing    String
+  amount     Int
+  status     String   @default("Active")
+  startedAt  DateTime @default(now())
+  nextChargeAt DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@schema("public")
+}
+
+model RefundRequest {
+  id         String   @id @default(cuid())
+  userId     String
+  amount     Int
+  reason     String
+  status     String   @default("Pending")
+  requestedAt DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@schema("public")
+}
+
+model PolicyCase {
+  id        String   @id @default(cuid())
+  userId    String
+  severity  String
+  reason    String
+  status    String   @default("Open")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@schema("public")
 }

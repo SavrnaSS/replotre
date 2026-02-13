@@ -2,21 +2,7 @@
 
 import { useCallback } from "react";
 
-function dataURLtoFile(dataUrl, filename = "face.jpg") {
-  const [meta, b64] = dataUrl.split(",");
-  const mime = meta.match(/data:(.*?);/)?.[1] || "image/jpeg";
-  const bin = atob(b64);
-  const u8 = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
-  return new File([u8], filename, { type: mime });
-}
-
 export default function useAIGenerate({
-  selectedFace,
-  uploadedFace,
-  uploadedFaceFile,
-  uploadedFaceRef,
-  getFaceFromStorage,
   buildFinalPrompt,
 
   // parent notifier
@@ -25,7 +11,6 @@ export default function useAIGenerate({
   setResults,
   setProcessing,
   setProgress,
-  setFaceSessionExpired,
 }) {
   const handleGenerate = useCallback(
     async (options = {}) => {
@@ -35,13 +20,6 @@ export default function useAIGenerate({
       const finalPrompt = overridePrompt || buildFinalPrompt();
       if (!finalPrompt) {
         alert("Please enter a prompt");
-        return;
-      }
-
-      /* ---------- FACE ---------- */
-      const finalFace = selectedFace ?? getFaceFromStorage();
-      if (!finalFace) {
-        alert("Please select a face");
         return;
       }
 
@@ -59,7 +37,6 @@ export default function useAIGenerate({
         meta: {
           type: "ai-generate",
           prompt: finalPrompt,
-          face: finalFace,
         },
       };
 
@@ -75,37 +52,14 @@ export default function useAIGenerate({
       }, 150);
 
       try {
-        const formData = new FormData();
-        formData.append("prompt", finalPrompt);
-
-        // ✅ FIX: support blob:, data:, http(s), and /path
-        if (typeof finalFace === "string" && finalFace.startsWith("blob:")) {
-          const file = uploadedFaceRef.current || uploadedFaceFile;
-          if (!file) {
-            setFaceSessionExpired(true);
-            setResults((prev) => (Array.isArray(prev) ? prev : []).filter((x) => x.id !== jobId));
-            onResultGenerated?.({ ...placeholderItem, __remove: true });
-            return;
-          }
-          formData.append("face", file);
-        } else if (typeof finalFace === "string" && finalFace.startsWith("data:")) {
-          // 🔥 after refresh, selectedFace is a thumbnail dataURL
-          const file = dataURLtoFile(finalFace, "face.jpg");
-          formData.append("face", file);
-        } else {
-          const faceUrl =
-            typeof finalFace === "string" && finalFace.startsWith("http")
-              ? finalFace
-              : `${window.location.origin}${finalFace}`;
-          formData.append("faceUrl", faceUrl);
-        }
-
-        const res = await fetch("https://web-production-85c19.up.railway.app/generate", {
+        const res = await fetch("/api/txt2img", {
           method: "POST",
-          body: formData,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: finalPrompt }),
         });
 
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data?.message || data?.error || "Generation failed");
 
         const imageUrl =
           data?.imageUrl ||
@@ -155,17 +109,11 @@ export default function useAIGenerate({
       }
     },
     [
-      selectedFace,
-      uploadedFace,
-      uploadedFaceFile,
-      uploadedFaceRef,
-      getFaceFromStorage,
       buildFinalPrompt,
       onResultGenerated,
       setResults,
       setProcessing,
       setProgress,
-      setFaceSessionExpired,
     ]
   );
 

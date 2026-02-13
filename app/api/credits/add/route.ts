@@ -14,6 +14,15 @@ export async function POST(req: Request) {
 
   const { amount } = await req.json();
 
+  const activeSubscription = await prisma.subscription.findFirst({
+    where: { userId: decoded.userId, status: "Active" },
+    orderBy: { createdAt: "desc" },
+  });
+
+  if (!activeSubscription) {
+    return NextResponse.json({ error: "no-subscription" }, { status: 403 });
+  }
+
   const user = await prisma.user.update({
     where: { id: decoded.userId },
     data: { credits: { increment: amount } },

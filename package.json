@@ -11,6 +11,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "validate:influencers": "node scripts/validate-influencers.mjs",
     "postinstall": "prisma generate"
   },
   "dependencies": {

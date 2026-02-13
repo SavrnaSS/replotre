@@ -20,9 +20,9 @@ export default function PaywallModal({ open, onClose, initialSelected = null }: 
 
   const packs = useMemo<Pack[]>(
     () => [
-      { c: 2000, p: 19, badge: "Starter", desc: "Try it out" },
-      { c: 5000, p: 39, badge: "Most popular", desc: "Best value" },
-      { c: 12999, p: 79, badge: "Pro", desc: "For power users" },
+      { c: 500, p: 19, badge: "Starter", desc: "Try it out" },
+      { c: 1000, p: 39, badge: "Most popular", desc: "Best value" },
+      { c: 4000, p: 79, badge: "Pro", desc: "For power users" },
     ],
     []
   );
@@ -81,7 +81,7 @@ export default function PaywallModal({ open, onClose, initialSelected = null }: 
       localStorage.setItem(LS_KEY, JSON.stringify({ c: chosen.c, p: chosen.p }));
     } catch {}
     // ✅ Send selection to billing so it shows without reselect
-    router.push(`/billing?pack=${chosen.c}&price=${chosen.p}`);
+    router.push(`/checkout`);
     onClose();
   };
 

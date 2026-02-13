@@ -1,15 +1,28 @@
 import { NextResponse } from "next/server";
 
-export async function POST() {
+function clearSession() {
   const res = NextResponse.json({ success: true });
-
-  // delete cookie
   res.cookies.set("mitux_session", "", {
-    expires: new Date(0), // delete cookie
+    expires: new Date(0),
     httpOnly: true,
-    secure: true,
-    sameSite: "strict",
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
   });
-
+  res.cookies.set("mitux_admin_session", "", {
+    expires: new Date(0),
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+  });
   return res;
+}
+
+export async function POST() {
+  return clearSession();
+}
+
+export async function GET() {
+  return clearSession();
 }

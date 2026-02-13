@@ -92,6 +92,7 @@ export async function getUserFromCookie(req: Request) {
   // Try common names (keep broad so it works with your existing login impl)
   const token =
     cookies["mitux_token"] ||
+    cookies["mitux_session"] ||
     cookies["auth_token"] ||
     cookies["token"] ||
     cookies["session"] ||

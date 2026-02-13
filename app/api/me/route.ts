@@ -37,7 +37,20 @@ export async function GET() {
       { status: 200 }
     );
   } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    const dbUnavailable =
+      message.includes("PrismaClientInitializationError") ||
+      message.includes("Can't reach database server");
+
+    if (dbUnavailable) {
+      console.warn("GET /api/me: database unavailable");
+      return NextResponse.json(
+        { user: null, error: "Database unavailable" },
+        { status: 503 }
+      );
+    }
+
     console.error("GET /api/me error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ user: null, error: "Internal server error" }, { status: 500 });
   }
 }

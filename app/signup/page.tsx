@@ -71,7 +71,7 @@ export default function SignupPage() {
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.error || "Signup failed");
 
-      router.push("/profile");
+      router.push("/workspace");
     } catch (e: any) {
       setError(e?.message || "Signup failed");
     } finally {

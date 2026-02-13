@@ -311,14 +311,14 @@ export default function IntroPageClient() {
 
   const packs: Pack[] = useMemo(
     () => [
-      { c: 2000, p: 19, badge: "Starter", desc: "Test your first AI twin" },
+      { c: 500, p: 19, badge: "Starter", desc: "Test your first AI twin" },
       {
-        c: 5000,
+        c: 1000,
         p: 39,
         badge: "Most popular",
         desc: "Daily posting for 1–2 AI influencers",
       },
-      { c: 12000, p: 79, badge: "Studio", desc: "For agencies & power users" },
+      { c: 4000, p: 79, badge: "Studio", desc: "For agencies & power users" },
     ],
     []
   );
@@ -335,9 +335,9 @@ export default function IntroPageClient() {
 
   const showcaseImages = useMemo(
     () => [
-      { src: "/model/face-1.jpg", alt: "Showcase model 1" },
-      { src: "/model/face-2.jpg", alt: "Showcase model 2" },
-      { src: "/model/face-3.jpg", alt: "Showcase model 3" },
+      { src: "/model/face-1-v2.jpg", alt: "Showcase model 1" },
+      { src: "/model/face-2-v2.jpg", alt: "Showcase model 2" },
+      { src: "/model/face-3-v2.jpg", alt: "Showcase model 3" },
     ],
     []
   );
@@ -442,7 +442,13 @@ useEffect(() => {
     }
   }, [selectedCredits]);
 
-  const start = () => router.push("/workspace");
+  const start = () => {
+    if (!isAuthed) {
+      goLogin();
+      return;
+    }
+    router.push("/workspace");
+  };
   const goLogin = () => {
     if (typeof window !== "undefined") {
       window.location.href = "/login";
@@ -461,12 +467,8 @@ useEffect(() => {
 
     setPaywallOpen(false);
 
-    const c = pack?.c ?? "";
-    const p = pack?.p ?? "";
     if (typeof window !== "undefined") {
-      window.location.href = `/billing?pack=${encodeURIComponent(
-        String(c)
-      )}&price=${encodeURIComponent(String(p))}`;
+      window.location.href = `/checkout`;
     }
   };
 
@@ -502,13 +504,13 @@ useEffect(() => {
           subtitle: "Ready to scale",
           price: 7.99,
           billed: 95.88,
-          credits: 2000,
+          credits: 1000,
           trainings: 2,
           button: "Get Credits",
           popular: true,
           features: [
             { ok: true, label: "2 Influencer trainings" },
-            { ok: true, label: "2,000 credits/month" },
+            { ok: true, label: "1,000 credits/month" },
             { ok: true, label: "Image & video generation" },
             ...commonFeatures,
             { ok: true, label: "Standard support" },
@@ -520,13 +522,13 @@ useEffect(() => {
           subtitle: "Best for businesses",
           price: 15.99,
           billed: 191.88,
-          credits: 8000,
+          credits: 4000,
           trainings: 5,
           button: "Get Credits",
           popular: false,
           features: [
             { ok: true, label: "5 Influencer trainings" },
-            { ok: true, label: "8,000 credits/month" },
+            { ok: true, label: "4,000 credits/month" },
             { ok: true, label: "Image & video generation" },
             ...commonFeatures,
             { ok: true, label: "Priority support" },
@@ -560,13 +562,13 @@ useEffect(() => {
         subtitle: "Ready to scale",
         price: 29,
         billed: null,
-        credits: 2000,
+        credits: 1000,
         trainings: 2,
         button: "Get Credits",
         popular: true,
         features: [
           { ok: true, label: "2 Influencer trainings" },
-          { ok: true, label: "2,000 credits/month" },
+          { ok: true, label: "1,000 credits/month" },
           { ok: true, label: "Image & video generation" },
           ...commonFeatures,
           { ok: true, label: "Standard support" },
@@ -578,13 +580,13 @@ useEffect(() => {
         subtitle: "Best for businesses",
         price: 79,
         billed: null,
-        credits: 8000,
+        credits: 4000,
         trainings: 5,
         button: "Get Credits",
         popular: false,
         features: [
           { ok: true, label: "5 Influencer trainings" },
-          { ok: true, label: "8,000 credits/month" },
+          { ok: true, label: "4,000 credits/month" },
           { ok: true, label: "Image & video generation" },
           ...commonFeatures,
           { ok: true, label: "Priority support" },
@@ -959,7 +961,7 @@ useEffect(() => {
                     <span className="h-5 w-5 rounded-full bg-gradient-to-br from-fuchsia-500 to-purple-700" />
                   </span>
                   <span className="min-w-0 break-words [overflow-wrap:anywhere]">
-                    1,000+ creators testing AI influencers
+                    1,000+ creators using AI influencers
                   </span>
                   <span className="whitespace-nowrap text-yellow-300">
                     ★★★★★ 4.9/5

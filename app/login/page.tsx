@@ -1,17 +1,24 @@
 // app/login/page.tsx
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (searchParams.get("error") === "db_unavailable") {
+      setError("Login is temporarily unavailable. Please try again in a few minutes.");
+    }
+  }, [searchParams]);
 
   const trimmedEmail = useMemo(() => email.trim().toLowerCase(), [email]);
   const emailValid = useMemo(() => {
@@ -49,9 +56,9 @@ export default function LoginPage() {
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.error || "Login failed");
 
-      router.push("/profile");
-    } catch (e: any) {
-      setError(e?.message || "Login failed");
+      router.push("/workspace");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Login failed");
     } finally {
       setLoading(false);
     }

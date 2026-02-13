@@ -1,0 +1,44 @@
+[
+  {
+    "id": "inf-1",
+    "name": "Adriana Perez",
+    "subtitle": "Lifestyle • UGC-ready",
+    "src": "/model/face-1-v2.jpg",
+    "folderName": "Adriana Perez"
+  },
+  {
+    "id": "inf-2",
+    "name": "Veronica Millsap",
+    "subtitle": "Fitness • High engagement",
+    "src": "/model/face-2-v2.jpg",
+    "folderName": "Veronica Millsap"
+  },
+  {
+    "id": "inf-3",
+    "name": "Luna Williams",
+    "subtitle": "Creator • Brand-friendly",
+    "src": "/model/face-3-v2.jpg",
+    "folderName": "Luna Williams"
+  },
+  {
+    "id": "inf-4",
+    "name": "Sofia Lane",
+    "subtitle": "Travel • Aesthetic reels",
+    "src": "/model/face-4-v2.jpg",
+    "folderName": "Sofia Lane"
+  },
+  {
+    "id": "inf-5",
+    "name": "Mia Carter",
+    "subtitle": "Fashion • Studio look",
+    "src": "/model/face-5-v2.jpg",
+    "folderName": "Mia Carter"
+  },
+  {
+    "id": "inf-6",
+    "name": "Noah Reed",
+    "subtitle": "Tech • Clean creator",
+    "src": "/model/face-6-v2.jpg",
+    "folderName": "Noah Reed"
+  }
+]

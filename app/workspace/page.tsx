@@ -9,6 +9,8 @@ import React, {
   useState,
 } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
+import useAuth from "@/app/hooks/useAuth";
 import {
   ArrowLeft,
   ArrowRight,
@@ -33,6 +35,12 @@ import {
   CreditCard,
   Crown,
 } from "lucide-react";
+import {
+  type BillingKey,
+  type PlanKey,
+  BILLING_PLANS,
+} from "@/app/config/billingPlans";
+import { INFLUENCERS } from "@/app/data/influencers";
 
 type GoalKey = "business" | "content" | "agency" | "tech";
 type ExperienceKey = "new" | "some";
@@ -49,8 +57,6 @@ type Influencer = {
   claimed?: string;
 };
 
-type BillingKey = "monthly" | "yearly";
-type PlanKey = "basic" | "pro" | "elite";
 
 function cn(...a: Array<string | false | undefined | null>) {
   return a.filter(Boolean).join(" ");
@@ -241,6 +247,8 @@ function CardSelect({
 }
 
 export default function Page() {
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const TOTAL = 8;
   const [step, setStep] = useState(0);
 
@@ -278,73 +286,237 @@ export default function Page() {
   const [billing, setBilling] = useState<BillingKey>("monthly");
   const [plan, setPlan] = useState<PlanKey>("pro");
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [checkingOnboarding, setCheckingOnboarding] = useState(true);
+  const [hasTrackedCheckout, setHasTrackedCheckout] = useState(false);
+  const [onboardingCompleted, setOnboardingCompleted] = useState(false);
+  const [onboardingAllowEdit, setOnboardingAllowEdit] = useState(false);
+  const [subscriptionActive, setSubscriptionActive] = useState(false);
+  const [billingLoaded, setBillingLoaded] = useState(false);
+  const [guestEmail, setGuestEmail] = useState("");
 
-  const CHECKOUT_URLS: Record<BillingKey, Record<PlanKey, string>> = {
-    monthly: {
-      basic: "https://example.com/checkout/basic-monthly",
-      pro: "https://example.com/checkout/pro-monthly",
-      elite: "https://example.com/checkout/elite-monthly",
-    },
-    yearly: {
-      basic: "https://example.com/checkout/basic-yearly",
-      pro: "https://example.com/checkout/pro-yearly",
-      elite: "https://example.com/checkout/elite-yearly",
-    },
-  };
+  const signedInEmail =
+    typeof user?.email === "string" ? user.email.trim().toLowerCase() : "";
+  const isSignedIn = Boolean(signedInEmail);
 
-  const influencers: Influencer[] = useMemo(
-    () => [
-      {
-        id: "inf-1",
-        name: "Adriana Perez",
-        subtitle: "Lifestyle • UGC-ready",
-        src: "/model/face-1.jpg",
-        badge: "V2",
-        claimed: "3/5 claimed",
-      },
-      {
-        id: "inf-2",
-        name: "Veronica Millsap",
-        subtitle: "Fitness • High engagement",
-        src: "/model/face-2.jpg",
-        badge: "V2",
-        claimed: "1/5 claimed",
-      },
-      {
-        id: "inf-3",
-        name: "Luna Williams",
-        subtitle: "Creator • Brand-friendly",
-        src: "/model/face-3.jpg",
-        badge: "V2",
-        claimed: "2/5 claimed",
-      },
-      {
-        id: "inf-4",
-        name: "Sofia Lane",
-        subtitle: "Travel • Aesthetic reels",
-        src: "/model/face-1.jpg",
-        badge: "V2",
-        claimed: "0/5 claimed",
-      },
-      {
-        id: "inf-5",
-        name: "Mia Carter",
-        subtitle: "Fashion • Studio look",
-        src: "/model/face-2.jpg",
-        badge: "V2",
-        claimed: "4/5 claimed",
-      },
-      {
-        id: "inf-6",
-        name: "Noah Reed",
-        subtitle: "Tech • Clean creator",
-        src: "/model/face-3.jpg",
-        badge: "V2",
-        claimed: "2/5 claimed",
-      },
-    ],
-    []
+  useEffect(() => {
+    if (authLoading) return;
+    if (!isSignedIn) {
+      router.push("/login");
+    }
+  }, [authLoading, isSignedIn, router]);
+
+  const guestEmailValid = useMemo(() => {
+    if (!guestEmail) return false;
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestEmail);
+  }, [guestEmail]);
+
+  useEffect(() => {
+    if (isSignedIn) {
+      setGuestEmail(signedInEmail);
+      return;
+    }
+    if (typeof window === "undefined") return;
+    const stored = window.localStorage.getItem("gx_guest_email") || "";
+    if (stored) setGuestEmail(stored);
+  }, [isSignedIn, signedInEmail]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (isSignedIn) {
+      window.localStorage.removeItem("gx_guest_email");
+      return;
+    }
+    if (guestEmail) {
+      window.localStorage.setItem("gx_guest_email", guestEmail);
+    }
+  }, [guestEmail, isSignedIn]);
+
+  const trackEvent = useCallback(async (name: string, payload?: any) => {
+    try {
+      await fetch("/api/analytics/event", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, payload }),
+      });
+    } catch {
+      // noop
+    }
+  }, []);
+
+  const onboardingPayload = useMemo(
+    () => ({
+      goal,
+      experience,
+      method,
+      influencerId,
+      aiName,
+      niche,
+      visualStyle,
+      platforms,
+      frequency,
+      contentTypes,
+      billing,
+      plan,
+      step,
+    }),
+    [
+      goal,
+      experience,
+      method,
+      influencerId,
+      aiName,
+      niche,
+      visualStyle,
+      platforms,
+      frequency,
+      contentTypes,
+      billing,
+      plan,
+      step,
+    ]
   );
+
+  useEffect(() => {
+    let active = true;
+
+    const loadStatus = async () => {
+      try {
+        const emailParam =
+          !isSignedIn && guestEmailValid ? `?email=${encodeURIComponent(guestEmail)}` : "";
+        const res = await fetch(`/api/onboarding/status${emailParam}`, {
+          cache: "no-store",
+        });
+        const data = await res.json();
+        if (active) {
+          const completed = Boolean(data?.profile?.completedAt);
+          const allowEdit = Boolean(data?.profile?.allowEdit);
+          setOnboardingCompleted(completed);
+          setOnboardingAllowEdit(allowEdit);
+        }
+      } catch {
+        // noop
+      } finally {
+        if (active) setCheckingOnboarding(false);
+      }
+    };
+
+    loadStatus();
+    return () => {
+      active = false;
+    };
+  }, [isSignedIn, guestEmail, guestEmailValid]);
+
+  useEffect(() => {
+    let active = true;
+    const loadBilling = async () => {
+      try {
+        if (authLoading) return;
+        if (!isSignedIn) {
+          if (active) {
+            setSubscriptionActive(false);
+            setBillingLoaded(true);
+          }
+          return;
+        }
+        const res = await fetch(`/api/subscription/status`, {
+          cache: "no-store",
+        });
+        const data = await res.json();
+        if (active) {
+          setSubscriptionActive(Boolean(data?.active));
+        }
+      } catch {
+        if (active) setSubscriptionActive(false);
+      } finally {
+        if (active) setBillingLoaded(true);
+      }
+    };
+    loadBilling();
+    return () => {
+      active = false;
+    };
+  }, [authLoading, isSignedIn]);
+
+  useEffect(() => {
+    if (checkingOnboarding || !billingLoaded || authLoading) return;
+    if ((onboardingCompleted && !onboardingAllowEdit) || subscriptionActive) return;
+    if (!isSignedIn && !guestEmailValid) return;
+    const id = window.setTimeout(async () => {
+      try {
+        await fetch("/api/onboarding/save", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            data: onboardingPayload,
+            plan,
+            billing,
+            email: !isSignedIn ? guestEmail : undefined,
+          }),
+        });
+        trackEvent("onboarding.autosave", {
+          step,
+          plan,
+          billing,
+          goal,
+          niche,
+          method,
+        });
+      } catch {
+        // noop
+      }
+    }, 800);
+
+    return () => {
+      window.clearTimeout(id);
+    };
+  }, [
+    onboardingPayload,
+    plan,
+    billing,
+    checkingOnboarding,
+    billingLoaded,
+    authLoading,
+    guestEmail,
+    guestEmailValid,
+    isSignedIn,
+    onboardingCompleted,
+    onboardingAllowEdit,
+    subscriptionActive,
+    trackEvent,
+    step,
+    goal,
+    niche,
+    method,
+  ]);
+
+  const getCheckoutUrl = useCallback(
+    (billingKey: BillingKey, planKey: PlanKey) => {
+      const params = new URLSearchParams({
+        plan: planKey,
+        billing: billingKey,
+      });
+      if (!isSignedIn && guestEmailValid) {
+        params.set("email", guestEmail);
+      }
+      return `/checkout?${params.toString()}`;
+    },
+    [guestEmail, guestEmailValid, isSignedIn]
+  );
+
+  const influencers: Influencer[] = useMemo(() => {
+    const meta: Record<string, Pick<Influencer, "badge" | "claimed">> = {
+      "inf-1": { badge: "V2", claimed: "3/5 claimed" },
+      "inf-2": { badge: "V2", claimed: "1/5 claimed" },
+      "inf-3": { badge: "V2", claimed: "2/5 claimed" },
+      "inf-4": { badge: "V2", claimed: "0/5 claimed" },
+      "inf-5": { badge: "V2", claimed: "4/5 claimed" },
+      "inf-6": { badge: "V2", claimed: "2/5 claimed" },
+    };
+    return INFLUENCERS.map((influencer) => ({
+      ...influencer,
+      ...meta[influencer.id],
+    }));
+  }, []);
 
   const selectedInfluencer =
     influencers.find((x) => x.id === influencerId) ?? influencers[0];
@@ -376,6 +548,46 @@ export default function Page() {
     return (
       <div className="mx-auto w-full max-w-6xl px-4 pb-28 pt-10 sm:px-6 sm:pt-12">
         <div className="flex min-w-0 flex-col items-center">
+          {!isSignedIn && (
+            <div className="mb-6 w-full max-w-2xl rounded-3xl border border-white/10 bg-gradient-to-r from-white/[0.08] via-white/[0.04] to-white/[0.08] p-4 text-white/80 shadow-[0_18px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 grid h-9 w-9 place-items-center rounded-2xl border border-white/10 bg-indigo-500/20">
+                    <Sparkles size={16} className="text-indigo-100" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-semibold text-white/95">
+                      Save your setup with email
+                    </div>
+                    <div className="mt-0.5 text-[12px] text-white/55">
+                      Auto‑links after payment so your playground unlocks instantly.
+                    </div>
+                  </div>
+                </div>
+
+                <div className="w-full max-w-xs">
+                  <input
+                    value={guestEmail}
+                    onChange={(e) =>
+                      setGuestEmail(e.target.value.trim().toLowerCase())
+                    }
+                    placeholder="you@example.com"
+                    inputMode="email"
+                    className={`w-full rounded-2xl bg-black/45 px-4 py-2.5 text-xs text-white/90 outline-none ring-1 transition ${
+                      guestEmail.length === 0
+                        ? "ring-white/10 focus:ring-indigo-300/40"
+                        : guestEmailValid
+                        ? "ring-emerald-400/30 focus:ring-emerald-400/40"
+                        : "ring-red-400/30 focus:ring-red-400/40"
+                    }`}
+                  />
+                  <div className="mt-1 text-[11px] text-white/45">
+                    Secure • used only to link your setup
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
           <div className="flex min-w-0 flex-col items-center gap-3">
             <StepDots total={TOTAL} current={step} />
             <p className="text-[12px] text-white/50">
@@ -442,6 +654,12 @@ export default function Page() {
             onClick={() => {
               if (isLast) setCheckoutOpen(true);
               else next();
+              if (isLast && !hasTrackedCheckout) {
+                trackEvent("checkout.modal_opened", { plan, billing });
+                setHasTrackedCheckout(true);
+              } else if (!isLast) {
+                trackEvent("onboarding.step_completed", { step });
+              }
             }}
             className="min-w-[175px]"
             innerClassName="px-6 py-2.5"
@@ -458,50 +676,66 @@ export default function Page() {
     );
   }
 
-  const planMeta = useMemo(() => {
-    const monthly = {
-      basic: {
-        price: 15,
-        label: "Basic",
-        desc: "Starter credits",
-        highlight: false,
-      },
-      pro: { price: 29, label: "Pro", desc: "Most popular", highlight: true },
-      elite: {
-        price: 79,
-        label: "Elite",
-        desc: "Unlimited power",
-        highlight: false,
-      },
-    } as const;
-
-    const yearly = {
-      basic: {
-        price: 2.99,
-        label: "Basic",
-        desc: "Billed yearly",
-        highlight: false,
-      },
-      pro: { price: 7.99, label: "Pro", desc: "Best value", highlight: true },
-      elite: {
-        price: 15.99,
-        label: "Elite",
-        desc: "Premium tier",
-        highlight: false,
-      },
-    } as const;
-
-    return billing === "monthly" ? monthly : yearly;
-  }, [billing]);
+  const planMeta = useMemo(() => BILLING_PLANS[billing], [billing]);
 
   const chosen = planMeta[plan];
 
-  const onSetBilling = useCallback((k: BillingKey) => {
-    startTransition(() => setBilling(k));
-  }, []);
-  const onSetPlan = useCallback((k: PlanKey) => {
-    startTransition(() => setPlan(k));
-  }, []);
+  const onSetBilling = useCallback(
+    (k: BillingKey) => {
+      startTransition(() => setBilling(k));
+      trackEvent("onboarding.billing_changed", { billing: k });
+    },
+    [trackEvent]
+  );
+  const onSetPlan = useCallback(
+    (k: PlanKey) => {
+      startTransition(() => setPlan(k));
+      trackEvent("onboarding.plan_changed", { plan: k });
+    },
+    [trackEvent]
+  );
+
+  const handlePlanCTA = useCallback(
+    (k: PlanKey) => {
+      if (plan !== k) {
+        onSetPlan(k);
+        return;
+      }
+      setCheckoutOpen(true);
+      if (!hasTrackedCheckout) {
+        trackEvent("checkout.modal_opened", { plan: k, billing });
+        setHasTrackedCheckout(true);
+      }
+    },
+    [billing, hasTrackedCheckout, onSetPlan, plan, trackEvent]
+  );
+
+  useEffect(() => {
+    trackEvent("onboarding.step_viewed", { step });
+  }, [step, trackEvent]);
+
+  if (checkingOnboarding || !billingLoaded || authLoading || !isSignedIn) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#05030a] text-white">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-3 text-sm text-white/70">
+          Redirecting to login...
+        </div>
+      </div>
+    );
+  }
+
+  if ((onboardingCompleted && !onboardingAllowEdit) || subscriptionActive) {
+    if (typeof window !== "undefined") {
+      window.location.href = "/playground";
+    }
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#05030a] text-white">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-3 text-sm text-white/70">
+          Redirecting to your playground...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative min-h-screen w-full overflow-x-hidden bg-[#05030a] text-white">
@@ -533,7 +767,7 @@ export default function Page() {
         {step === 0 && (
           <Shell
             topPill="✨ 5-minute setup"
-            title="Create Your AI Influencer"
+            title="Create Your AI Creator Model"
             subtitle="Join thousands of creators building unique AI models — we’ll guide you through every step."
           >
          <div className="mx-auto max-w-4xl">
@@ -574,7 +808,7 @@ export default function Page() {
               <CardSelect
                 active={goal === "business"}
                 title="Build a Business"
-                desc="Create and monetize AI influencers."
+                desc="Create and monetize AI creator models."
                 icon={<BriefcaseBusiness size={20} />}
                 onClick={() => setGoal("business")}
               />
@@ -689,7 +923,7 @@ export default function Page() {
               <CardSelect
                 active={method === "custom"}
                 title="Create a Custom Model"
-                desc="Upload your own images and build a unique influencer."
+                desc="Upload your own images and build a unique creator model."
                 icon={<Upload size={20} />}
                 onClick={() => setMethod("custom")}
               />
@@ -705,7 +939,7 @@ export default function Page() {
 
         {step === 3 && (
           <Shell
-            title="Pick your AI influencer"
+            title="Pick your AI creator model"
             subtitle="Select a high-performing base model — no training required for this path."
           >
             <div className="grid gap-4 md:grid-cols-3">
@@ -796,7 +1030,7 @@ export default function Page() {
         {step === 4 && (
           <Shell
             title="Create your AI persona"
-            subtitle="Give your influencer a unique identity so the content stays consistent."
+            subtitle="Give your creator model a unique identity so the content stays consistent."
           >
             <div className="rounded-[34px] border border-white/10 bg-white/[0.04] p-5 sm:p-7">
               <div className="grid gap-6">
@@ -1130,8 +1364,8 @@ export default function Page() {
               <div className="overflow-hidden rounded-[34px] border border-white/10 bg-white/[0.04] shadow-[0_26px_120px_rgba(0,0,0,0.5)]">
                 <div className="relative aspect-[4/3] w-full">
                   <Image
-                    src={selectedInfluencer?.src || "/model/face-2.jpg"}
-                    alt={selectedInfluencer?.name || "AI influencer"}
+                    src={selectedInfluencer?.src || "/model/face-2-v2.jpg"}
+                    alt={selectedInfluencer?.name || "AI creator model"}
                     fill
                     className="object-cover"
                   />
@@ -1204,12 +1438,20 @@ export default function Page() {
           >
             <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
               <div className="overflow-hidden rounded-[34px] border border-white/10 bg-white/[0.04] shadow-[0_26px_120px_rgba(0,0,0,0.5)]">
-                <div className="relative aspect-[4/3] w-full">
+                <div className="relative aspect-[4/3] w-full lg:aspect-auto">
                   <Image
-                    src={selectedInfluencer?.src || "/model/face-2.jpg"}
-                    alt={selectedInfluencer?.name || "AI influencer"}
+                    src={selectedInfluencer?.src || "/model/face-2-v2.jpg"}
+                    alt={selectedInfluencer?.name || "AI creator model"}
                     fill
-                    className="object-cover"
+                    className="object-cover lg:hidden"
+                    priority
+                  />
+                  <Image
+                    src={selectedInfluencer?.src || "/model/face-2-v2.jpg"}
+                    alt={selectedInfluencer?.name || "AI creator model"}
+                    width={1200}
+                    height={1600}
+                    className="hidden h-auto w-full object-cover lg:block"
                     priority
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-transparent" />
@@ -1252,15 +1494,22 @@ export default function Page() {
                   </div>
                 </div>
 
-                <button
-                  type="button"
+                <div
+                  role="button"
+                  tabIndex={0}
                   onClick={() => onSetPlan("pro")}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      onSetPlan("pro");
+                    }
+                  }}
                   className={cn(
                     "mt-4 w-full overflow-hidden rounded-3xl border text-left transition",
                     plan === "pro"
                       ? "border-indigo-300/80 shadow-[0_26px_120px_rgba(94,169,255,0.18)]"
                       : "border-white/10 hover:border-white/25",
-                    "bg-white/[0.04]"
+                    "bg-white/[0.04] cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400/50"
                   )}
                 >
                   <div className="relative p-5">
@@ -1280,15 +1529,17 @@ export default function Page() {
 
                         <div className="mt-2 flex items-end gap-2">
                           <p className="text-4xl font-semibold">
-                            ${chosen.price}
+                            ${planMeta.pro.price}
                           </p>
-                          <p className="pb-1 text-sm text-white/55">/month</p>
+                          <p className="pb-1 text-sm text-white/55">
+                            /{billing === "monthly" ? "month" : "year"}
+                          </p>
                         </div>
 
                         <div className="mt-4 space-y-2 text-sm text-white/70">
                           <div className="flex items-center gap-2">
                             <Check className="text-emerald-300" size={16} />
-                            2000 Credits (photos & videos)
+                            {planMeta.pro.credits} Credits (photos & videos)
                           </div>
                           <div className="flex items-center gap-2">
                             <Check className="text-emerald-300" size={16} />2
@@ -1298,8 +1549,12 @@ export default function Page() {
                             </span>
                           </div>
                           <div className="flex items-center gap-2">
+                        <Check className="text-emerald-300" size={16} />
+                        60 scheduled posts / 30 days
+                          </div>
+                          <div className="flex items-center gap-2">
                             <Check className="text-emerald-300" size={16} />
-                            60 scheduled posts
+                            NSFW scheduled posts
                           </div>
                         </div>
                       </div>
@@ -1319,69 +1574,134 @@ export default function Page() {
                     </div>
 
                     <div className="relative mt-5">
-                      <div className="gx-cta-bar">Get Started</div>
+                      <button
+                        type="button"
+                        onClick={() => handlePlanCTA("pro")}
+                        className={cn(
+                          "gx-cta-bar w-full",
+                          plan !== "pro" && "gx-cta-muted"
+                        )}
+                      >
+                        {plan === "pro" ? "Get Started" : "Select"}
+                      </button>
                     </div>
                   </div>
-                </button>
+                </div>
 
                 <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                  <button
-                    type="button"
+                  <div
+                    role="button"
+                    tabIndex={0}
                     onClick={() => onSetPlan("basic")}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        onSetPlan("basic");
+                      }
+                    }}
                     className={cn(
                       "rounded-3xl border bg-white/[0.04] p-5 text-left transition",
                       plan === "basic"
                         ? "border-indigo-300/70 shadow-[0_18px_80px_rgba(94,169,255,0.14)]"
-                        : "border-white/10 hover:border-white/25"
+                        : "border-white/10 hover:border-white/25",
+                      "cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400/50"
                     )}
                   >
                     <p className="text-base font-semibold">Basic Plan</p>
                     <p className="mt-2 text-2xl font-semibold">
                       ${planMeta.basic.price}{" "}
-                      <span className="text-sm text-white/55">/mo</span>
+                      <span className="text-sm text-white/55">
+                        /{billing === "monthly" ? "mo" : "yr"}
+                      </span>
                     </p>
-                    <p className="mt-2 text-sm text-white/55">500 Credits</p>
-                    <p className="mt-1 text-sm text-rose-300/80">No video</p>
-                    <div
+                    <div className="mt-4 space-y-2 text-sm text-white/70">
+                      <div className="flex items-center gap-2">
+                        <Check className="text-emerald-300" size={16} />
+                        {planMeta.basic.credits} Credits (images only)
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Check className="text-emerald-300" size={16} />
+                        1 Model Token/month{" "}
+                        <span className="text-white/40">(claim or make 1 model)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Check className="text-emerald-300" size={16} />
+                        15 scheduled posts / 30 days
+                      </div>
+                      <div className="flex items-center gap-2 text-rose-300/80">
+                        <span className="text-rose-300/80">•</span> No video
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handlePlanCTA("basic")}
                       className={cn(
-                        "mt-4 gx-mini",
-                        plan === "basic" && "gx-mini-active"
+                        "mt-4 gx-cta-bar w-full",
+                        plan !== "basic" && "gx-cta-muted"
                       )}
                     >
-                      Select
-                    </div>
-                  </button>
+                      {plan === "basic" ? "Get Started" : "Select"}
+                    </button>
+                  </div>
 
-                  <button
-                    type="button"
+                  <div
+                    role="button"
+                    tabIndex={0}
                     onClick={() => onSetPlan("elite")}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        onSetPlan("elite");
+                      }
+                    }}
                     className={cn(
                       "rounded-3xl border bg-white/[0.04] p-5 text-left transition",
                       plan === "elite"
                         ? "border-indigo-300/70 shadow-[0_18px_80px_rgba(94,169,255,0.14)]"
-                        : "border-white/10 hover:border-white/25"
+                        : "border-white/10 hover:border-white/25",
+                      "cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400/50"
                     )}
                   >
                     <p className="text-base font-semibold">Elite Plan</p>
                     <p className="mt-2 text-2xl font-semibold">
                       ${planMeta.elite.price}{" "}
-                      <span className="text-sm text-white/55">/mo</span>
+                      <span className="text-sm text-white/55">
+                        /{billing === "monthly" ? "mo" : "yr"}
+                      </span>
                     </p>
-                    <p className="mt-2 text-sm text-white/55">
-                      Unlimited credits (photos & videos)
-                    </p>
-                    <p className="mt-1 text-sm text-indigo-200/80">
-                      Premium features
-                    </p>
-                    <div
+                    <div className="mt-4 space-y-2 text-sm text-white/70">
+                      <div className="flex items-center gap-2">
+                        <Check className="text-emerald-300" size={16} />
+                        {planMeta.elite.credits} Credits (photos & videos)
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Check className="text-emerald-300" size={16} />
+                        6 Model Tokens/month{" "}
+                        <span className="text-white/40">(multi-brand setup)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Check className="text-emerald-300" size={16} />
+                        180 scheduled posts / 30 days
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Check className="text-emerald-300" size={16} />
+                        NSFW scheduled posts
+                      </div>
+                      <div className="flex items-center gap-2 text-indigo-200/80">
+                        <span className="text-indigo-200/80">•</span> Premium support + priority renders
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handlePlanCTA("elite")}
                       className={cn(
-                        "mt-4 gx-mini",
-                        plan === "elite" && "gx-mini-active"
+                        "mt-4 gx-cta-bar w-full",
+                        plan !== "elite" && "gx-cta-muted"
                       )}
                     >
-                      Select
-                    </div>
-                  </button>
+                      {plan === "elite" ? "Get Started" : "Select"}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="mt-4 rounded-3xl border border-white/10 bg-black/25 p-5 text-center text-sm text-white/60">
@@ -1519,14 +1839,41 @@ export default function Page() {
                 <GradientButton
                   type="button"
                   onClick={() => {
-                    const url = CHECKOUT_URLS[billing][plan];
-                    window.location.href = url;
+                    trackEvent("checkout.redirect", { plan, billing });
+                    window.location.href = getCheckoutUrl(billing, plan);
                   }}
+                  disabled={!isSignedIn && !guestEmailValid}
                   className="mt-5 w-full"
                   innerClassName="w-full px-4 py-3"
                 >
                   Continue to Checkout
                 </GradientButton>
+
+                {!isSignedIn && (
+                  <div className="mt-4 rounded-2xl border border-white/10 bg-black/30 p-4">
+                    <label className="text-[12px] font-semibold text-white/80">
+                      Checkout email
+                    </label>
+                    <input
+                      value={guestEmail}
+                      onChange={(e) =>
+                        setGuestEmail(e.target.value.trim().toLowerCase())
+                      }
+                      placeholder="you@example.com"
+                      inputMode="email"
+                      className={`mt-2 w-full rounded-2xl bg-black/40 px-4 py-3 text-sm text-white/85 outline-none ring-1 transition ${
+                        guestEmail.length === 0
+                          ? "ring-white/10 focus:ring-indigo-300/40"
+                          : guestEmailValid
+                          ? "ring-emerald-400/30 focus:ring-emerald-400/40"
+                          : "ring-red-400/30 focus:ring-red-400/40"
+                      }`}
+                    />
+                    <p className="mt-2 text-[11px] text-white/45">
+                      We’ll attach your plan + setup to this email automatically.
+                    </p>
+                  </div>
+                )}
 
                 <div className="mt-4 text-center text-[11px] text-white/45">
                   <span className="inline-flex items-center gap-2">
@@ -1656,6 +2003,12 @@ export default function Page() {
           );
           opacity: 0.75;
           pointer-events: none;
+        }
+        .gx-cta-muted {
+          opacity: 0.88;
+          background: linear-gradient(120deg, #111318 0%, #0b0c11 100%);
+          color: rgba(255, 255, 255, 0.78);
+          box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
         }
 
         /* Mini selector bars for Basic/Elite cards */

@@ -7,7 +7,7 @@ export default function ProfileAvatar() {
   const { user } = useAuth();
 
   return (
-    <Link href="/profile">
+    <Link href="/playground">
       <div
         className="
           w-11 h-11 rounded-full bg-[#1a1a1c]

@@ -26,6 +26,15 @@ export async function POST(req: Request) {
 
   if (!user) return NextResponse.json({ error: "not-found" }, { status: 404 });
 
+  const activeSubscription = await prisma.subscription.findFirst({
+    where: { userId: user.id, status: "Active" },
+    orderBy: { createdAt: "desc" },
+  });
+
+  if (!activeSubscription) {
+    return NextResponse.json({ error: "no-subscription" }, { status: 403 });
+  }
+
   if (user.credits <= 0)
     return NextResponse.json({ error: "no-credit" }, { status: 400 });
 
