@@ -33,7 +33,9 @@ export async function POST(req: Request) {
 
   const updates: any = {};
   if (status) updates.status = status;
-  if (Number.isFinite(credits)) updates.credits = Math.max(0, Math.floor(credits));
+  if (typeof credits === "number" && Number.isFinite(credits)) {
+    updates.credits = Math.max(0, Math.floor(credits));
+  }
 
   const updatedUser = Object.keys(updates).length
     ? await prisma.user.update({ where: { id: userId }, data: updates })

@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import { XCircle, ArrowRight } from "lucide-react";
 import { BILLING_PLANS, type BillingKey, type PlanKey } from "@/app/config/billingPlans";
 
-export default function CheckoutFailedPage() {
+function CheckoutFailedPageContent() {
   const searchParams = useSearchParams();
   const plan = (searchParams.get("plan") || "pro") as PlanKey;
   const billing = (searchParams.get("billing") || "monthly") as BillingKey;
@@ -68,5 +69,19 @@ export default function CheckoutFailedPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function CheckoutFailedPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-[#07070B] text-white grid place-items-center">
+          <div className="text-sm text-white/70">Loading checkout status…</div>
+        </main>
+      }
+    >
+      <CheckoutFailedPageContent />
+    </Suspense>
   );
 }

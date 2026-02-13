@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { WhopCheckoutEmbed } from "@whop/checkout/react";
 import { Sparkles, ShieldCheck, ArrowLeft } from "lucide-react";
 import useAuth from "@/app/hooks/useAuth";
@@ -13,7 +13,7 @@ import {
   getPlanId,
 } from "@/app/config/billingPlans";
 
-export default function CheckoutPage() {
+function CheckoutPageContent() {
   const searchParams = useSearchParams();
   const planParam = searchParams.get("plan");
   const billingParam = searchParams.get("billing");
@@ -521,5 +521,19 @@ export default function CheckoutPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function CheckoutPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-[#07070B] text-white grid place-items-center">
+          <div className="text-sm text-white/70">Loading checkout…</div>
+        </main>
+      }
+    >
+      <CheckoutPageContent />
+    </Suspense>
   );
 }

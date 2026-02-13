@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import prisma from "@/app/lib/prisma";
 import { findPlanById } from "@/app/config/billingPlans";
 
@@ -202,7 +203,7 @@ export async function POST(req: Request) {
       ? match?.entry.priceCents ?? 0
       : 0;
 
-  const tx = [
+  const tx: Prisma.PrismaPromise<any>[] = [
     prisma.billingHistory.create({
       data: {
         userId: user.id,

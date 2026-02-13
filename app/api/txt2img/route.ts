@@ -153,7 +153,7 @@ async function generateCandidate(opts: {
   influencerId: string;
   fileName: string;
   mime: string;
-  faceBytes: Buffer;
+  faceBytes: Uint8Array;
 }) {
   const form = new FormData();
   form.append("prompt", opts.finalPrompt);
@@ -168,7 +168,8 @@ async function generateCandidate(opts: {
   form.append("primaryFaceRequired", "true");
   form.append("hiddenPromptApplied", "true");
 
-  const faceBlob = new Blob([opts.faceBytes], { type: opts.mime });
+  const safeBytes = new Uint8Array(opts.faceBytes);
+  const faceBlob = new Blob([safeBytes.buffer], { type: opts.mime });
   const faceFile = new File([faceBlob], opts.fileName, { type: opts.mime });
 
   form.append("face", faceFile);
@@ -271,7 +272,7 @@ export async function POST(req: Request) {
 
     const relativeFacePath = influencer.src.replace(/^\/+/, "");
     const absoluteFacePath = path.join(process.cwd(), "public", relativeFacePath);
-    const faceBytes = await fs.readFile(absoluteFacePath);
+    const faceBytes = new Uint8Array(await fs.readFile(absoluteFacePath));
     const fileName = path.basename(absoluteFacePath);
     const mime = extToMime(absoluteFacePath);
 

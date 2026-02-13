@@ -1,11 +1,11 @@
 // app/login/page.tsx
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
@@ -221,5 +221,19 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-[#0B0B10] text-white grid place-items-center">
+          <div className="text-sm text-white/70">Loading login…</div>
+        </main>
+      }
+    >
+      <LoginPageContent />
+    </Suspense>
   );
 }
