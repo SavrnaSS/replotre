@@ -230,6 +230,30 @@ export async function POST(req: Request) {
     );
   }
 
+  if (isSuccess && match?.plan && match?.billing) {
+    tx.push(
+      prisma.subscription.upsert({
+        where: { id: `whop_${user.id}` },
+        update: {
+          plan: match.plan,
+          billing: match.billing,
+          amount: amountCents,
+          status: "Active",
+          startedAt: new Date(),
+        },
+        create: {
+          id: `whop_${user.id}`,
+          userId: user.id,
+          plan: match.plan,
+          billing: match.billing,
+          amount: amountCents,
+          status: "Active",
+          startedAt: new Date(),
+        },
+      })
+    );
+  }
+
   tx.push(
     prisma.onboardingProfile.upsert({
       where: { userId: user.id },

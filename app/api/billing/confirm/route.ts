@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/app/lib/prisma";
 import { getUserFromCookie } from "@/app/lib/auth";
 import { getPlanConfig } from "@/app/config/billingPlans";
+import type { BillingKey, PlanKey } from "@/app/config/billingPlans";
 
 export async function POST(req: Request) {
   const user = await getUserFromCookie(req);
@@ -47,11 +48,21 @@ export async function POST(req: Request) {
 
   let amount = 0;
   let credits = 0;
+  let planKey: PlanKey | null = null;
+  let billingKey: BillingKey | null = null;
   if (plan && billing) {
     try {
-      const meta = getPlanConfig(billing as any, plan as any);
-      amount = meta?.priceCents ?? 0;
-      credits = meta?.credits ?? 0;
+      const normalizedPlan =
+        plan === "basic" || plan === "pro" || plan === "elite" ? (plan as PlanKey) : null;
+      const normalizedBilling =
+        billing === "monthly" || billing === "yearly" ? (billing as BillingKey) : null;
+      if (normalizedPlan && normalizedBilling) {
+        const meta = getPlanConfig(normalizedBilling, normalizedPlan);
+        amount = meta?.priceCents ?? 0;
+        credits = meta?.credits ?? 0;
+        planKey = normalizedPlan;
+        billingKey = normalizedBilling;
+      }
     } catch {
       // ignore
     }
@@ -71,6 +82,44 @@ export async function POST(req: Request) {
       webhookId: `fallback_${receiptId || crypto.randomUUID()}`,
     },
   });
+
+  if (planKey && billingKey) {
+    const existingSub = await prisma.subscription.findFirst({
+      where: { userId: lookupUser.id },
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (existingSub) {
+      await prisma.subscription.update({
+        where: { id: existingSub.id },
+        data: {
+          plan: planKey,
+          billing: billingKey,
+          amount,
+          status: "Active",
+          startedAt: new Date(),
+        },
+      });
+    } else {
+      await prisma.subscription.create({
+        data: {
+          userId: lookupUser.id,
+          plan: planKey,
+          billing: billingKey,
+          amount,
+          status: "Active",
+          startedAt: new Date(),
+        },
+      });
+    }
+  }
+
+  if (credits > 0) {
+    await prisma.user.update({
+      where: { id: lookupUser.id },
+      data: { credits: { increment: credits } },
+    });
+  }
 
   const existingProfile = await prisma.onboardingProfile.findUnique({
     where: { userId: lookupUser.id },

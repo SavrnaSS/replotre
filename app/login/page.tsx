@@ -79,29 +79,29 @@ function LoginPageContent() {
           <div className="hidden lg:block">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
               <span className="h-2 w-2 rounded-full bg-emerald-400/80" />
-              Secure authentication • Supabase + Prisma
+              Secure sign-in • Account protection built in
             </div>
 
             <h1 className="mt-4 text-5xl font-semibold leading-tight tracking-tight">
               Welcome back to{" "}
               <span className="bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">
-                Gerox
+                replotre
               </span>
             </h1>
 
             <p className="mt-3 max-w-md text-sm leading-relaxed text-white/65">
-              Sign in to continue. Use Google for one-tap access or your email/password.
-              Your session is stored securely in an HTTP-only cookie.
+              Sign in to continue to your workspace. Use Google for instant access,
+              or sign in with your email and password. Your session is protected with secure cookies.
             </p>
 
             <div className="mt-8 grid max-w-md grid-cols-2 gap-3">
               <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <div className="text-xs text-white/60">Fast</div>
-                <div className="mt-1 text-sm font-semibold">One-click Google login</div>
+                <div className="text-xs text-white/60">Faster access</div>
+                <div className="mt-1 text-sm font-semibold">Continue with Google in one tap</div>
               </div>
               <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <div className="text-xs text-white/60">Safe</div>
-                <div className="mt-1 text-sm font-semibold">Encrypted credentials</div>
+                <div className="text-xs text-white/60">Security first</div>
+                <div className="mt-1 text-sm font-semibold">Encrypted credentials and sessions</div>
               </div>
             </div>
           </div>
@@ -114,13 +114,13 @@ function LoginPageContent() {
               <div className="relative">
                 <div className="mb-5">
                   <div className="flex items-center justify-between">
-                    <h2 className="text-2xl font-semibold tracking-tight">Gerox AI Login</h2>
+                    <h2 className="text-2xl font-semibold tracking-tight">replotre Login</h2>
                     <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] text-white/70">
                       v1
                     </span>
                   </div>
                   <p className="mt-1 text-sm text-white/60">
-                    Login with Google or use your email & password.
+                    Continue with Google or sign in with your email and password.
                   </p>
                 </div>
 
@@ -197,14 +197,14 @@ function LoginPageContent() {
                         : "cursor-not-allowed border border-white/10 bg-white/10 text-white/50"
                     }`}
                   >
-                    {loading ? "Logging in..." : "Login"}
+                    {loading ? "Signing in..." : "Sign in"}
                   </button>
                 </div>
 
                 <div className="mt-6 flex items-center justify-between text-xs text-white/55">
-                  <span>Don’t have an account?</span>
+                  <span>New to replotre?</span>
                   <Link href="/signup" className="text-white underline underline-offset-4 hover:opacity-85">
-                    Sign up
+                    Create account
                   </Link>
                 </div>
 
@@ -215,7 +215,7 @@ function LoginPageContent() {
             </div>
 
             <p className="mt-6 text-center text-[11px] text-white/45">
-              Tip: For Vercel, use Supabase pooler in <span className="text-white/65">DATABASE_URL</span>.
+              Secure cookies • Encrypted credentials • Protected sessions
             </p>
           </div>
         </div>
@@ -229,7 +229,7 @@ export default function LoginPage() {
     <Suspense
       fallback={
         <main className="min-h-screen bg-[#0B0B10] text-white grid place-items-center">
-          <div className="text-sm text-white/70">Loading login…</div>
+          <div className="text-sm text-white/70">Loading sign-in…</div>
         </main>
       }
     >

@@ -97,25 +97,26 @@ export default function SignupPage() {
           <div className="hidden lg:block">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
               <span className="h-2 w-2 rounded-full bg-emerald-400/80" />
-              Create account • Start with 101 credits
+              Account setup • Credits activate after subscription
             </div>
 
             <h1 className="mt-4 text-5xl font-semibold leading-tight tracking-tight">
               Create your{" "}
               <span className="bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">
-                Gerox
+                replotre
               </span>{" "}
               account
             </h1>
 
             <p className="mt-3 max-w-md text-sm leading-relaxed text-white/65">
-              Use Google for instant signup, or create an email/password account. Your password is stored as a secure hash.
+              Continue with Google for instant access, or create an account with email and password.
+              Credentials are protected with secure hashing and session cookies.
             </p>
 
             <div className="mt-8 grid max-w-md grid-cols-2 gap-3">
               <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                 <div className="text-xs text-white/60">Credits</div>
-                <div className="mt-1 text-sm font-semibold">101 starting credits</div>
+                <div className="mt-1 text-sm font-semibold">Unlocked with active plan</div>
               </div>
               <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                 <div className="text-xs text-white/60">Auth</div>
@@ -131,9 +132,9 @@ export default function SignupPage() {
 
               <div className="relative">
                 <div className="mb-5">
-                  <h2 className="text-2xl font-semibold tracking-tight">Sign up</h2>
+                  <h2 className="text-2xl font-semibold tracking-tight">Create your replotre account</h2>
                   <p className="mt-1 text-sm text-white/60">
-                    Use Google or create an email/password account.
+                    Use Google or continue with email and password.
                   </p>
                 </div>
 
@@ -237,7 +238,7 @@ export default function SignupPage() {
                         : "cursor-not-allowed border border-white/10 bg-white/10 text-white/50"
                     }`}
                   >
-                    {loading ? "Creating..." : "Create account"}
+                    {loading ? "Creating account..." : "Create account"}
                   </button>
 
                   <p className="text-[11px] leading-snug text-white/45">
@@ -248,7 +249,7 @@ export default function SignupPage() {
                 <div className="mt-6 flex items-center justify-between text-xs text-white/55">
                   <span>Already have an account?</span>
                   <Link href="/login" className="text-white underline underline-offset-4 hover:opacity-85">
-                    Login
+                    Sign in
                   </Link>
                 </div>
               </div>

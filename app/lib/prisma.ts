@@ -3,11 +3,37 @@ import { PrismaClient } from "@prisma/client";
 
 const isProd = process.env.NODE_ENV === "production";
 
-// Prefer DATABASE_URL_LOCAL in dev, fallback to DATABASE_URL
-const baseConnectionString =
-  (isProd
-    ? process.env.DATABASE_URL
-    : process.env.DATABASE_URL_LOCAL || process.env.DATABASE_URL) || "";
+type UrlCandidate = {
+  key: string;
+  value: string | undefined;
+};
+
+const pickFirstUrl = (candidates: UrlCandidate[]) => {
+  for (const candidate of candidates) {
+    if (candidate.value && candidate.value.trim()) {
+      return { key: candidate.key, value: candidate.value.trim() };
+    }
+  }
+  return { key: "", value: "" };
+};
+
+// In production, support Vercel/Supabase common envs.
+// In development, prefer DATABASE_URL_LOCAL.
+const resolved = pickFirstUrl(
+  isProd
+    ? [
+        { key: "DATABASE_URL", value: process.env.DATABASE_URL },
+        { key: "POSTGRES_PRISMA_URL", value: process.env.POSTGRES_PRISMA_URL },
+        { key: "POSTGRES_URL", value: process.env.POSTGRES_URL },
+        { key: "DATABASE_URL_LOCAL", value: process.env.DATABASE_URL_LOCAL },
+      ]
+    : [
+        { key: "DATABASE_URL_LOCAL", value: process.env.DATABASE_URL_LOCAL },
+        { key: "DATABASE_URL", value: process.env.DATABASE_URL },
+        { key: "POSTGRES_PRISMA_URL", value: process.env.POSTGRES_PRISMA_URL },
+        { key: "POSTGRES_URL", value: process.env.POSTGRES_URL },
+      ]
+);
 
 const withDevPoolLimits = (url: string) => {
   if (isProd || !url) return url;
@@ -25,10 +51,12 @@ const withDevPoolLimits = (url: string) => {
   }
 };
 
-const connectionString = withDevPoolLimits(baseConnectionString);
+const connectionString = withDevPoolLimits(resolved.value);
 
 if (!connectionString) {
-  throw new Error("DATABASE_URL is missing (or DATABASE_URL_LOCAL in dev).");
+  throw new Error(
+    "Database env missing. Set one of: DATABASE_URL, POSTGRES_PRISMA_URL, POSTGRES_URL, DATABASE_URL_LOCAL."
+  );
 }
 
 // Prisma v6 reads DATABASE_URL from env automatically.
@@ -44,5 +72,11 @@ export const prisma =
   });
 
 if (!isProd) globalForPrisma.prisma = prisma;
+
+if (!isProd) {
+  // Useful in dev without exposing secrets.
+  // eslint-disable-next-line no-console
+  console.log(`[prisma] using connection from ${resolved.key}`);
+}
 
 export default prisma;
