@@ -114,7 +114,7 @@ function LoginPageContent() {
               <div className="relative">
                 <div className="mb-5">
                   <div className="flex items-center justify-between">
-                    <h2 className="text-2xl font-semibold tracking-tight">replotre Login</h2>
+                    <h2 className="text-2xl font-semibold tracking-tight">Replotre Login</h2>
                     <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] text-white/70">
                       v1
                     </span>
