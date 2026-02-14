@@ -84,7 +84,7 @@ export const getPlanConfig = (billing: BillingKey, plan: PlanKey) =>
   BILLING_PLANS[billing][plan];
 
 export const getPlanId = (billing: BillingKey, plan: PlanKey) =>
-  BILLING_PLANS[billing][plan].whopPlanId;
+  BILLING_PLANS[billing][plan].whopPlanId || process.env.NEXT_PUBLIC_WHOP_PLAN_ID;
 
 export const findPlanById = (planId?: string) => {
   if (!planId) return null;

@@ -56,7 +56,9 @@ function CheckoutPageContent() {
     (typeof window !== "undefined" ? window.location.origin : "");
 
   const whopOrigin = process.env.NEXT_PUBLIC_WHOP_ORIGIN;
-  const useCustomEmbed = Boolean(whopOrigin && whopOrigin !== "https://whop.com");
+  const embedMode = (process.env.NEXT_PUBLIC_WHOP_EMBED_MODE || "sdk").toLowerCase();
+  const useCustomEmbed =
+    embedMode === "iframe" && Boolean(whopOrigin && whopOrigin !== "https://whop.com");
 
   const [iframeHeight, setIframeHeight] = useState(1120);
   const [iframeLoaded, setIframeLoaded] = useState(false);
@@ -482,9 +484,7 @@ function CheckoutPageContent() {
                             onComplete={(id: string, receipt?: string) =>
                               handleCheckoutSuccess(receipt ?? id)
                             }
-                            returnUrl={`${
-                              process.env.NEXT_PUBLIC_BASE_URL ?? ""
-                            }/checkout/complete?plan=${plan}&billing=${billing}`}
+                            returnUrl={`${baseUrl}/checkout/complete?plan=${plan}&billing=${billing}`}
                             prefill={isSignedIn ? { email: safeEmail } : undefined}
                             hideEmail={isSignedIn}
                             disableEmail={isSignedIn}
