@@ -220,3 +220,200 @@ button {
   50% { transform: scale(1.3); }
   100% { transform: scale(1); }
 }
+
+/* ===============================
+   REPLOTRE DESIGN SYSTEM (rp-*) — landing, auth and app pages
+   Layered so Tailwind utilities like `hidden` / `lg:hidden` still win.
+   =============================== */
+@layer components {
+  .rp-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 9999px;
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    background: linear-gradient(100deg, #3a3470 0%, #6d5dfc 45%, #6aa7ff 100%);
+    background-size: 160% 100%;
+    background-position: 0% 50%;
+    box-shadow: 0 18px 60px rgba(109, 93, 252, 0.28),
+      inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    transition: background-position 0.5s ease, box-shadow 0.3s ease,
+      transform 0.15s ease;
+    overflow: hidden;
+    isolation: isolate;
+    white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .rp-btn::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.28) 50%, transparent 70%);
+    transform: translateX(-120%);
+    transition: transform 0.7s ease;
+    z-index: -1;
+    pointer-events: none;
+  }
+  .rp-btn:active { transform: translateY(1px) scale(0.99); }
+
+  .rp-ghost {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 9999px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.04);
+    color: rgba(255, 255, 255, 0.88);
+    transition: background 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
+    white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .rp-ghost:active { background: rgba(255, 255, 255, 0.1); }
+
+  @media (hover: hover) {
+    .rp-btn:hover {
+      background-position: 100% 50%;
+      box-shadow: 0 22px 70px rgba(109, 93, 252, 0.42),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    }
+    .rp-btn:hover::after { transform: translateX(120%); }
+    .rp-ghost:hover {
+      background: rgba(255, 255, 255, 0.09);
+      border-color: rgba(255, 255, 255, 0.24);
+    }
+  }
+
+  .rp-btn:focus-visible,
+  .rp-ghost:focus-visible,
+  .rp-focus:focus-visible {
+    outline: 2px solid rgba(167, 139, 250, 0.85);
+    outline-offset: 3px;
+  }
+
+  .rp-tile {
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    background: rgba(0, 0, 0, 0.55);
+    padding: 14px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+  .rp-stat {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border-radius: 9999px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.04);
+    padding: 3px 8px;
+    white-space: nowrap;
+  }
+  .rp-grid-bg {
+    background-image: linear-gradient(to right, rgba(255, 255, 255, 0.5) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.5) 1px, transparent 1px);
+    background-size: 28px 28px;
+    mask-image: radial-gradient(ellipse at center, #000 30%, transparent 75%);
+  }
+  .rp-text-shine {
+    background-image: linear-gradient(90deg, #ddd6fe 0%, #a5b4fc 25%, #bae6fd 50%, #a5b4fc 75%, #ddd6fe 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .rp-noscrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+  .rp-noscrollbar::-webkit-scrollbar { display: none; }
+
+  /* Motion only when the user hasn't asked to reduce it. Content is visible without JS. */
+  @media (prefers-reduced-motion: no-preference) {
+    .rp-text-shine { animation: rp-shine 6s linear infinite; }
+    .rp-spin { transform-box: fill-box; transform-origin: center; animation: rp-rotate 6s linear infinite; }
+    .rp-marquee { animation: rp-marquee 36s linear infinite; }
+    .rp-marquee-wrap:hover .rp-marquee { animation-play-state: paused; }
+    .rp-rise { animation: rp-rise 0.85s cubic-bezier(0.22, 1, 0.36, 1) both; }
+    .rp-float { animation: rp-float 7s ease-in-out infinite; }
+  }
+}
+
+@keyframes rp-shine { to { background-position: 200% center; } }
+@keyframes rp-rotate { to { transform: rotate(360deg); } }
+@keyframes rp-marquee { to { transform: translateX(-50%); } }
+@keyframes rp-rise {
+  from { opacity: 0; transform: translateY(18px); filter: blur(6px); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+@keyframes rp-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+/* Forms, cards and app chrome shared by auth + app pages. */
+@layer components {
+  .rp-card {
+    border-radius: 26px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.025));
+    box-shadow: 0 30px 120px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  .rp-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.65);
+  }
+
+  .rp-input {
+    width: 100%;
+    height: 3rem;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.35);
+    padding: 0 1rem;
+    /* 16px stops iOS Safari from zooming into focused inputs */
+    font-size: 16px;
+    color: #fff;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  }
+  @media (min-width: 640px) {
+    .rp-input { font-size: 14px; }
+  }
+  .rp-input::placeholder { color: rgba(255, 255, 255, 0.3); }
+  .rp-input:hover { border-color: rgba(255, 255, 255, 0.18); }
+  .rp-input:focus {
+    border-color: rgba(167, 139, 250, 0.6);
+    box-shadow: 0 0 0 4px rgba(109, 93, 252, 0.18);
+    background: rgba(0, 0, 0, 0.45);
+  }
+  .rp-input[aria-invalid="true"] {
+    border-color: rgba(251, 113, 133, 0.55);
+    box-shadow: 0 0 0 4px rgba(244, 63, 94, 0.12);
+  }
+  .rp-input:-webkit-autofill {
+    -webkit-text-fill-color: #fff;
+    -webkit-box-shadow: 0 0 0 1000px #0d0e1c inset;
+    caret-color: #fff;
+  }
+
+  .rp-btn:disabled,
+  .rp-ghost:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+    filter: saturate(0.6);
+  }
+
+  .rp-spinner {
+    width: 16px;
+    height: 16px;
+    border-radius: 9999px;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    border-top-color: #fff;
+    animation: rp-rotate 0.7s linear infinite;
+  }
+}
