@@ -36,6 +36,7 @@ model User {
   adminNotes AdminNote[]
   adminActions AdminAction[]
   scheduledPosts ScheduledPost[]
+  customModel   CustomModel?
 
   @@schema("public")
 }
@@ -295,5 +296,48 @@ model PolicyCase {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@schema("public")
+}
+
+/// A user's own-face model: a reference set of their training photos.
+/// status: draft → training → ready | failed
+model CustomModel {
+  id               String    @id @default(cuid())
+  userId           String    @unique
+  status           String    @default("draft")
+  photoCount       Int       @default(0)
+  referencePhotoId String?
+  consentAt        DateTime?
+  error            String?
+  trainedAt        DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  user   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  photos CustomModelPhoto[]
+
+  @@schema("public")
+}
+
+/// One training photo, stored privately in Supabase Storage (EXIF stripped).
+model CustomModelPhoto {
+  id         String   @id @default(cuid())
+  modelId    String
+  storageKey String
+  width      Int
+  height     Int
+  sharpness  Float
+  brightness Float
+  hash       String
+  /// Face count reported by the browser check (advisory only).
+  faces      Int?
+  score      Float
+  warnings   String[] @default([])
+  createdAt  DateTime @default(now())
+
+  model CustomModel @relation(fields: [modelId], references: [id], onDelete: Cascade)
+
+  @@unique([modelId, hash])
+  @@index([modelId])
   @@schema("public")
 }

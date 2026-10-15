@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/app/lib/prisma";
 import { getUserFromCookie } from "@/app/lib/auth";
 import { getInfluencerById } from "@/app/data/influencers";
+import { getObject } from "@/app/lib/trainingStorage.server";
 
 export const runtime = "nodejs";
 
@@ -248,37 +249,77 @@ export async function POST(req: Request) {
     });
 
     const profileData = asRecord(profile?.data);
-    const influencerId = String(profileData.influencerId || "").trim();
-    if (!influencerId) {
-      return NextResponse.json(
-        {
-          error: "influencer_not_mapped",
-          message: "No influencer face is mapped to this user.",
-        },
-        { status: 409 }
-      );
-    }
 
-    const influencer = getInfluencerById(influencerId);
-    if (!influencer?.src) {
-      return NextResponse.json(
-        {
-          error: "invalid_influencer_mapping",
-          message: "Mapped influencer is invalid or missing face source.",
-        },
-        { status: 409 }
-      );
-    }
+    // Resolve the locked identity reference: the user's own custom model, or a mapped look.
+    let influencerId: string;
+    let faceBytes: Uint8Array;
+    let fileName: string;
+    let mime: string;
+    let identityName: string;
+    let faceSource: string;
 
-    const relativeFacePath = influencer.src.replace(/^\/+/, "");
-    const absoluteFacePath = path.join(process.cwd(), "public", relativeFacePath);
-    const faceBytes = new Uint8Array(await fs.readFile(absoluteFacePath));
-    const fileName = path.basename(absoluteFacePath);
-    const mime = extToMime(absoluteFacePath);
+    if (String(profileData.method || "") === "custom") {
+      const custom = await prisma.customModel.findUnique({
+        where: { userId: user.id },
+        select: { status: true, referencePhotoId: true },
+      });
+      const reference =
+        custom?.status === "ready" && custom.referencePhotoId
+          ? await prisma.customModelPhoto.findUnique({
+              where: { id: custom.referencePhotoId },
+              select: { storageKey: true },
+            })
+          : null;
+      if (!reference) {
+        return NextResponse.json(
+          {
+            error: "custom_model_not_ready",
+            message: "Your custom model isn't built yet. Upload your photos and build it first.",
+          },
+          { status: 409 }
+        );
+      }
+      influencerId = "custom";
+      faceBytes = new Uint8Array(await getObject(reference.storageKey));
+      fileName = "reference.jpg";
+      mime = "image/jpeg";
+      identityName = "the user's own custom model";
+      faceSource = "custom-model";
+    } else {
+      influencerId = String(profileData.influencerId || "").trim();
+      if (!influencerId) {
+        return NextResponse.json(
+          {
+            error: "influencer_not_mapped",
+            message: "No influencer face is mapped to this user.",
+          },
+          { status: 409 }
+        );
+      }
+
+      const influencer = getInfluencerById(influencerId);
+      if (!influencer?.src) {
+        return NextResponse.json(
+          {
+            error: "invalid_influencer_mapping",
+            message: "Mapped influencer is invalid or missing face source.",
+          },
+          { status: 409 }
+        );
+      }
+
+      const relativeFacePath = influencer.src.replace(/^\/+/, "");
+      const absoluteFacePath = path.join(process.cwd(), "public", relativeFacePath);
+      faceBytes = new Uint8Array(await fs.readFile(absoluteFacePath));
+      fileName = path.basename(absoluteFacePath);
+      mime = extToMime(absoluteFacePath);
+      identityName = influencer.name;
+      faceSource = influencer.src;
+    }
 
     const hiddenPrompt = getHiddenQualityPrompt();
     const identityLockPrompt = cleanPrompt(
-      `Reference identity lock: ${influencer.name}. Match this exact person from source_img.`
+      `Reference identity lock: ${identityName}. Match this exact person from source_img.`
     );
     const finalPrompt = cleanPrompt(`${prompt}\n${identityLockPrompt}\n${hiddenPrompt}`);
 
@@ -351,7 +392,7 @@ export async function POST(req: Request) {
         enforced: true,
         mode: "server_mapped",
         influencerId,
-        faceSource: influencer.src,
+        faceSource,
       },
       faceConsistency: {
         checked: false,

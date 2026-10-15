@@ -6,6 +6,7 @@ import React, {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import Image from "next/image";
@@ -41,6 +42,9 @@ import {
   BILLING_PLANS,
 } from "@/app/config/billingPlans";
 import { INFLUENCERS } from "@/app/data/influencers";
+import { takeBuilderDraft } from "@/app/lib/builderDraft";
+import { listPhotos } from "@/app/lib/photoStore";
+import CustomModelSync from "@/app/components/customModel/CustomModelSync";
 
 type GoalKey = "business" | "content" | "agency" | "tech";
 type ExperienceKey = "new" | "some";
@@ -304,6 +308,40 @@ export default function Page() {
       router.push("/login");
     }
   }, [authLoading, isSignedIn, router]);
+
+  // Choices made in the homepage builder before signing in: apply them once
+  // and open the review step, so the visitor doesn't answer the same questions twice.
+  const builderDraftApplied = useRef(false);
+  // Own photos added in the builder (still on this device) for a custom model.
+  const [customPhotos, setCustomPhotos] = useState<{ url: string; count: number } | null>(null);
+  useEffect(() => () => {
+    if (customPhotos) URL.revokeObjectURL(customPhotos.url);
+  }, [customPhotos]);
+  useEffect(() => {
+    if (authLoading || !isSignedIn || builderDraftApplied.current) return;
+    builderDraftApplied.current = true;
+    const draft = takeBuilderDraft();
+    if (!draft || !INFLUENCERS.some((x) => x.id === draft.influencerId)) return;
+    setMethod(draft.method === "custom" ? "custom" : "market");
+    setInfluencerId(draft.influencerId);
+    if (draft.method === "custom") {
+      listPhotos().then((photos) => {
+        const usable = photos.filter((p) => p.report && p.report.verdict !== "bad");
+        const cover = photos.find((p) => p.report?.verdict === "good") ?? usable[0];
+        if (cover) setCustomPhotos({ url: URL.createObjectURL(cover.blob), count: usable.length });
+      });
+    }
+    if (draft.aiName) {
+      setAiName(draft.aiName);
+      setAiNameManuallyEdited(true);
+    }
+    setNiche(draft.niche);
+    setVisualStyle(draft.visualStyle);
+    setPlatforms(draft.platforms);
+    setFrequency(draft.frequency);
+    setContentTypes(draft.contentTypes);
+    setStep(6);
+  }, [authLoading, isSignedIn]);
 
   const guestEmailValid = useMemo(() => {
     if (!guestEmail) return false;
@@ -1363,22 +1401,35 @@ export default function Page() {
             <div className="grid gap-5 lg:grid-cols-2">
               <div className="overflow-hidden rounded-[34px] border border-white/10 bg-white/[0.04] shadow-[0_26px_120px_rgba(0,0,0,0.5)]">
                 <div className="relative aspect-[4/3] w-full">
-                  <Image
-                    src={selectedInfluencer?.src || "/model/face-2-v2.jpg"}
-                    alt={selectedInfluencer?.name || "AI creator model"}
-                    fill
-                    className="object-cover"
-                  />
+                  {method === "custom" && customPhotos ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={customPhotos.url}
+                      alt="Your training photo"
+                      className="absolute inset-0 h-full w-full object-cover"
+                    />
+                  ) : (
+                    <Image
+                      src={selectedInfluencer?.src || "/model/face-2-v2.jpg"}
+                      alt={selectedInfluencer?.name || "AI creator model"}
+                      fill
+                      className="object-cover"
+                    />
+                  )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
                   <div className="absolute left-4 top-4 rounded-full bg-emerald-500/90 px-3 py-1 text-[11px] font-semibold text-black">
                     ✓ ACTIVE
                   </div>
                   <div className="absolute bottom-4 left-4 right-4">
                     <p className="text-sm font-semibold text-white/90">
-                      {selectedInfluencer?.name}
+                      {method === "custom" ? "Custom model" : selectedInfluencer?.name}
                     </p>
                     <p className="text-[12px] text-white/55">
-                      {selectedInfluencer?.subtitle}
+                      {method === "custom"
+                        ? customPhotos
+                          ? `${customPhotos.count} of your photos on this device`
+                          : "Your own photos"
+                        : selectedInfluencer?.subtitle}
                     </p>
                   </div>
                 </div>
@@ -1393,7 +1444,12 @@ export default function Page() {
                     },
                     {
                       t: "Influencer Ready",
-                      d: `Based on ${selectedInfluencer?.name}`,
+                      d:
+                        method === "custom"
+                          ? customPhotos
+                            ? `Custom model from ${customPhotos.count} of your photos`
+                            : "Custom model from your photos"
+                          : `Based on ${selectedInfluencer?.name}`,
                     },
                     {
                       t: "Content Strategy Set",
@@ -1428,6 +1484,12 @@ export default function Page() {
                 </div>
               </div>
             </div>
+
+            {method === "custom" && (
+              <div className="mt-5">
+                <CustomModelSync />
+              </div>
+            )}
           </Shell>
         )}
 
