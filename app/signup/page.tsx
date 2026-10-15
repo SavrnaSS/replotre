@@ -1,9 +1,22 @@
 // app/signup/page.tsx
 "use client";
 
-import { useMemo, useState } from "react";
-import Link from "next/link";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { AlertCircle, ArrowRight, Check } from "lucide-react";
+
+import { peekPromptDraft } from "@/app/lib/promptDraft";
+import AuthShell, {
+  GoogleButton,
+  OrDivider,
+  PasswordField,
+} from "@/app/components/auth/AuthShell";
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function cx(...parts: Array<string | false | null | undefined>) {
+  return parts.filter(Boolean).join(" ");
+}
 
 export default function SignupPage() {
   const router = useRouter();
@@ -14,47 +27,68 @@ export default function SignupPage() {
 
   const [loading, setLoading] = useState<boolean>(false);
   const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [capsLock, setCapsLock] = useState(false);
   const [error, setError] = useState<string>("");
+  const [touched, setTouched] = useState({ name: false, email: false, password: false });
+  const [submitted, setSubmitted] = useState(false);
+
+  const nameRef = useRef<HTMLInputElement | null>(null);
+  const emailRef = useRef<HTMLInputElement | null>(null);
+  const passwordRef = useRef<HTMLInputElement | null>(null);
 
   const trimmedName = useMemo(() => name.trim(), [name]);
   const trimmedEmail = useMemo(() => email.trim().toLowerCase(), [email]);
 
-  const emailValid = useMemo(() => {
-    if (!trimmedEmail) return false;
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail);
-  }, [trimmedEmail]);
+  const checks = useMemo(
+    () => [
+      { ok: password.length >= 6, label: "At least 6 characters", required: true },
+      { ok: /[A-Z]/.test(password) && /[a-z]/.test(password), label: "Upper & lowercase" },
+      { ok: /[0-9]/.test(password), label: "A number" },
+      { ok: /[^A-Za-z0-9]/.test(password), label: "A symbol" },
+    ],
+    [password]
+  );
 
   const passwordScore = useMemo(() => {
-    const p = password || "";
-    let score = 0;
-    if (p.length >= 6) score++;
-    if (p.length >= 10) score++;
-    if (/[A-Z]/.test(p)) score++;
-    if (/[0-9]/.test(p)) score++;
-    if (/[^A-Za-z0-9]/.test(p)) score++;
+    if (!password) return 0;
+    let score = checks.filter((c) => c.ok).length;
+    if (password.length >= 10) score++;
     return Math.min(score, 5);
-  }, [password]);
+  }, [password, checks]);
 
-  const canSubmit = useMemo(() => {
-    if (loading) return false;
-    if (!trimmedName) return false;
-    if (!trimmedEmail || !emailValid) return false;
-    if (!password || password.length < 6) return false;
-    return true;
-  }, [loading, trimmedName, trimmedEmail, emailValid, password]);
+  const strength = [
+    { label: "Too short", color: "bg-rose-400" },
+    { label: "Weak", color: "bg-rose-400" },
+    { label: "Fair", color: "bg-amber-300" },
+    { label: "Good", color: "bg-lime-300" },
+    { label: "Strong", color: "bg-emerald-400" },
+    { label: "Very strong", color: "bg-emerald-400" },
+  ][password.length < 6 ? 0 : passwordScore];
+
+  const fieldErrors = useMemo(() => {
+    const e: { name?: string; email?: string; password?: string } = {};
+    if (!trimmedName) e.name = "Name is required.";
+    if (!trimmedEmail) e.email = "Email is required.";
+    else if (!EMAIL_RE.test(trimmedEmail)) e.email = "Please enter a valid email.";
+    if (!password) e.password = "Password is required.";
+    else if (password.length < 6) e.password = "Password must be at least 6 characters.";
+    return e;
+  }, [trimmedName, trimmedEmail, password]);
+
+  const show = (k: keyof typeof touched) => (touched[k] || submitted) && fieldErrors[k];
 
   const signupGoogle = () => {
     window.location.href = "/api/auth/google";
   };
 
-  const signupManual = async () => {
+  const signupManual = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitted(true);
     setError("");
 
-    if (!trimmedName) return setError("Name is required.");
-    if (!trimmedEmail) return setError("Email is required.");
-    if (!emailValid) return setError("Please enter a valid email.");
-    if (!password) return setError("Password is required.");
-    if (password.length < 6) return setError("Password must be at least 6 characters.");
+    if (fieldErrors.name) return nameRef.current?.focus();
+    if (fieldErrors.email) return emailRef.current?.focus();
+    if (fieldErrors.password) return passwordRef.current?.focus();
 
     setLoading(true);
     try {
@@ -71,196 +105,169 @@ export default function SignupPage() {
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.error || "Signup failed");
 
-      router.push("/workspace");
-    } catch (e: any) {
-      setError(e?.message || "Signup failed");
-    } finally {
+      // an idea typed on the homepage takes them straight to Generate
+      router.push(peekPromptDraft() ? "/generate" : "/workspace");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Signup failed");
       setLoading(false);
     }
   };
 
-  const scoreLabel = ["Weak", "Fair", "Good", "Strong", "Very strong"][Math.max(0, passwordScore - 1)] || "Weak";
-  const scorePct = (passwordScore / 5) * 100;
-
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#0B0B10] text-white">
-      {/* Background */}
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-48 left-[-80px] h-[560px] w-[560px] rounded-full bg-indigo-500/20 blur-[110px]" />
-        <div className="absolute -bottom-48 right-[-120px] h-[560px] w-[560px] rounded-full bg-purple-500/25 blur-[110px]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.06)_1px,transparent_0)] bg-[length:22px_22px] opacity-40" />
-      </div>
+    <AuthShell
+      title="Create your account"
+      subtitle="Start building your AI influencer in minutes."
+      topLink={{ prompt: "Already have an account?", label: "Sign in", href: "/login" }}
+    >
+      <GoogleButton onClick={signupGoogle} label="Sign up with Google" />
+      <OrDivider />
 
-      <div className="relative mx-auto flex min-h-screen max-w-6xl items-center justify-center px-4 py-10">
-        <div className="grid w-full items-center gap-8 lg:grid-cols-2">
-          {/* Left */}
-          <div className="hidden lg:block">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
-              <span className="h-2 w-2 rounded-full bg-emerald-400/80" />
-              Account setup • Credits activate after subscription
-            </div>
-
-            <h1 className="mt-4 text-5xl font-semibold leading-tight tracking-tight">
-              Create your{" "}
-              <span className="bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">
-                replotre
-              </span>{" "}
-              account
-            </h1>
-
-            <p className="mt-3 max-w-md text-sm leading-relaxed text-white/65">
-              Continue with Google for instant access, or create an account with email and password.
-              Credentials are protected with secure hashing and session cookies.
-            </p>
-
-            <div className="mt-8 grid max-w-md grid-cols-2 gap-3">
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <div className="text-xs text-white/60">Credits</div>
-                <div className="mt-1 text-sm font-semibold">Unlocked with active plan</div>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <div className="text-xs text-white/60">Auth</div>
-                <div className="mt-1 text-sm font-semibold">Google + Password</div>
-              </div>
-            </div>
+      <form onSubmit={signupManual} noValidate className="space-y-5">
+        {error && (
+          <div
+            role="alert"
+            className="flex items-start gap-2.5 rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-[13px] leading-snug text-rose-100"
+          >
+            <AlertCircle size={16} className="mt-0.5 shrink-0 text-rose-300" />
+            {error}
           </div>
+        )}
 
-          {/* Right */}
-          <div className="mx-auto w-full max-w-md">
-            <div className="relative rounded-3xl border border-white/12 bg-white/[0.07] p-7 shadow-2xl backdrop-blur-xl">
-              <div className="absolute inset-0 rounded-3xl bg-gradient-to-b from-white/[0.06] to-transparent" />
-
-              <div className="relative">
-                <div className="mb-5">
-                  <h2 className="text-2xl font-semibold tracking-tight">Create your replotre account</h2>
-                  <p className="mt-1 text-sm text-white/60">
-                    Use Google or continue with email and password.
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={signupGoogle}
-                  className="relative w-full rounded-2xl border border-white/10 bg-white py-3.5 font-semibold text-black shadow-lg shadow-white/10 transition hover:bg-gray-200"
-                >
-                  Continue with Google
-                </button>
-
-                <div className="my-6 flex items-center gap-3">
-                  <div className="h-px flex-1 bg-white/15" />
-                  <span className="text-[11px] text-white/45">OR</span>
-                  <div className="h-px flex-1 bg-white/15" />
-                </div>
-
-                {error ? (
-                  <div className="mb-4 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-[12px] text-red-200 leading-snug">
-                    {error}
-                  </div>
-                ) : null}
-
-                <div className="space-y-3">
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-medium text-white/60">Name</label>
-                    <input
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="Your name"
-                      required
-                      autoComplete="name"
-                      className="w-full rounded-2xl bg-black/30 px-4 py-3.5 text-sm outline-none ring-1 ring-white/10 transition focus:ring-2 focus:ring-purple-500/30"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-medium text-white/60">Email</label>
-                    <input
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="you@example.com"
-                      type="email"
-                      required
-                      autoComplete="email"
-                      className={`w-full rounded-2xl bg-black/30 px-4 py-3.5 text-sm outline-none ring-1 transition focus:ring-2 ${
-                        email.length === 0
-                          ? "ring-white/10 focus:ring-purple-500/30"
-                          : emailValid
-                          ? "ring-emerald-400/30 focus:ring-emerald-500/20"
-                          : "ring-red-400/30 focus:ring-red-500/20"
-                      }`}
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <label className="text-[11px] font-medium text-white/60">Password</label>
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword((v) => !v)}
-                        className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-semibold text-white/70 transition hover:bg-white/10"
-                      >
-                        {showPassword ? "Hide" : "Show"}
-                      </button>
-                    </div>
-
-                    <input
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Min 6 chars"
-                      type={showPassword ? "text" : "password"}
-                      required
-                      minLength={6}
-                      autoComplete="new-password"
-                      className="w-full rounded-2xl bg-black/30 px-4 py-3.5 text-sm outline-none ring-1 ring-white/10 transition focus:ring-2 focus:ring-purple-500/30"
-                    />
-
-                    {/* Strength meter */}
-                    <div className="mt-2">
-                      <div className="flex items-center justify-between text-[11px] text-white/55">
-                        <span>Password strength</span>
-                        <span className="text-white/70">{scoreLabel}</span>
-                      </div>
-                      <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-white/10">
-                        <div
-                          className="h-full rounded-full bg-gradient-to-r from-red-400 via-yellow-300 to-emerald-400 transition-all"
-                          style={{ width: `${scorePct}%` }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    disabled={!canSubmit}
-                    onClick={signupManual}
-                    className={`w-full rounded-2xl py-4 text-sm font-semibold shadow-lg transition ${
-                      canSubmit
-                        ? "bg-gradient-to-r from-white to-gray-200 text-black hover:opacity-95"
-                        : "cursor-not-allowed border border-white/10 bg-white/10 text-white/50"
-                    }`}
-                  >
-                    {loading ? "Creating account..." : "Create account"}
-                  </button>
-
-                  <p className="text-[11px] leading-snug text-white/45">
-                    By continuing, you agree to our Terms and Privacy Policy.
-                  </p>
-                </div>
-
-                <div className="mt-6 flex items-center justify-between text-xs text-white/55">
-                  <span>Already have an account?</span>
-                  <Link href="/login" className="text-white underline underline-offset-4 hover:opacity-85">
-                    Sign in
-                  </Link>
-                </div>
-              </div>
-            </div>
-
-            <p className="mt-6 text-center text-[11px] text-white/45">
-              Secure cookies • Prisma • Supabase
+        <div>
+          <label htmlFor="name" className="rp-label mb-2">
+            Name
+          </label>
+          <input
+            ref={nameRef}
+            id="name"
+            name="name"
+            autoComplete="name"
+            autoFocus
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onBlur={() => setTouched((t) => ({ ...t, name: true }))}
+            placeholder="Your name"
+            aria-invalid={show("name") ? true : undefined}
+            aria-describedby={show("name") ? "name-error" : undefined}
+            className="rp-input"
+          />
+          {show("name") && (
+            <p id="name-error" className="mt-2 text-[12px] text-rose-300">
+              {fieldErrors.name}
             </p>
-          </div>
+          )}
         </div>
-      </div>
-    </div>
+
+        <div>
+          <label htmlFor="email" className="rp-label mb-2">
+            Email
+          </label>
+          <input
+            ref={emailRef}
+            id="email"
+            name="email"
+            type="email"
+            inputMode="email"
+            autoComplete="email"
+            autoCapitalize="none"
+            spellCheck={false}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            onBlur={() => setTouched((t) => ({ ...t, email: true }))}
+            placeholder="you@example.com"
+            aria-invalid={show("email") ? true : undefined}
+            aria-describedby={show("email") ? "email-error" : undefined}
+            className="rp-input"
+          />
+          {show("email") && (
+            <p id="email-error" className="mt-2 text-[12px] text-rose-300">
+              {fieldErrors.email}
+            </p>
+          )}
+        </div>
+
+        <PasswordField
+          id="password"
+          label="Password"
+          value={password}
+          onChange={setPassword}
+          onBlur={() => setTouched((t) => ({ ...t, password: true }))}
+          inputRef={passwordRef}
+          autoComplete="new-password"
+          error={show("password") || undefined}
+          show={showPassword}
+          setShow={setShowPassword}
+          capsLock={capsLock}
+          setCapsLock={setCapsLock}
+          aside={
+            password ? (
+              <span className="text-[12px] text-white/55" aria-live="polite">
+                {strength.label}
+              </span>
+            ) : null
+          }
+          hint={
+            <div>
+              {/* 5-segment strength meter */}
+              <div className="grid grid-cols-5 gap-1" aria-hidden>
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <span
+                    key={i}
+                    className={cx(
+                      "h-1 rounded-full transition-colors duration-300",
+                      password && i < Math.max(1, passwordScore) ? strength.color : "bg-white/10"
+                    )}
+                  />
+                ))}
+              </div>
+              <ul className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1.5">
+                {checks.map((c) => (
+                  <li
+                    key={c.label}
+                    className={cx(
+                      "flex items-center gap-1.5 transition-colors",
+                      c.ok ? "text-emerald-300/90" : "text-white/40"
+                    )}
+                  >
+                    <span
+                      className={cx(
+                        "flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border transition-colors",
+                        c.ok ? "border-transparent bg-emerald-400/90" : "border-white/20"
+                      )}
+                    >
+                      {c.ok && <Check size={9} className="text-black" strokeWidth={3} />}
+                    </span>
+                    {c.label}
+                    {c.required && !c.ok && <span className="sr-only"> (required)</span>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          }
+        />
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="rp-btn h-12 w-full text-[15px] font-semibold"
+        >
+          {loading ? (
+            <>
+              <span className="rp-spinner" aria-hidden />
+              Creating account…
+            </>
+          ) : (
+            <>
+              Create account
+              <ArrowRight size={17} />
+            </>
+          )}
+        </button>
+      </form>
+
+      <p className="mt-6 text-center text-[12px] leading-relaxed text-white/40">
+        By creating an account, you agree to our Terms and Privacy Policy.
+      </p>
+    </AuthShell>
   );
 }

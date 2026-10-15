@@ -1,9 +1,18 @@
 // app/login/page.tsx
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { AlertCircle, ArrowRight } from "lucide-react";
+
+import { peekPromptDraft } from "@/app/lib/promptDraft";
+import AuthShell, {
+  GoogleButton,
+  OrDivider,
+  PasswordField,
+} from "@/app/components/auth/AuthShell";
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function LoginPageContent() {
   const router = useRouter();
@@ -12,7 +21,13 @@ function LoginPageContent() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [capsLock, setCapsLock] = useState(false);
   const [error, setError] = useState("");
+  const [touched, setTouched] = useState({ email: false, password: false });
+  const [submitted, setSubmitted] = useState(false);
+
+  const emailRef = useRef<HTMLInputElement | null>(null);
+  const passwordRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (searchParams.get("error") === "db_unavailable") {
@@ -21,29 +36,30 @@ function LoginPageContent() {
   }, [searchParams]);
 
   const trimmedEmail = useMemo(() => email.trim().toLowerCase(), [email]);
-  const emailValid = useMemo(() => {
-    if (!trimmedEmail) return false;
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail);
-  }, [trimmedEmail]);
 
-  const canSubmit = useMemo(() => {
-    if (loading) return false;
-    if (!trimmedEmail || !emailValid) return false;
-    if (!password || password.length < 6) return false;
-    return true;
-  }, [loading, trimmedEmail, emailValid, password]);
+  const fieldErrors = useMemo(() => {
+    const e: { email?: string; password?: string } = {};
+    if (!trimmedEmail) e.email = "Email is required.";
+    else if (!EMAIL_RE.test(trimmedEmail)) e.email = "Please enter a valid email.";
+    if (!password) e.password = "Password is required.";
+    else if (password.length < 6) e.password = "Password must be at least 6 characters.";
+    return e;
+  }, [trimmedEmail, password]);
+
+  const showEmailError = (touched.email || submitted) && fieldErrors.email;
+  const showPasswordError = (touched.password || submitted) && fieldErrors.password;
 
   const loginGoogle = () => {
     window.location.href = "/api/auth/google";
   };
 
-  const loginManual = async () => {
+  const loginManual = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitted(true);
     setError("");
 
-    if (!trimmedEmail) return setError("Email is required.");
-    if (!emailValid) return setError("Please enter a valid email.");
-    if (!password) return setError("Password is required.");
-    if (password.length < 6) return setError("Password must be at least 6 characters.");
+    if (fieldErrors.email) return emailRef.current?.focus();
+    if (fieldErrors.password) return passwordRef.current?.focus();
 
     setLoading(true);
     try {
@@ -56,171 +72,101 @@ function LoginPageContent() {
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.error || "Login failed");
 
-      router.push("/workspace");
+      // an idea typed on the homepage takes them straight to Generate
+      router.push(peekPromptDraft() ? "/generate" : "/workspace");
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Login failed");
-    } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#0B0B10] text-white">
-      {/* Background */}
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-40 left-1/2 h-[520px] w-[520px] -translate-x-1/2 rounded-full bg-purple-500/25 blur-[90px]" />
-        <div className="absolute -bottom-40 right-[-120px] h-[520px] w-[520px] rounded-full bg-fuchsia-400/20 blur-[110px]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.06)_1px,transparent_0)] bg-[length:22px_22px] opacity-40" />
-      </div>
+    <AuthShell
+      title="Welcome back"
+      subtitle="Sign in to continue to your creator studio."
+      topLink={{ prompt: "New to Replotre?", label: "Create account", href: "/signup" }}
+    >
+      <GoogleButton onClick={loginGoogle} />
+      <OrDivider />
 
-      <div className="relative mx-auto flex min-h-screen max-w-6xl items-center justify-center px-4 py-10">
-        <div className="grid w-full items-center gap-8 lg:grid-cols-2">
-          {/* Left: Brand */}
-          <div className="hidden lg:block">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
-              <span className="h-2 w-2 rounded-full bg-emerald-400/80" />
-              Secure sign-in • Account protection built in
-            </div>
-
-            <h1 className="mt-4 text-5xl font-semibold leading-tight tracking-tight">
-              Welcome back to{" "}
-              <span className="bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">
-                replotre
-              </span>
-            </h1>
-
-            <p className="mt-3 max-w-md text-sm leading-relaxed text-white/65">
-              Sign in to continue to your workspace. Use Google for instant access,
-              or sign in with your email and password. Your session is protected with secure cookies.
-            </p>
-
-            <div className="mt-8 grid max-w-md grid-cols-2 gap-3">
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <div className="text-xs text-white/60">Faster access</div>
-                <div className="mt-1 text-sm font-semibold">Continue with Google in one tap</div>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <div className="text-xs text-white/60">Security first</div>
-                <div className="mt-1 text-sm font-semibold">Encrypted credentials and sessions</div>
-              </div>
-            </div>
+      <form onSubmit={loginManual} noValidate className="space-y-5">
+        {error && (
+          <div
+            role="alert"
+            className="flex items-start gap-2.5 rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-[13px] leading-snug text-rose-100"
+          >
+            <AlertCircle size={16} className="mt-0.5 shrink-0 text-rose-300" />
+            {error}
           </div>
+        )}
 
-          {/* Right: Card */}
-          <div className="mx-auto w-full max-w-md">
-            <div className="relative rounded-3xl border border-white/12 bg-white/[0.07] p-7 shadow-2xl backdrop-blur-xl">
-              <div className="absolute inset-0 rounded-3xl bg-gradient-to-b from-white/[0.06] to-transparent" />
-
-              <div className="relative">
-                <div className="mb-5">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-2xl font-semibold tracking-tight">Replotre Login</h2>
-                    <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] text-white/70">
-                      v1
-                    </span>
-                  </div>
-                  <p className="mt-1 text-sm text-white/60">
-                    Continue with Google or sign in with your email and password.
-                  </p>
-                </div>
-
-                <button
-                  onClick={loginGoogle}
-                  className="group relative flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white text-black py-3.5 font-semibold shadow-lg shadow-white/10 transition hover:bg-gray-200"
-                >
-                  <span className="absolute inset-0 rounded-2xl bg-gradient-to-r from-black/0 via-black/0 to-black/5 opacity-0 transition group-hover:opacity-100" />
-                  <span className="relative">Continue with Google</span>
-                </button>
-
-                <div className="my-6 flex items-center gap-3">
-                  <div className="h-px flex-1 bg-white/15" />
-                  <span className="text-[11px] text-white/45">OR</span>
-                  <div className="h-px flex-1 bg-white/15" />
-                </div>
-
-                {error ? (
-                  <div className="mb-4 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-[12px] text-red-200 leading-snug">
-                    {error}
-                  </div>
-                ) : null}
-
-                <div className="space-y-3">
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-medium text-white/60">Email</label>
-                    <input
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="you@example.com"
-                      inputMode="email"
-                      autoComplete="email"
-                      className={`w-full rounded-2xl bg-black/30 px-4 py-3.5 text-sm outline-none ring-1 transition focus:ring-2 ${
-                        email.length === 0
-                          ? "ring-white/10 focus:ring-purple-500/30"
-                          : emailValid
-                          ? "ring-emerald-400/30 focus:ring-emerald-500/20"
-                          : "ring-red-400/30 focus:ring-red-500/20"
-                      }`}
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <label className="text-[11px] font-medium text-white/60">Password</label>
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword((v) => !v)}
-                        className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-semibold text-white/70 transition hover:bg-white/10"
-                      >
-                        {showPassword ? "Hide" : "Show"}
-                      </button>
-                    </div>
-
-                    <input
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••"
-                      type={showPassword ? "text" : "password"}
-                      autoComplete="current-password"
-                      className="w-full rounded-2xl bg-black/30 px-4 py-3.5 text-sm outline-none ring-1 ring-white/10 transition focus:ring-2 focus:ring-purple-500/30"
-                    />
-                    <div className="text-[11px] text-white/45">
-                      Minimum 6 characters.
-                    </div>
-                  </div>
-
-                  <button
-                    disabled={!canSubmit}
-                    onClick={loginManual}
-                    className={`w-full rounded-2xl py-4 text-sm font-semibold shadow-lg transition ${
-                      canSubmit
-                        ? "bg-gradient-to-r from-white to-gray-200 text-black hover:opacity-95"
-                        : "cursor-not-allowed border border-white/10 bg-white/10 text-white/50"
-                    }`}
-                  >
-                    {loading ? "Signing in..." : "Sign in"}
-                  </button>
-                </div>
-
-                <div className="mt-6 flex items-center justify-between text-xs text-white/55">
-                  <span>New to replotre?</span>
-                  <Link href="/signup" className="text-white underline underline-offset-4 hover:opacity-85">
-                    Create account
-                  </Link>
-                </div>
-
-                <p className="mt-4 text-[11px] leading-snug text-white/45">
-                  By continuing, you agree to our Terms and Privacy Policy.
-                </p>
-              </div>
-            </div>
-
-            <p className="mt-6 text-center text-[11px] text-white/45">
-              Secure cookies • Encrypted credentials • Protected sessions
+        <div>
+          <label htmlFor="email" className="rp-label mb-2">
+            Email
+          </label>
+          <input
+            ref={emailRef}
+            id="email"
+            name="email"
+            type="email"
+            inputMode="email"
+            autoComplete="email"
+            autoCapitalize="none"
+            spellCheck={false}
+            autoFocus
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            onBlur={() => setTouched((t) => ({ ...t, email: true }))}
+            placeholder="you@example.com"
+            aria-invalid={showEmailError ? true : undefined}
+            aria-describedby={showEmailError ? "email-error" : undefined}
+            className="rp-input"
+          />
+          {showEmailError && (
+            <p id="email-error" className="mt-2 text-[12px] text-rose-300">
+              {fieldErrors.email}
             </p>
-          </div>
+          )}
         </div>
-      </div>
-    </div>
+
+        <PasswordField
+          id="password"
+          label="Password"
+          value={password}
+          onChange={setPassword}
+          onBlur={() => setTouched((t) => ({ ...t, password: true }))}
+          inputRef={passwordRef}
+          autoComplete="current-password"
+          error={showPasswordError || undefined}
+          show={showPassword}
+          setShow={setShowPassword}
+          capsLock={capsLock}
+          setCapsLock={setCapsLock}
+        />
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="rp-btn h-12 w-full text-[15px] font-semibold"
+        >
+          {loading ? (
+            <>
+              <span className="rp-spinner" aria-hidden />
+              Signing in…
+            </>
+          ) : (
+            <>
+              Sign in
+              <ArrowRight size={17} />
+            </>
+          )}
+        </button>
+      </form>
+
+      <p className="mt-6 text-center text-[12px] leading-relaxed text-white/40">
+        By continuing, you agree to our Terms and Privacy Policy.
+      </p>
+    </AuthShell>
   );
 }
 
@@ -228,8 +174,8 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <main className="min-h-screen bg-[#0B0B10] text-white grid place-items-center">
-          <div className="text-sm text-white/70">Loading sign-in…</div>
+        <main className="grid min-h-[100dvh] place-items-center bg-[#050612] text-white">
+          <span className="rp-spinner" aria-label="Loading sign-in" />
         </main>
       }
     >
