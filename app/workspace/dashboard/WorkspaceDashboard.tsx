@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Sparkles,
@@ -15,10 +15,13 @@ import {
   Timer,
   Rocket,
   Layers,
+  X,
 } from "lucide-react";
+import { clearPromptDraft, usePromptDraft } from "@/app/lib/promptDraft";
 import { BILLING_PLANS, type BillingKey, type PlanKey } from "@/app/config/billingPlans";
 import { getDailyQuotaForPlan } from "@/app/lib/schedule";
 import { getInfluencerById } from "@/app/data/influencers";
+import AppShell, { APP_CONTENT_PAD } from "@/app/components/shell/AppShell";
 
 type OnboardingProfile = {
   data: Record<string, any>;
@@ -27,18 +30,11 @@ type OnboardingProfile = {
   completedAt?: string | null;
 };
 
-type UserAccount = {
-  id: string;
-  email?: string | null;
-  name?: string | null;
-  image?: string | null;
-  credits?: number | null;
-};
-
 export default function WorkspaceDashboard() {
+  // An idea typed on the homepage before signing in (e.g. via Google).
+  const pendingDraft = usePromptDraft();
   const [profile, setProfile] = useState<OnboardingProfile | null>(null);
   const [credits, setCredits] = useState<number | null>(null);
-  const [user, setUser] = useState<UserAccount | null>(null);
   const [loading, setLoading] = useState(true);
   const [trackedView, setTrackedView] = useState(false);
   const [subscriptionActive, setSubscriptionActive] = useState(false);
@@ -53,7 +49,6 @@ export default function WorkspaceDashboard() {
   const [submittingChange, setSubmittingChange] = useState(false);
   const [unlocking, setUnlocking] = useState(false);
   const [restoring, setRestoring] = useState(false);
-  const [profileOpen, setProfileOpen] = useState(false);
   const [scheduleItems, setScheduleItems] = useState<
     Array<{
       id: string;
@@ -68,7 +63,6 @@ export default function WorkspaceDashboard() {
   const [scheduleExhausted, setScheduleExhausted] = useState(false);
   const [scheduleReason, setScheduleReason] = useState<string>("");
   const [usedSchedule, setUsedSchedule] = useState<Record<string, boolean>>({});
-  const profileRef = useRef<HTMLDivElement | null>(null);
 
   const trackEvent = async (name: string, payload?: any) => {
     try {
@@ -139,7 +133,6 @@ export default function WorkspaceDashboard() {
         const data = await res.json();
         if (active) {
           setCredits(data?.user?.credits ?? null);
-          setUser(data?.user ?? null);
         }
       } catch {
         if (active) setCredits(null);
@@ -194,18 +187,6 @@ export default function WorkspaceDashboard() {
     subscriptionInfo?.billing,
     trackedView,
   ]);
-
-  useEffect(() => {
-    if (!profileOpen) return;
-    const onClick = (event: MouseEvent) => {
-      if (!profileRef.current) return;
-      if (!profileRef.current.contains(event.target as Node)) {
-        setProfileOpen(false);
-      }
-    };
-    window.addEventListener("click", onClick);
-    return () => window.removeEventListener("click", onClick);
-  }, [profileOpen]);
 
   const submitChangeRequest = async () => {
     const message = changeMessage.trim();
@@ -490,14 +471,6 @@ export default function WorkspaceDashboard() {
     [planKey]
   );
 
-  const initials = useMemo(() => {
-    const label = user?.name || user?.email || "User";
-    const parts = label.trim().split(" ");
-    const first = parts[0]?.[0] || "";
-    const second = parts[1]?.[0] || "";
-    return `${first}${second}`.toUpperCase() || "U";
-  }, [user?.name, user?.email]);
-
   const activity = useMemo(
     () => [
       {
@@ -525,14 +498,7 @@ export default function WorkspaceDashboard() {
   }, [planKey, scheduleItems]);
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#07070B] text-white">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-40 left-1/2 h-[520px] w-[900px] -translate-x-1/2 rounded-full bg-purple-600/20 blur-[120px]" />
-        <div className="absolute -bottom-56 right-[-120px] h-[520px] w-[520px] rounded-full bg-indigo-500/20 blur-[120px]" />
-        <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.04]" />
-        <div className="absolute inset-0 bg-gradient-to-b from-white/[0.04] via-transparent to-black/40" />
-      </div>
-
+    <AppShell>
       <style jsx global>{`
         @keyframes gxReveal {
           0% {
@@ -557,7 +523,7 @@ export default function WorkspaceDashboard() {
         }
       `}</style>
 
-      <div className="relative z-10 mx-auto max-w-7xl px-4 pb-16 pt-10 sm:px-6">
+      <div className={`relative z-10 mx-auto max-w-7xl ${APP_CONTENT_PAD}`}>
         <div className="relative flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="text-[11px] uppercase tracking-[0.26em] text-white/55">
@@ -608,52 +574,46 @@ export default function WorkspaceDashboard() {
             >
               Manage plan
             </Link>
-            <div
-              ref={profileRef}
-              className="absolute right-0 top-0 col-span-2 sm:static sm:col-span-1 sm:top-auto sm:right-auto"
-            >
-              <button
-                type="button"
-                onClick={() => setProfileOpen((prev) => !prev)}
-                className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-[#1a1a1c] text-sm font-bold text-white/80 shadow-[0_0_12px_rgba(255,255,255,0.08)] transition-all duration-200 hover:border-white/20 hover:shadow-[0_0_18px_rgba(255,255,255,0.18)]"
-              >
-                {initials}
-              </button>
-              {profileOpen && (
-                <div className="absolute right-0 z-50 mt-2 w-56 rounded-2xl border border-white/10 bg-[#0f1018] p-2 text-sm text-white/80 shadow-[0_25px_80px_rgba(0,0,0,0.55)]">
-                  <div className="px-3 py-2">
-                    <p className="text-xs text-white/50">Signed in as</p>
-                    <p className="mt-1 text-sm font-semibold text-white/90">
-                      {user?.name || "Creator"}
-                    </p>
-                    <p className="text-xs text-white/60">{user?.email || "—"}</p>
-                  </div>
-                  <div className="my-2 h-px bg-white/10" />
-                  <Link
-                    href="/profile"
-                    className="block rounded-xl px-3 py-2 text-xs text-white/80 hover:bg-white/10"
-                  >
-                    Profile settings
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      await fetch("/api/logout", { method: "POST" });
-                      window.location.href = "/";
-                    }}
-                    className="mt-1 w-full rounded-xl px-3 py-2 text-left text-xs text-rose-200 hover:bg-rose-500/10"
-                  >
-                    Log out
-                  </button>
-                </div>
-              )}
-            </div>
           </div>
         </div>
 
+        {pendingDraft && (
+          <div
+            role="status"
+            className="mt-6 flex flex-col gap-3 rounded-[22px] border border-violet-400/25 bg-gradient-to-r from-violet-500/15 via-indigo-500/10 to-sky-500/10 p-4 sm:flex-row sm:items-center sm:gap-4"
+          >
+            <div className="flex min-w-0 flex-1 items-start gap-3">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl border border-white/10 bg-violet-500/20">
+                <Sparkles size={17} className="text-violet-100" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-white/90">Pick up where you left off</p>
+                <p className="mt-0.5 truncate text-[13px] text-white/60">“{pendingDraft.text}”</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/generate"
+                className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-full border border-indigo-300/40 bg-gradient-to-r from-indigo-500/40 to-sky-500/30 px-4 text-sm font-semibold text-white transition hover:brightness-110 sm:flex-none"
+              >
+                Continue in Generate
+                <ArrowRight size={15} />
+              </Link>
+              <button
+                type="button"
+                onClick={clearPromptDraft}
+                aria-label="Dismiss saved idea"
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-white/10 text-white/60 transition hover:bg-white/10 hover:text-white"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="mt-8 grid gap-5 lg:grid-cols-[1.15fr_0.85fr]">
           <div
-            className="gx-reveal gx-card-ambient relative overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.06] p-6 shadow-[0_30px_120px_rgba(0,0,0,0.4)] backdrop-blur-xl"
+            className="gx-reveal gx-card-ambient lg:sticky lg:top-24 lg:self-start relative overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.06] p-6 shadow-[0_30px_120px_rgba(0,0,0,0.4)] backdrop-blur-xl"
             style={{ animationDelay: "0.04s" }}
           >
             <div className="pointer-events-none absolute inset-0 opacity-70">
@@ -1354,6 +1314,6 @@ export default function WorkspaceDashboard() {
 
       </div>
 
-    </main>
+    </AppShell>
   );
 }

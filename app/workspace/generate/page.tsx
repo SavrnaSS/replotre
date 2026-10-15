@@ -3,16 +3,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
-  ArrowLeft,
   Download,
   Sparkles,
   Wand2,
   Lock,
   Trash2,
+  X,
 } from "lucide-react";
 import { BILLING_PLANS, type BillingKey, type PlanKey } from "@/app/config/billingPlans";
 import { getDailyQuotaForPlan } from "@/app/lib/schedule";
 import { getInfluencerById } from "@/app/data/influencers";
+import AppShell, { APP_CONTENT_PAD } from "@/app/components/shell/AppShell";
+import { takePromptDraft, type PromptDraft, type PromptDraftMode } from "@/app/lib/promptDraft";
 
 type OnboardingData = {
   influencerId?: string;
@@ -207,6 +209,11 @@ export default function GeneratePage() {
   const [scheduleReason, setScheduleReason] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [prompt, setPrompt] = useState("");
+  // Set when the prompt came from the homepage prompt bar.
+  const [draftMode, setDraftMode] = useState<PromptDraftMode | null>(null);
+  // The draft is removed from storage when read, so keep it here: effects can
+  // re-run before the prompt state updates (e.g. React StrictMode in dev).
+  const homepageDraft = useRef<PromptDraft | null | undefined>(undefined);
   const [style, setStyle] = useState(styleOptions[0].key);
   const [aspect, setAspect] = useState(aspectOptions[0].key);
   const [batchSize, setBatchSize] = useState(3);
@@ -463,6 +470,13 @@ export default function GeneratePage() {
 
   useEffect(() => {
     if (prompt) return;
+    if (homepageDraft.current === undefined) homepageDraft.current = takePromptDraft();
+    const draft = homepageDraft.current;
+    if (draft) {
+      setPrompt(draft.text);
+      setDraftMode(draft.mode);
+      return;
+    }
     const selectedStyle = styleOptions.find((s) => s.key === style)?.label || style;
     const base = `${summary.aiName} ${summary.niche} creator photoshoot, ${selectedStyle} look, ${summary.style} wardrobe, soft studio lighting, clean background, natural skin texture, sharp focus, no text or watermark.`;
     setPrompt(base);
@@ -837,23 +851,8 @@ export default function GeneratePage() {
   };
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#07070B] text-white">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-40 left-1/2 h-[520px] w-[900px] -translate-x-1/2 rounded-full bg-purple-600/20 blur-[120px]" />
-        <div className="absolute -bottom-56 right-[-120px] h-[520px] w-[520px] rounded-full bg-indigo-500/20 blur-[120px]" />
-        <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.04]" />
-        <div className="absolute inset-0 bg-gradient-to-b from-white/[0.04] via-transparent to-black/40" />
-      </div>
-
-      <div className="relative z-10 mx-auto max-w-6xl px-4 pb-16 pt-10 sm:px-6">
-        <div className="flex flex-wrap items-center gap-3">
-          <Link
-            href="/playground"
-            className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70 transition hover:bg-white/10"
-          >
-            <ArrowLeft size={14} /> Back to playground
-          </Link>
-        </div>
+    <AppShell>
+      <div className={`relative z-10 mx-auto max-w-6xl ${APP_CONTENT_PAD}`}>
 
         <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
           <div className="min-w-0 rounded-[28px] border border-white/10 bg-white/[0.06] p-5 shadow-[0_30px_120px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:p-6">
@@ -885,6 +884,27 @@ export default function GeneratePage() {
                 <p className="text-xs uppercase tracking-[0.22em] text-white/45">
                   Creative direction
                 </p>
+                {draftMode && (
+                  <div
+                    role="status"
+                    className="mt-2 flex items-start gap-2 rounded-2xl border border-violet-400/25 bg-violet-500/10 px-3 py-2.5 text-[12px] leading-snug text-violet-100"
+                  >
+                    <Sparkles size={14} className="mt-0.5 shrink-0 text-violet-200" />
+                    <span className="min-w-0 flex-1">
+                      Loaded your idea from the homepage — tweak it below or create the set.
+                      {draftMode === "video" &&
+                        " Video batches are made from studio sets, so create the set first, then turn it into a video batch."}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setDraftMode(null)}
+                      aria-label="Dismiss"
+                      className="-m-1 rounded-lg p-1 text-violet-200/70 transition hover:bg-white/10 hover:text-white"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                )}
                 <textarea
                   rows={4}
                   value={prompt}
@@ -1499,6 +1519,6 @@ export default function GeneratePage() {
           </div>
         </div>
       </div>
-    </main>
+    </AppShell>
   );
 }

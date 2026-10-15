@@ -1,8 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
-import { ArrowLeft, CalendarDays, Lock } from "lucide-react";
+import { CalendarDays, Lock } from "lucide-react";
 import { BILLING_PLANS, type BillingKey, type PlanKey } from "@/app/config/billingPlans";
 import { getInfluencerById } from "@/app/data/influencers";
 import {
@@ -10,6 +9,7 @@ import {
   getDailyQuotaForPlanInZone,
   getDateKeyInTimeZone,
 } from "@/app/lib/schedule";
+import AppShell, { APP_CONTENT_PAD } from "@/app/components/shell/AppShell";
 
 const DEFAULT_TIME_ZONES = [
   "UTC",
@@ -377,23 +377,8 @@ export default function SchedulePage() {
   }, [schedulePreview, summary.plan, summary.scheduleTimeZone, timeZone]);
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#07070B] text-white">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-40 left-1/2 h-[520px] w-[900px] -translate-x-1/2 rounded-full bg-purple-600/20 blur-[120px]" />
-        <div className="absolute -bottom-56 right-[-120px] h-[520px] w-[520px] rounded-full bg-indigo-500/20 blur-[120px]" />
-        <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.04]" />
-        <div className="absolute inset-0 bg-gradient-to-b from-white/[0.04] via-transparent to-black/40" />
-      </div>
-
-      <div className="relative z-10 mx-auto max-w-6xl px-4 pb-16 pt-10 sm:px-6">
-        <div className="flex flex-wrap items-center gap-3">
-          <Link
-            href="/playground"
-            className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70 transition hover:bg-white/10"
-          >
-            <ArrowLeft size={14} /> Back to playground
-          </Link>
-        </div>
+    <AppShell>
+      <div className={`relative z-10 mx-auto max-w-6xl ${APP_CONTENT_PAD}`}>
 
         <div className="mt-6 grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
             <div className="rounded-[28px] border border-white/10 bg-white/[0.06] p-6 shadow-[0_30px_120px_rgba(0,0,0,0.35)] backdrop-blur-xl">
@@ -750,6 +735,6 @@ export default function SchedulePage() {
           }
         }
       `}</style>
-    </main>
+    </AppShell>
   );
 }

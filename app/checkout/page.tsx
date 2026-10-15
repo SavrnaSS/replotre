@@ -330,9 +330,9 @@ function CheckoutPageContent() {
           <p className="mt-2 text-sm text-white/60">Secure checkout powered by Whop</p>
         </div>
 
-        <div className="mt-10 grid grid-cols-12 items-start gap-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:gap-10">
+        <div className="mt-10 grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:gap-10">
           {/* Left info */}
-          <aside className="order-1 col-span-12 lg:order-1 lg:sticky lg:top-8">
+          <aside className="min-w-0 lg:sticky lg:top-8">
             <div className="overflow-hidden rounded-[28px] border border-blue-400/10 bg-[#0a0f1f]/70 backdrop-blur-xl shadow-[0_30px_130px_rgba(4,10,30,0.7)]">
               <div className="border-b border-white/10 px-6 py-6">
                 <div className="flex items-start justify-between gap-4">
@@ -393,7 +393,7 @@ function CheckoutPageContent() {
           </aside>
 
           {/* Right checkout */}
-          <section className="order-2 col-span-12 lg:order-2">
+          <section className="min-w-0">
             <div className="relative overflow-hidden rounded-[28px] border border-blue-400/10 bg-[#0a0f1f]/70 backdrop-blur-xl shadow-[0_30px_130px_rgba(4,10,30,0.7)]">
               <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-white/10 to-transparent" />
 
@@ -508,11 +508,8 @@ function CheckoutPageContent() {
                 </div>
 
                 <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-xs text-white/60">
-                  After payment, you’ll be redirected back with a{" "}
-                  <code className="rounded bg-white/10 px-1.5 py-0.5 text-white/80">
-                    status
-                  </code>{" "}
-                  query param (success/error).
+                  After payment you’ll be brought back automatically to finish
+                  activating your plan.
                 </div>
               </div>
             </div>
