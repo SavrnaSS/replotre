@@ -57,12 +57,14 @@ async function startOnboarding(fromStep){await Promise.all([S.account?null:loadA
 /* Account gate: the studio is for signed-in creators. Step 0 of the same flow is sign up / sign in. */
 function startGate(){try{const e=localStorage.getItem('replotre_last_email');if(e&&!S.authEmail){S.authEmail=e;S.authMode='login'}}catch{}S.ob={step:0,data:{},dir:1,gate:true};ensureOb();renderOb();ungate()}
 function ungate(){document.documentElement.classList.remove('rp-gate')}
-function closeOnboarding(){const el=document.querySelector('.ob');ungate();if(!el)return;for(const n of el._inert||[])n.inert=false;document.body.style.overflow='';el.remove();S.ob=null;renderChip()}
+function closeOnboarding(){const el=document.querySelector('.ob');ungate();stopScenes();if(!el)return;for(const n of el._inert||[])n.inert=false;document.body.style.overflow='';el.remove();S.ob=null;renderChip()}
 const sel=(k,v)=>Array.isArray(S.ob.data[k])?S.ob.data[k].includes(v):S.ob.data[k]===v;
 function valid(step){const d=S.ob.data;switch(STEPS[step].id){case 'about':return !!d.role&&(d.role!=='other'||!!(d.roleOther||'').trim());case 'work':return (d.goals||[]).length>0;case 'style':return !!d.aspect;case 'experience':return !!d.experience&&!!d.team;default:return true}}
 function recommend(){const d=S.ob?.data||S.account?.profile||{};if(d.team==='mid'||d.team==='large'||d.role==='agency'||(d.experience==='pro'&&d.cadence==='daily'))return 'pro';if(['daily','weekly'].includes(d.cadence)||['creator','social','freelance'].includes(d.role))return 'creator';return 'free'}
 function chips(k,{multi=false,icons}={}){return `<div class="ob-chips" role="${multi?'group':'radiogroup'}" aria-label="${esc(k)}">${Object.entries(LABEL[k]).map(([v,l],i)=>`<button type="button" class="ob-chip${sel(k,v)?' is-on':''}" role="${multi?'checkbox':'radio'}" aria-checked="${sel(k,v)}" data-ob-pick="${k}" data-value="${v}" data-multi="${multi}">${icons?`<span class="ob-chip-ico">${ico(icons[v]||'check')}</span>`:''}<span>${esc(l)}</span>${multi?`<i class="ob-tick">${ico('check')}</i>`:''}</button>`).join('')}</div>`}
-const SHOWCASE={id:'pop-captions'};
+const SCENES=[{id:'pop-captions',feat:'Auto captions',sub:'Synced word by word',icon:'captions',ask:'Add word-pop captions',done:'Captions synced to 112 words',secs:3},
+ {id:'crimson',feat:'AI Director',sub:'Describe it, it’s done',icon:'wand-sparkles',ask:'Make the first 3 seconds hit harder',done:'Hook title added at 0:00',secs:4},
+ {id:'candlelit',feat:'Smart templates',sub:'Fitted to your footage',icon:'zap',ask:'Warm cinematic look, like golden hour',done:'Template fitted to 6 clips',secs:5}];
 function authBody(){const reg=S.authMode==='register',st=S.status||{},closed=reg&&st.signup===false;
  return `<div class="au-tabs" role="tablist" aria-label="Account">
    <button type="button" role="tab" aria-selected="${reg}" class="${reg?'is-on':''}" data-ob="auth-mode" data-mode="register">Create account</button>
@@ -79,26 +81,42 @@ function authBody(){const reg=S.authMode==='register',st=S.status||{},closed=reg
   ${reg?`<ul class="au-perks" aria-label="Included"><li>${ico('check')}Free plan</li><li>${ico('check')}No card needed</li><li>${ico('check')}Upgrade any time</li></ul>
   <p class="ob-legal">By continuing you agree to Replotre's terms and privacy policy.</p>`:`<p class="ob-legal">Forgot your password? Email support from the address on your account and we'll reset it.</p>`}
  </form>`}
-function showcase(){const lite=document.documentElement.classList.contains('lite')||matchMedia('(prefers-reduced-motion: reduce)').matches,t=SHOWCASE.id;
- return `<aside class="au-show" aria-hidden="true"><div class="au-glow"></div>
+const calm=()=>document.documentElement.classList.contains('lite')||matchMedia('(prefers-reduced-motion: reduce)').matches;
+function showcase(){const c=SCENES[0],still=calm();
+ return `<aside class="au-show"><div class="au-glow" aria-hidden="true"></div>
   <div class="au-head"><p class="au-kicker">${ico('sparkles')}Replotre Studio</p><h2>Edit like a pro.<br><span>In plain words.</span></h2></div>
-  <div class="au-scene">
-   <figure class="au-phone">${lite?`<img src="/assets/templates/${t}.jpg" alt="">`:`<video src="/assets/templates/${t}.mp4" poster="/assets/templates/${t}.jpg" muted loop autoplay playsinline preload="metadata"></video>`}</figure>
-   <div class="au-bubble au-ask"><span class="au-bubble-ico">${ico('wand-sparkles')}</span><span><small>AI Director</small>Add word-pop captions and a punchy hook</span></div>
-   <div class="au-bubble au-done"><span class="au-bubble-ico is-ok">${ico('check')}</span><span><small>Applied in 4s</small>Captions synced to 112 words</span></div>
+  <div class="au-scene" aria-hidden="true">
+   <figure class="au-phone">${still?`<img class="au-media" src="/assets/templates/${c.id}.jpg" alt="">`:`<video class="au-media" src="/assets/templates/${c.id}.mp4" poster="/assets/templates/${c.id}.jpg" muted loop autoplay playsinline preload="metadata"></video>`}</figure>
+   <div class="au-bubble au-ask"><span class="au-bubble-ico">${ico('wand-sparkles')}</span><span><small>You asked</small><span class="au-ask-text">${still?esc(c.ask):''}</span><i class="au-caret"></i></span></div>
+   <div class="au-bubble au-done${still?' is-done is-in':''}"><span class="au-bubble-ico"><span class="acct-spin"></span>${ico('check')}</span><span><small class="au-done-label">${still?`Applied in ${c.secs}s`:'Applying…'}</small><span class="au-done-text">${esc(c.done)}</span></span></div>
   </div>
-  <ul class="au-feats"><li>${ico('wand-sparkles')}<span><strong>AI Director</strong>Describe it, it's done</span></li><li>${ico('captions')}<span><strong>Auto captions</strong>Synced word by word</span></li><li>${ico('zap')}<span><strong>Smart templates</strong>Fitted to your footage</span></li></ul>
+  <div class="au-feats" role="tablist" aria-label="What Replotre does">${SCENES.map((x,k)=>`<button type="button" role="tab" class="au-feat${k?'':' is-on'}" aria-selected="${!k}" data-au-scene="${k}">${ico(x.icon)}<span><strong>${esc(x.feat)}</strong>${esc(x.sub)}</span><i class="au-bar"><b></b></i></button>`).join('')}</div>
  </aside>`}
-function renderAuth(el){const reg=S.authMode==='register';
+/* Showcase story: type the request, "apply" it, show the result, move to the next feature. */
+const SCENE_MS=7000;
+function playScene(k){const root=document.querySelector('.au-show');if(!root)return stopScenes();stopScenes();
+ S.auScene=k;const c=SCENES[k],still=calm();
+ root.querySelectorAll('.au-feat').forEach((b,i)=>{b.classList.toggle('is-on',i===k);b.setAttribute('aria-selected',String(i===k));const bar=b.querySelector('.au-bar b');bar.style.animation='none';void bar.offsetWidth;bar.style.animation=i===k&&!still?`auBar ${SCENE_MS}ms linear forwards`:''});
+ const m=root.querySelector('.au-media'),ask=root.querySelector('.au-ask-text'),done=root.querySelector('.au-done');
+ if(m&&!m.src.endsWith(`/${c.id}.${m.tagName==='VIDEO'?'mp4':'jpg'}`)){m.classList.add('is-out');setTimeout(()=>{if(m.tagName==='VIDEO'){m.poster=`/assets/templates/${c.id}.jpg`;m.src=`/assets/templates/${c.id}.mp4`;m.play?.().catch(()=>{})}else m.src=`/assets/templates/${c.id}.jpg`;m.classList.remove('is-out')},260)}
+ done.querySelector('.au-done-text').textContent=c.done;
+ if(still){ask.textContent=c.ask;done.classList.add('is-done','is-in');done.querySelector('.au-done-label').textContent=`Applied in ${c.secs}s`;return}
+ done.classList.remove('is-done','is-in');root.classList.add('is-typing');ask.textContent='';let n=0;
+ S.auType=setInterval(()=>{ask.textContent=c.ask.slice(0,++n);if(n>=c.ask.length){clearInterval(S.auType);root.classList.remove('is-typing');
+  done.querySelector('.au-done-label').textContent='Applying…';done.classList.add('is-in');
+  S.auT1=setTimeout(()=>{done.classList.add('is-done');done.querySelector('.au-done-label').textContent=`Applied in ${c.secs}s`},1300)}},38);
+ S.auT2=setTimeout(()=>playScene((k+1)%SCENES.length),SCENE_MS)}
+function stopScenes(){clearTimeout(S.auT1);clearTimeout(S.auT2);clearInterval(S.auType)}
+function renderAuth(el){const reg=S.authMode==='register',wide=matchMedia('(min-width:1001px)').matches;stopScenes();
  el.innerHTML=`<div class="ob-bg" aria-hidden="true"></div>
- <header class="ob-top au-top"><span class="ob-brand" aria-hidden="true">${brandMark()}</span><span class="au-word">replotre<b>.</b></span>
-  <span class="au-switch"><span>${reg?'Have an account?':'New here?'}</span><button type="button" class="ob-link" data-ob="auth-mode" data-mode="${reg?'login':'register'}">${reg?'Sign in':'Create one'}</button></span></header>
  <main class="au-main" data-step="account" data-mode="${S.authMode}">
-  <section class="au-pane"><div class="au-form ob-content">
-   ${reg?`<p class="au-steps">${ico('sparkles')}<span>Step 1 of 7 · then a 60-second setup</span></p>`:''}
+  <section class="au-pane"><a class="au-brand" href="/" aria-label="Replotre home"><span class="ob-brand" aria-hidden="true">${brandMark()}</span><span class="au-word">replotre<b>.</b></span></a>
+   <div class="au-form ob-content">
+   ${reg?`<div class="au-steps" aria-label="Step 1 of 7"><span class="au-dots" aria-hidden="true">${'<i></i>'.repeat(7)}</span><span>Step 1 of 7 · setup takes a minute</span></div>`:''}
    <h1 id="obTitle" tabindex="-1">${reg?'Create your account':'Welcome back'}</h1>
    <p class="ob-sub">${reg?'Your projects, media and plan, saved to your Replotre account.':'Sign in to pick up where you left off.'}</p>
-   ${authBody()}</div></section>${matchMedia('(min-width:1001px)').matches?showcase():''}</main>`;
+   ${authBody()}</div></section>${wide?showcase():''}</main>`;
+ if(wide)playScene(S.auScene||0);
  requestAnimationFrame(()=>{const em=el.querySelector('input[name=email]');(em&&!em.value?em:el.querySelector('input[name=password]'))?.focus({preventScroll:true});validateEmail(em)})}
 function validateEmail(inp){if(!inp)return;inp.closest('.au-input')?.classList.toggle('is-ok',/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(inp.value.trim()))}
 function stepBody(id){const d=S.ob.data;
@@ -146,7 +164,8 @@ async function go(delta){const o=S.ob;if(!o)return;const next=o.step+delta;if(de
  o.dir=delta;o.step=Math.max(1,next);renderOb()}
 function applyPrefs(){const d=S.account?.profile||S.ob?.data||{};try{localStorage.setItem('replotre_prefs',JSON.stringify({aspect:d.aspect,captionStyle:d.captionStyle,favoriteTemplates:d.favoriteTemplates||[]}))}catch{}
  const snap=E()?.snapshot?.();if(d.aspect&&snap&&!snap.clips?.length&&snap.aspect!==d.aspect)E().loadSavedEdit({...snap,aspect:d.aspect});window.ReplotreTemplates?.rerender?.()}
-async function onObClick(e){const b=e.target.closest('button');if(!b)return;const o=S.ob;
+async function onObClick(e){const b=e.target.closest('button');if(!b)return;
+ if(b.dataset.auScene!=null){playScene(+b.dataset.auScene);return}const o=S.ob;
  if(b.dataset.ob==='next')return go(1);if(b.dataset.ob==='back')return go(-1);
  if(b.dataset.ob==='signout'){b.disabled=true;try{await Cloud()?.saveNow?.()}catch{}try{await api('/api/auth/logout',{method:'POST'})}catch{}sessionStorage.removeItem('replotre_new_account');location.reload();return}
  if(b.dataset.ob==='auth-mode'){const m=b.dataset.mode||(S.authMode==='register'?'login':'register');if(m===S.authMode)return;S.authEmail=document.querySelector('.ob-auth input[name=email]')?.value||S.authEmail;S.authMode=m;renderOb();return}
