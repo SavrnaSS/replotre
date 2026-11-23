@@ -60,6 +60,10 @@ function ungate(){document.documentElement.classList.remove('rp-gate')}
 function closeOnboarding(){const el=document.querySelector('.ob');ungate();if(!el)return;for(const n of el._inert||[])n.inert=false;document.body.style.overflow='';el.remove();S.ob=null;renderChip()}
 const sel=(k,v)=>Array.isArray(S.ob.data[k])?S.ob.data[k].includes(v):S.ob.data[k]===v;
 function valid(step){const d=S.ob.data;switch(STEPS[step].id){case 'about':return !!d.role&&(d.role!=='other'||!!(d.roleOther||'').trim());case 'work':return (d.goals||[]).length>0;case 'style':return !!d.aspect;case 'experience':return !!d.experience&&!!d.team;default:return true}}
+function recommendWhy(){const d=S.ob?.data||S.account?.profile||{},p=recommend(),cad={daily:'every day',weekly:'every week'}[d.cadence];
+ if(p==='pro')return d.team==='mid'||d.team==='large'?'you edit with a team':d.role==='agency'?'you work for clients as an agency':'you publish daily at a professional level';
+ if(p==='creator')return cad?`you publish ${cad}`:`you're a ${(LABEL.role[d.role]||'creator').toLowerCase()}`;
+ return ''}
 function recommend(){const d=S.ob?.data||S.account?.profile||{};if(d.team==='mid'||d.team==='large'||d.role==='agency'||(d.experience==='pro'&&d.cadence==='daily'))return 'pro';if(['daily','weekly'].includes(d.cadence)||['creator','social','freelance'].includes(d.role))return 'creator';return 'free'}
 function chips(k,{multi=false,icons}={}){return `<div class="ob-chips" role="${multi?'group':'radiogroup'}" aria-label="${esc(k)}">${Object.entries(LABEL[k]).map(([v,l],i)=>`<button type="button" class="ob-chip${sel(k,v)?' is-on':''}" role="${multi?'checkbox':'radio'}" aria-checked="${sel(k,v)}" data-ob-pick="${k}" data-value="${v}" data-multi="${multi}">${icons?`<span class="ob-chip-ico">${ico(icons[v]||'check')}</span>`:''}<span>${esc(l)}</span>${multi?`<i class="ob-tick">${ico('check')}</i>`:''}</button>`).join('')}</div>`}
 function authBody(){const reg=S.authMode==='register',st=S.status||{},closed=reg&&st.signup===false;
@@ -108,7 +112,7 @@ function stepBody(id){const d=S.ob.data;
    ${tpls.length?`<div class="ob-group"><span class="ob-label">Favourite looks <small>Pick up to 3</small></span><div class="ob-tpls">${tpls.map(t=>`<button type="button" class="ob-tpl${favs.includes(t.id)?' is-on':''}" aria-pressed="${favs.includes(t.id)}" data-ob-tpl="${t.id}"><img src="/assets/templates/${esc(t.preview?.poster||t.id+'.jpg')}" alt="" loading="lazy" width="90" height="160"><span>${esc(t.name)}</span><i class="ob-tick">${ico('check')}</i></button>`).join('')}</div></div>`:''}`}
  if(id==='experience')return `<div class="ob-group"><div class="ob-cards" role="radiogroup" aria-label="Experience">${Object.entries(LABEL.experience).map(([v,[l,sub]],i)=>`<button type="button" class="ob-card${sel('experience',v)?' is-on':''}" role="radio" aria-checked="${sel('experience',v)}" data-ob-pick="experience" data-value="${v}"><span class="ob-card-level" aria-hidden="true">${'<i></i>'.repeat(i+1)}${'<i class="off"></i>'.repeat(2-i)}</span><strong>${l}</strong><small>${sub}</small></button>`).join('')}</div></div>
   <div class="ob-group"><span class="ob-label">Team size</span>${chips('team')}</div>`;
- if(id==='plan')return plansMarkup({compact:false,recommended:recommend(),context:'onboarding'});
+ if(id==='plan')return plansMarkup({compact:false,recommended:recommend(),context:'onboarding',why:recommendWhy()});
  if(id==='ready'){const name=d.name?`, ${esc(d.name)}`:'';const favs=(d.favoriteTemplates||[]).map(x=>window.ReplotreTemplateCatalog?.get(x)?.name).filter(Boolean);
   const facts=[d.aspect&&[`${d.aspect} ${LABEL.aspect[d.aspect]}`,'Default frame'],d.captionStyle&&[LABEL.captionStyle[d.captionStyle],'Captions'],favs.length&&[favs.join(', '),'Templates pinned first'],[S.account?.plan?.name||'Free','Plan']].filter(Boolean);
   return `<div class="ob-ready"><div class="ob-ready-mark" aria-hidden="true">${ico('check')}</div><p class="ob-ready-lead">You're all set${name}. Here's what we tuned for you:</p><dl class="ob-facts">${facts.map(([v,k])=>`<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl></div>`}
@@ -154,9 +158,17 @@ function renderOb(){const el=document.querySelector('.ob');if(!el||!S.ob)return;
   ${i>1&&!last?`<button type="button" class="ob-back" data-ob="back">${ico('chevron-down')}<span>Back</span></button>`:'<span></span>'}
   <div class="obx-bar-end">
    ${!last&&st.id!=='plan'?`<span class="ob-hint" aria-hidden="true">${valid(i)?'Press':'Choose an option, then press'} <kbd>Enter ↵</kbd></span>`:''}
-   ${st.id==='plan'?`<button type="button" class="ob-next" data-ob="next"><span>Continue with ${esc(S.account?.plan?.id&&S.account.plan.id!=='free'?S.account.plan.name:'Free')}</span>${ico('arrow-up')}</button>`:`<button type="button" class="ob-next" data-ob="next" ${valid(i)?'':'disabled'}><span>${last?'Open the studio':'Continue'}</span>${ico('arrow-up')}</button>`}
+   ${st.id==='plan'?`<button type="button" class="ob-next${(S.account?.plan?.id||'free')==='free'?' is-ghost':''}" data-ob="next"><span>Continue with ${esc(S.account?.plan?.id&&S.account.plan.id!=='free'?S.account.plan.name:'Free')}</span>${ico('arrow-up')}</button>`:`<button type="button" class="ob-next" data-ob="next" ${valid(i)?'':'disabled'}><span>${last?'Open the studio':'Continue'}</span>${ico('arrow-up')}</button>`}
   </div></div></footer>`;
- if(anim)requestAnimationFrame(()=>{el.querySelector('#obTitle')?.focus({preventScroll:true});el.querySelector('.ob-main')?.scrollTo?.(0,0)})}
+ if(anim)requestAnimationFrame(()=>{el.querySelector('#obTitle')?.focus({preventScroll:true});el.querySelector('.ob-main')?.scrollTo?.(0,0)});
+ if(st.id==='plan')planCarousel(el,anim)}
+/* Phones: plans become a swipeable row that opens on the recommended plan. */
+function planCarousel(el,first){const g=el.querySelector('.pl[data-context=onboarding] .pl-grid');if(!g)return;const cards=[...g.children],dots=[...el.querySelectorAll('[data-pl-dot]')];
+ const mark=()=>{const mid=g.scrollLeft+g.clientWidth/2;let best=0,dist=1e9;cards.forEach((c,k)=>{const d=Math.abs(c.offsetLeft+c.offsetWidth/2-mid);if(d<dist){dist=d;best=k}});dots.forEach((d,k)=>d.classList.toggle('is-on',k===best))};
+ const go=k=>{const c=cards[k];if(c)g.scrollTo({left:c.offsetLeft-(g.clientWidth-c.offsetWidth)/2,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})};
+ dots.forEach((d,k)=>d.addEventListener('click',()=>go(k)));g.addEventListener('scroll',()=>requestAnimationFrame(mark),{passive:true});
+ requestAnimationFrame(()=>{if(g.scrollWidth<=g.clientWidth+4)return;if(first||S.plScroll==null){const k=Math.max(0,cards.findIndex(c=>c.classList.contains('is-featured')));const c=cards[k];g.scrollLeft=c.offsetLeft-(g.clientWidth-c.offsetWidth)/2}else g.scrollLeft=S.plScroll;mark()});
+ g.addEventListener('scroll',()=>{S.plScroll=g.scrollLeft},{passive:true})}
 async function go(delta){const o=S.ob;if(!o)return;const next=o.step+delta;if(delta>0&&!valid(o.step))return;
  if(delta>0)await saveProfile({},{step:next});
  if(next>=STEPS.length){await saveProfile({},{step:STEPS.length-1,complete:true});applyPrefs();closeOnboarding();E()?.notify('Welcome to Replotre');return}
@@ -196,18 +208,20 @@ async function onAuthSubmit(e){e.preventDefault();const f=e.target,btn=f.querySe
 
 /* ---------- Plans ---------- */
 function planPrice(p){const yearly=S.interval==='year';if(!p.price.month)return {main:money(0),note:'Free forever'};const per=yearly?p.price.year/12:p.price.month;return {main:money(Math.round(per*100)/100),note:yearly?`${money(p.price.year)} billed yearly`:'Billed monthly'}}
-function plansMarkup({recommended,context,reason}={}){const plans=S.plans||[],cur=S.account?.plan?.id||'free',sub=S.account?.subscription;const save=plans.filter(p=>p.price.month).map(p=>Math.round((1-p.price.year/(p.price.month*12))*100));const maxSave=save.length?Math.max(...save):0;
+function plansMarkup({recommended,context,reason,why}={}){const plans=S.plans||[],cur=S.account?.plan?.id||'free',sub=S.account?.subscription;if(recommended===cur)recommended=null;const recName=recommended&&plans.find(x=>x.id===recommended)?.name;const save=plans.filter(p=>p.price.month).map(p=>Math.round((1-p.price.year/(p.price.month*12))*100));const maxSave=save.length?Math.max(...save):0;
  return `<div class="pl" data-context="${context}">
   ${reason?`<div class="pl-reason">${ico('zap')}<span>${esc(reason)}</span></div>`:''}
+  ${why&&recName?`<div class="pl-why">${ico('sparkles')}<span>We recommend <b>${esc(recName)}</b> because ${esc(why)}.</span></div>`:''}
   <div class="pl-head"><div class="pl-toggle" role="radiogroup" aria-label="Billing period"><button type="button" role="radio" aria-checked="${S.interval==='month'}" data-interval="month">Monthly</button><button type="button" role="radio" aria-checked="${S.interval==='year'}" data-interval="year">Yearly${maxSave?` <em>Save ${maxSave}%</em>`:''}</button></div>
-   ${S.mode==='test'?`<span class="pl-test" title="No card is charged. Add WHOP_API_KEY to take payments.">${ico('shield-check')}Test mode, no charge</span>`:S.mode==='off'?`<span class="pl-test">Payments are not configured</span>`:`<span class="pl-secure">${ico('shield-check')}Secure checkout by Whop</span>`}</div>
+   ${S.mode==='test'?`<span class="pl-test" title="No card is charged. Add WHOP_API_KEY to take payments.">${ico('shield-check')}Test mode<span class="pl-more">, no charge</span></span>`:S.mode==='off'?`<span class="pl-test">Payments are not configured</span>`:`<span class="pl-secure">${ico('shield-check')}Secure checkout by Whop</span>`}</div>
   <div class="pl-grid">${plans.map(p=>{const pr=planPrice(p),isCur=p.id===cur,rec=p.id===recommended&&!isCur,locked=sub?.provider==='whop'&&cur!=='free'&&!isCur,can=p.purchasable?.[S.interval]!==false&&S.mode!=='off'&&!locked;
    return `<article class="pl-card${isCur?' is-current':''}${rec||(!recommended&&p.popular&&!isCur)?' is-featured':''}">
     ${isCur?'<span class="pl-flag">Current plan</span>':rec?'<span class="pl-flag is-rec">Recommended for you</span>':p.popular&&!recommended?'<span class="pl-flag is-rec">Most popular</span>':''}
     <div class="pl-name"><strong>${esc(p.name)}</strong><small>${esc(p.tagline)}</small></div>
     <div class="pl-price"><b>${pr.main}</b>${p.price.month?'<span>/mo</span>':''}</div><p class="pl-note">${esc(pr.note)}</p>
-    <button type="button" class="pl-cta${rec&&!isCur?' is-primary':''}${isCur?' is-current':''}" data-plan="${p.id}" ${isCur&&(!sub||sub.interval===S.interval||p.id==='free'||sub.provider==='whop')||!can?'disabled':''}>${isCur?(p.id!=='free'&&sub&&sub.interval!==S.interval&&sub.provider!=='whop'?`Switch to ${S.interval}ly`:'Current plan'):locked?'Cancel current plan to switch':!can?'Unavailable':p.id==='free'?'Downgrade':cur!=='free'&&planIndex(p.id)<planIndex(cur)?`Switch to ${esc(p.name)}`:`Get ${esc(p.name)}`}</button>
+    ${context==='onboarding'&&isCur&&p.id==='free'?`<button type="button" class="pl-cta is-start" data-ob="next">Start with Free</button>`:''}<button type="button" ${context==='onboarding'&&isCur&&p.id==='free'?'hidden ':''}class="pl-cta${(rec||(!recommended&&p.popular))&&!isCur?' is-primary':''}${isCur?' is-current':''}" data-plan="${p.id}" ${isCur&&(!sub||sub.interval===S.interval||p.id==='free'||sub.provider==='whop')||!can?'disabled':''}>${isCur?(p.id!=='free'&&sub&&sub.interval!==S.interval&&sub.provider!=='whop'?`Switch to ${S.interval}ly`:'Current plan'):locked?'Cancel current plan to switch':!can?'Unavailable':p.id==='free'?'Downgrade':cur!=='free'&&planIndex(p.id)<planIndex(cur)?`Switch to ${esc(p.name)}`:`Get ${esc(p.name)}`}</button>
     <ul class="pl-feat">${p.features.map(f=>`<li>${ico('check')}<span>${esc(f)}</span></li>`).join('')}</ul></article>`}).join('')}</div>
+  ${context==='onboarding'?`<div class="pl-dots" aria-hidden="true">${plans.map((p,k)=>`<button type="button" tabindex="-1" data-pl-dot="${k}"></button>`).join('')}</div>`:''}
   <p class="pl-foot">Prices in USD. Payments are handled by Whop. Cancel any time; paid features stay on until the end of the period.</p></div>`}
 const planIndex=id=>(S.plans||[]).findIndex(p=>p.id===id);
 async function choosePlan(planId,context){const btns=document.querySelectorAll(`[data-plan="${planId}"]`);btns.forEach(b=>{b.disabled=true;b.dataset.label=b.innerHTML;b.innerHTML='<span class="acct-spin"></span>'});
