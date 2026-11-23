@@ -90,13 +90,12 @@ function authBody(){const reg=S.authMode==='register',st=S.status||{},closed=reg
   <div class="ob-field au-f" data-f="password"><span class="au-row"><label for="auPw">Password</label><small class="au-caps" hidden>Caps Lock is on</small>${reg?`<button type="button" class="au-suggest" data-ob="suggest">${AU_I.wand}Suggest strong password</button>`:''}</span>
    <span class="ob-pw au-input has-ico">${AU_I.lock}<input id="auPw" type="password" name="password" autocomplete="${reg?'new-password':'current-password'}" required minlength="${reg?12:1}" maxlength="128" placeholder="${reg?'At least 12 characters':'Your password'}" aria-describedby="auPwMsg${reg?' auReqs':''}"><button type="button" class="ob-pw-toggle" data-ob="pw" aria-label="Show password" aria-pressed="false">${ico('eye')}</button></span>
    ${reg?`<div class="au-meter"><span class="ob-strength" aria-hidden="true"><i></i><i></i><i></i><i></i></span><small class="ob-strength-label" aria-live="polite"></small></div>
-   <ul class="au-reqs" id="auReqs" aria-label="Password requirements"><li data-r="len">${ico('check')}12+ characters</li><li data-r="case">${ico('check')}Upper &amp; lower case</li><li data-r="mix">${ico('check')}A number or symbol</li></ul>`:''}
+   <ul class="au-reqs" id="auReqs" aria-label="Password requirements"><li data-r="len">${ico('check')}12+ chars</li><li data-r="case">${ico('check')}Upper &amp; lower</li><li data-r="mix">${ico('check')}Number or symbol</li></ul>`:''}
    <p class="au-msg" id="auPwMsg" aria-live="polite"></p></div>
   ${reg&&st.inviteRequired?`<label class="ob-field"><span>Invitation code</span><span class="au-input"><input type="text" name="invite" autocomplete="off" required maxlength="120" placeholder="From your invite email"></span></label>`:''}
   <p class="ob-auth-error" role="alert" hidden></p>
   <button type="submit" class="ob-next au-submit" ${closed?'disabled':''}><span>${reg?'Create account':'Sign in'}</span>${ico('arrow-up')}</button>
-  <p class="au-secure">${AU_I.lock}Encrypted connection · passwords stored hashed</p>
-  ${reg?`<p class="ob-legal">By continuing you agree to Replotre's <a href="/terms" target="_blank" rel="noopener">Terms</a> and <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>.</p>`:`<p class="ob-legal">Forgot your password? Email support from the address on your account and we'll reset it.</p>`}
+  ${reg?`<p class="ob-legal au-legal">${AU_I.lock}<span>Encrypted. By continuing you agree to our <a href="/terms" target="_blank" rel="noopener">Terms</a> and <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>.</span></p>`:`<p class="ob-legal">Forgot your password? Email support from the address on your account and we'll reset it.</p>`}
  </form>`}
 const WALL=['crimson','editorial','neon-pulse','candlelit','pop-captions','documentary','hero-float','field-journal','beat-keyword','cinematic-wide','motion-deck','quote-card'];
 function wall(){if(document.documentElement.classList.contains('lite'))return '';const phone=!matchMedia('(min-width:721px)').matches;
@@ -110,7 +109,7 @@ function renderAuth(el){const reg=S.authMode==='register';
    <section class="au-card-wrap ob-content">
     ${reg?`<div class="au-steps" aria-label="Step 1 of 7"><span class="au-dots" aria-hidden="true">${'<i></i>'.repeat(7)}</span><span>Step 1 of 7</span></div>`:''}
     <h1 id="obTitle" tabindex="-1">${reg?'Create your account':'Welcome back'}</h1>
-    <p class="ob-sub">${reg?'Start editing in minutes. Free to start, no card needed.':'Sign in to pick up where you left off.'}</p>
+    <p class="ob-sub">${reg?'Start editing in minutes. Free, no card needed.':'Sign in to pick up where you left off.'}</p>
     ${authBody()}
    </section>
    <ul class="au-feats-row" aria-label="What you get"><li>${ico('wand-sparkles')}<span>AI Director</span></li><li>${ico('captions')}<span>Auto captions</span></li><li>${ico('zap')}<span>Smart templates</span></li></ul>
