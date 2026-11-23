@@ -660,3 +660,4 @@ html.rp-gate body>*:not(.ob){visibility:hidden}
 .au-or:before,.au-or:after{content:'';flex:1;height:1px;background:var(--a-line)}
 .au-tabs+.au-google{margin-top:0}
 @media (max-width:380px){.ob button.au-google{height:46px;font-size:14px}.au-or{margin:14px 0 4px}}
+.ob-legal a{color:var(--a-muted);text-decoration:underline;text-underline-offset:2px}.ob-legal a:hover{color:var(--a-text)}
