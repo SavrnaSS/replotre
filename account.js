@@ -169,6 +169,11 @@ const CAP_DEMO={box:'make it <b>pop</b>',karaoke:'<b>every</b> word',script:'so 
 const STEP_HINT={about:'You',work:'Makes',style:'Look',experience:'Level',plan:'Plan',ready:''};
 function previewPoster(d){const C=window.ReplotreTemplateCatalog;const fav=(d.favoriteTemplates||[])[0];if(fav)return fav;
  const want=new Set(d.goals||[]);const best=(C?.TEMPLATES||[]).slice().sort((x,y)=>score(y,want)-score(x,want))[0];return best?.id||'crimson'}
+function obSummary(d){const c=[];const n=(k,one,many)=>{const v=(d[k]||[]).length;if(v)c.push(v===1?LABEL[k][d[k][0]]:`${v} ${many}`)};
+ if(d.aspect)c.push(`${d.aspect} ${LABEL.aspect[d.aspect]}`);if(d.captionStyle)c.push(LABEL.captionStyle[d.captionStyle]);n('goals','','formats');n('platforms','','platforms');
+ if(d.cadence)c.push(LABEL.cadence[d.cadence]);if(d.experience)c.push(LABEL.experience[d.experience][0]);if(d.team)c.push(LABEL.team[d.team]);
+ const ids=['about','work','style','experience'],done=ids.filter(id=>valid(STEPS.findIndex(x=>x.id===id))).length,total=ids.length;
+ return `<div class="obp-sum"><div class="obp-chips">${c.length?c.slice(0,4).map(x=>`<span>${esc(x)}</span>`).join('')+(c.length>4?`<span class="more">+${c.length-4}</span>`:''):'<em>Your picks will show up here</em>'}</div><span class="obp-prog" aria-label="${done} of ${total} sections done"><i style="--p:${(done/total*100).toFixed(0)}%"></i>${done}/${total}</span></div>`}
 function obPreview(){const d=S.ob.data,i=S.ob.step,id=STEPS[i].id;
  const name=(d.name||'').trim(),role=d.role==='other'?(d.roleOther||'').trim()||'Other':LABEL.role[d.role]||'';
  const [w,h]=(d.aspect||'9:16').split(':').map(Number),k=250/Math.max(w,h),cs=d.captionStyle||'box',poster=previewPoster(d);
@@ -184,7 +189,7 @@ function obPreview(){const d=S.ob.data,i=S.ob.step,id=STEPS[i].id;
    ${row('Publishes to',list('platforms'),id==='work')}
    ${row('Look',d.aspect?`<span>${esc(d.aspect)} ${esc(LABEL.aspect[d.aspect])}</span>${d.captionStyle?`<span>${esc(LABEL.captionStyle[d.captionStyle])}</span>`:''}${tpls.length?`<span>${esc(tpls.length)} favourite${tpls.length>1?'s':''}</span>`:''}`:'',id==='style')}
    ${row('Workflow',exp?`<span>${esc(exp)}</span>${team?`<span>${esc(team)}</span>`:''}`:'',id==='experience')}
-  </dl></div>
+  </dl>${obSummary(d)}</div>
   <p class="obp-note">${ico('sparkles')}Everything here becomes your studio’s defaults. Change it any time.</p></aside>`}
 function renderOb(){const el=document.querySelector('.ob');if(!el||!S.ob)return;const i=S.ob.step,st=STEPS[i],total=STEPS.length-1;const last=i===total;
  if(i===0)return renderAuth(el);
