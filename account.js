@@ -99,14 +99,14 @@ function renderOb(){const el=document.querySelector('.ob');if(!el||!S.ob)return;
  el.innerHTML=`<div class="ob-bg" aria-hidden="true"></div>
  <header class="ob-top"><span class="ob-brand" aria-hidden="true">${brandMark()}</span>
   <ol class="ob-steps">${STEPS.map((s,k)=>`<li class="${k<i?'is-done':k===i?'is-current':''}"><span>${k<i?ico('check'):''}${esc(s.label)}</span></li>`).join('')}</ol>
-  <div class="ob-mstep" aria-hidden="true"><span>${i?`Step ${i} of ${total}`:'Create your account'}</span><i style="--p:${(i/total*100).toFixed(1)}%"></i></div>
+  <div class="ob-mstep" aria-hidden="true"><span>${i?`Step ${i} of ${total}`:S.authMode==='login'?'Sign in':'Create your account'}</span><i style="--p:${(i/total*100).toFixed(1)}%"></i></div>
   ${i===0?'':last?'':`<button type="button" class="ob-skip" data-ob="signout">${ico('link')}<span>Sign out</span></button>`}</header>
  <main class="ob-main ob-dir-${S.ob.dir>0?'next':'prev'}" data-step="${st.id}">
   <div class="ob-count" aria-hidden="true">${i?`<b>${String(i).padStart(2,'0')}</b><span>of ${String(total).padStart(2,'0')}</span>`:''}</div>
   <div class="ob-content"><h1 id="obTitle" tabindex="-1">${esc(i===0&&S.authMode==='login'?'Welcome back.':st.title)}</h1>${(i===0&&S.authMode==='login')?`<p class="ob-sub">Sign in to open your studio.</p>`:st.sub?`<p class="ob-sub">${esc(st.sub)}</p>`:''}
    <div class="ob-body">${stepBody(st.id)}</div>
    ${i===0?'':`<div class="ob-actions">`}${i===0?'':i>1&&!last?`<button type="button" class="ob-back" data-ob="back">${ico('chevron-down')}<span>Back</span></button>`:''}
-    ${st.id==='plan'?'':`<button type="button" class="ob-next" data-ob="next" ${valid(i)?'':'disabled'}><span>${last?'Open the studio':'Continue'}</span>${ico('arrow-up')}</button>`}
+    ${st.id==='plan'||i===0?'':`<button type="button" class="ob-next" data-ob="next" ${valid(i)?'':'disabled'}><span>${last?'Open the studio':'Continue'}</span>${ico('arrow-up')}</button>`}
     ${st.id==='plan'?`<button type="button" class="ob-link" data-ob="next">Continue with ${esc(S.account?.plan?.id&&S.account.plan.id!=='free'?S.account.plan.name:'Free')}</button>`:''}
     ${i===0?'':!last&&st.id!=='plan'?`<span class="ob-hint" aria-hidden="true">press <kbd>Enter ↵</kbd></span>`:''}${i===0?'':'</div>'}
   </div></main>`;
@@ -253,6 +253,6 @@ async function boot(){let status=null,me=null;
  setTimeout(()=>{if(document.documentElement.classList.contains('rp-gate'))onConnection()},4000)}
 window.addEventListener('replotre:cloud',onConnection);
 document.addEventListener('visibilitychange',async()=>{if(document.visibilityState!=='visible'||!sessionStorage.getItem('replotre_portal_open'))return;sessionStorage.removeItem('replotre_portal_open');try{S.account=(await api('/api/billing/refresh',{method:'POST'})).account;renderChip();renderCenter()}catch{}});
-window.addEventListener('replotre:ready',boot,{once:true});
+if(window.ReplotreEditor?.ready)boot();else window.addEventListener('replotre:ready',boot,{once:true});
 window.ReplotreAccount={open:openCenter,openPlans:reason=>openCenter('plans',reason),upgrade,startOnboarding,refresh:loadAccount,get:()=>S.account};
 })();
