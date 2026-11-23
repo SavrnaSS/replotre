@@ -516,7 +516,9 @@ $('#tryChips').addEventListener('click',e=>{const c=e.target.closest('.chip');if
   // live tiles: desktop 5, tablet 3, phone 2; only tiles on screen and outside the cleared centre; rotated as the columns drift
   const weak=(navigator.hardwareConcurrency||8)<=4||(navigator.deviceMemory||8)<=4;
   const liveMax=()=>{const w=stageEl.clientWidth;return w<700?2:w<1100?3:weak?3:4};
-  const canLive=()=>stageOn&&!document.hidden&&!motionOff()&&!(navigator.connection&&navigator.connection.saveData);
+  // Live video tiles are off: decoding video inside the tilted, masked wall forced a full repaint of the hero on every video frame
+  // (about 30 fps idle and while scrolling, instead of 60). The columns still drift and tilt with the pointer; tiles show stills.
+  const canLive=()=>false;
   const toStill=t=>{const v=t.querySelector('.wf-vid');t.classList.remove('is-live');if(v){v.pause();v.removeAttribute('src');v.load();v.remove()}};
   const toLive=t=>{const tall=t.classList.contains('r-916')||t.classList.contains('r-45'),list=tall?LOOPS_TALL:LOOPS_WIDE,v=document.createElement('video');
    v.className='wf-vid';v.muted=true;v.loop=true;v.playsInline=true;v.setAttribute('playsinline','');v.setAttribute('aria-hidden','true');v.disablePictureInPicture=true;v.preload='auto';
