@@ -97,6 +97,34 @@ function renderAuth(el){const reg=S.authMode==='register';
  </main>`;
  requestAnimationFrame(()=>{const em=el.querySelector('input[name=email]');(em&&!em.value?em:el.querySelector('input[name=password]'))?.focus({preventScroll:true});validateEmail(em)})}
 function validateEmail(inp){if(!inp)return;inp.closest('.au-input')?.classList.toggle('is-ok',/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(inp.value.trim()))}
+const stepOf=id=>STEPS.findIndex(s=>s.id===id);
+function readyBody(){const d=S.ob.data,C=window.ReplotreTemplateCatalog,[w,h]=(d.aspect||'9:16').split(':').map(Number),k=150/Math.max(w,h),cs=d.captionStyle||'box';
+ const favs=(d.favoriteTemplates||[]).map(x=>C?.get(x)).filter(Boolean),plan=S.account?.plan||{id:'free',name:'Free'};
+ const chips=(key)=>(d[key]||[]).map(x=>LABEL[key][x]).filter(Boolean).map(x=>`<span>${esc(x)}</span>`).join('');
+ const edit=(id,label='Edit')=>`<button type="button" class="rd-edit" data-ob="edit" data-step="${stepOf(id)}">${esc(label)}</button>`;
+ const row=(icon,label,val,id,btn)=>`<div class="rd-row"><span class="rd-ico">${ico(icon)}</span><div class="rd-val"><small>${label}</small><div>${val||'<i>Not set</i>'}</div></div>${btn??edit(id)}</div>`;
+ const firstStart=d.experience==='new'?'sample':'upload';
+ const starts=[['upload','cloud-upload','Import your footage','Drop in clips from your device'],['sample','play','Try a sample clip','See the AI Director on real footage'],['templates','grid','Browse templates',favs.length?`Starting with ${esc(favs[0].name)}`:'Pick a look to start from']];
+ return `<div class="rd">
+  <div class="rd-next"><p class="ob-label">Start with</p><div class="rd-starts">${starts.map(([a,i,t,sub])=>`<button type="button" class="rd-start${a===firstStart?' is-rec':''}" data-ob="finish" data-start="${a}"><span class="rd-start-ico">${ico(i)}</span><span><strong>${t}</strong><small>${sub}</small></span>${a===firstStart?'<em>Suggested</em>':''}</button>`).join('')}</div></div>
+  <div class="rd-setup"><p class="ob-label">Your setup</p>
+  <div class="rd-card">
+   <div class="rd-stage" aria-hidden="true"><div class="obp-frame" style="--fw:${(w*k).toFixed(0)}px;--fh:${(h*k).toFixed(0)}px"><img src="/assets/templates/${esc(previewPoster(d))}.jpg" alt=""><span class="obp-cap obp-cap-${cs}">${CAP_DEMO[cs]}</span><span class="obp-ar">${esc(d.aspect||'9:16')}</span></div></div>
+   <div class="rd-rows">
+    ${row('image','Look',d.aspect?`<span>${esc(d.aspect)} ${esc(LABEL.aspect[d.aspect])}</span>${d.captionStyle?`<span>${esc(LABEL.captionStyle[d.captionStyle])} captions</span>`:''}`:'','style')}
+    ${row('sparkles','Pinned templates',favs.length?`<span class="rd-thumbs">${favs.map(t=>`<img src="/assets/templates/${esc(t.id)}.jpg" alt="" title="${esc(t.name)}">`).join('')}</span><span class="rd-plain">${esc(favs.map(t=>t.name).join(', '))}</span>`:'','style')}
+    ${row('clapperboard','You make',chips('goals')+chips('platforms'),'work')}
+    ${row('sliders-horizontal','Workflow',d.experience?`<span>${esc(LABEL.experience[d.experience][0])}</span>${d.team?`<span>${esc(LABEL.team[d.team])}</span>`:''}`:'','experience')}
+    ${row('shield-check','Plan',`<span class="${plan.id!=='free'?'is-paid':''}">${esc(plan.name)}</span>`,'plan',plan.id==='free'?`<button type="button" class="rd-edit is-up" data-ob="edit" data-step="${stepOf('plan')}">Upgrade</button>`:'')}
+   </div>
+  </div></div>
+ </div>`}
+function finishOnboarding(start){saveProfile({},{step:STEPS.length-1,complete:true});applyPrefs();closeOnboarding();
+ const q=sel=>document.querySelector(sel);
+ if(start==='upload')q('[data-action="upload"]')?.click();
+ else if(start==='sample')q('[data-action="add-demo"][data-index="0"]')?.click();
+ else if(start==='templates')q('.rail-item[data-tab="templates"]')?.click();
+ E()?.notify(S.ob?.data?.name?`Welcome to Replotre, ${S.ob.data.name}`:'Welcome to Replotre')}
 function stepBody(id){const d=S.ob.data;
  if(id==='account')return authBody();
  if(id==='about')return `<label class="ob-field"><span>What should we call you? <small>Optional</small></span><input type="text" maxlength="60" autocomplete="given-name" data-ob-text="name" value="${esc(d.name||'')}" placeholder="Your first name"></label>
@@ -113,9 +141,7 @@ function stepBody(id){const d=S.ob.data;
  if(id==='experience')return `<div class="ob-group"><div class="ob-cards" role="radiogroup" aria-label="Experience">${Object.entries(LABEL.experience).map(([v,[l,sub]],i)=>`<button type="button" class="ob-card${sel('experience',v)?' is-on':''}" role="radio" aria-checked="${sel('experience',v)}" data-ob-pick="experience" data-value="${v}"><span class="ob-card-level" aria-hidden="true">${'<i></i>'.repeat(i+1)}${'<i class="off"></i>'.repeat(2-i)}</span><strong>${l}</strong><small>${sub}</small></button>`).join('')}</div></div>
   <div class="ob-group"><span class="ob-label">Team size</span>${chips('team')}</div>`;
  if(id==='plan')return plansMarkup({compact:false,recommended:recommend(),context:'onboarding',why:recommendWhy()});
- if(id==='ready'){const name=d.name?`, ${esc(d.name)}`:'';const favs=(d.favoriteTemplates||[]).map(x=>window.ReplotreTemplateCatalog?.get(x)?.name).filter(Boolean);
-  const facts=[d.aspect&&[`${d.aspect} ${LABEL.aspect[d.aspect]}`,'Default frame'],d.captionStyle&&[LABEL.captionStyle[d.captionStyle],'Captions'],favs.length&&[favs.join(', '),'Templates pinned first'],[S.account?.plan?.name||'Free','Plan']].filter(Boolean);
-  return `<div class="ob-ready"><div class="ob-ready-mark" aria-hidden="true">${ico('check')}</div><p class="ob-ready-lead">You're all set${name}. Here's what we tuned for you:</p><dl class="ob-facts">${facts.map(([v,k])=>`<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl></div>`}
+ if(id==='ready')return readyBody();
  return ''}
 function score(t,want){const map={shorts:['crimson','beat-keyword','pop-captions','neon-pulse','candlelit','interview-glow'],youtube:['cinematic-wide','documentary','editorial','motion-deck'],ads:['hero-float','quote-card','pop-captions'],podcast:['interview-glow','documentary','pop-captions'],tutorial:['motion-deck','pop-captions','editorial'],realestate:['property-reel','cinematic-wide'],events:['field-journal','cinematic-wide','candlelit'],brand:['editorial','hero-float','quote-card']};let n=0;for(const g of want)if(map[g]?.includes(t.id))n+=2;return n+(t.tag?1:0)}
 const CAP_DEMO={box:'make it <b>pop</b>',karaoke:'<b>every</b> word',script:'so <em>simple</em>',minimal:'clean &amp; quiet'};
@@ -141,7 +167,7 @@ function obPreview(){const d=S.ob.data,i=S.ob.step,id=STEPS[i].id;
   <p class="obp-note">${ico('sparkles')}Everything here becomes your studio’s defaults. Change it any time.</p></aside>`}
 function renderOb(){const el=document.querySelector('.ob');if(!el||!S.ob)return;const i=S.ob.step,st=STEPS[i],total=STEPS.length-1;const last=i===total;
  if(i===0)return renderAuth(el);
- const anim=S.ob.anim!==false;S.ob.anim=false;const side=st.id!=='plan';
+ const anim=S.ob.anim!==false;S.ob.anim=false;const side=!['plan','ready'].includes(st.id);
  el.innerHTML=`<div class="ob-bg obx-bg" aria-hidden="true"></div>
  <header class="ob-top obx-top"><span class="ob-brand" aria-hidden="true">${brandMark()}</span>
   <div class="obx-progress" role="progressbar" aria-valuemin="1" aria-valuemax="${total}" aria-valuenow="${i}" aria-label="Setup progress">
@@ -150,7 +176,7 @@ function renderOb(){const el=document.querySelector('.ob');if(!el||!S.ob)return;
   ${last?'<span class="obx-spacer"></span>':`<button type="button" class="ob-skip obx-signout" data-ob="signout">${ico('link')}<span>Sign out</span></button>`}</header>
  <main class="ob-main obx-main${anim?` ob-dir-${S.ob.dir>0?'next':'prev'} is-anim`:''}" data-step="${st.id}">
   <div class="obx-grid${side?' has-side':''}">
-   <section class="ob-content obx-content"><p class="obx-kicker">${esc(st.label)}</p><h1 id="obTitle" tabindex="-1">${esc(st.title)}</h1>${st.sub?`<p class="ob-sub">${esc(st.sub)}</p>`:''}
+   <section class="ob-content obx-content">${last?`<div class="rd-mark${anim?' is-anim':''}" aria-hidden="true">${ico('check')}${'<i></i>'.repeat(10)}</div>`:''}<p class="obx-kicker">${esc(st.label)}</p><h1 id="obTitle" tabindex="-1">${esc(last?((S.ob.data.name||'').trim()?`You’re all set, ${S.ob.data.name.trim()}.`:'You’re all set.'):st.title)}</h1>${last?`<p class="ob-sub">Your studio is tuned to how you work. Change anything here, or later in Settings.</p>`:st.sub?`<p class="ob-sub">${esc(st.sub)}</p>`:''}
     <div class="ob-body">${stepBody(st.id)}</div></section>
    ${side?obPreview():''}
   </div></main>
@@ -178,7 +204,9 @@ function applyPrefs(){const d=S.account?.profile||S.ob?.data||{};try{localStorag
  const snap=E()?.snapshot?.();if(d.aspect&&snap&&!snap.clips?.length&&snap.aspect!==d.aspect)E().loadSavedEdit({...snap,aspect:d.aspect});window.ReplotreTemplates?.rerender?.()}
 async function onObClick(e){const b=e.target.closest('button');if(!b)return;
  const o=S.ob;
- if(b.dataset.ob==='next')return go(1);if(b.dataset.ob==='back')return go(-1);
+ if(b.dataset.ob==='next')return STEPS[o.step]?.id==='ready'?finishOnboarding():go(1);
+ if(b.dataset.ob==='finish')return finishOnboarding(b.dataset.start);
+ if(b.dataset.ob==='edit'){o.dir=-1;o.anim=true;o.step=Math.max(1,+b.dataset.step);renderOb();return}if(b.dataset.ob==='back')return go(-1);
  if(b.dataset.ob==='signout'){b.disabled=true;try{await Cloud()?.saveNow?.()}catch{}try{await api('/api/auth/logout',{method:'POST'})}catch{}sessionStorage.removeItem('replotre_new_account');location.reload();return}
  if(b.dataset.ob==='auth-mode'){const m=b.dataset.mode||(S.authMode==='register'?'login':'register');if(m===S.authMode)return;S.authEmail=document.querySelector('.ob-auth input[name=email]')?.value||S.authEmail;S.authMode=m;renderOb();return}
  if(b.dataset.ob==='pw'){const inp=b.parentElement.querySelector('input');const show=inp.type==='password';inp.type=show?'text':'password';b.setAttribute('aria-label',show?'Hide password':'Show password');b.setAttribute('aria-pressed',String(show));b.classList.toggle('is-on',show);inp.focus();return}
