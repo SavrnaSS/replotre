@@ -27,8 +27,7 @@ const STEPS=[
  {id:'account',label:'Sign up',title:'Create your account.',sub:'Your projects, media and plan live in your Replotre account. It takes a minute.'},
  {id:'about',label:'About you',title:'Who are you?',sub:'We’ll tailor the studio to you.'},
  {id:'work',label:'Your work',title:'What will you make?',sub:'Pick all that apply.'},
- {id:'style',label:'Style',title:'Your default look',sub:'Change it any time.'},
- {id:'experience',label:'Workflow',title:'How do you edit?',sub:'We’ll set the right amount of guidance.'},
+ {id:'style',label:'Style',title:'Your default look',sub:'Change it any time in the studio.'},
  {id:'plan',label:'Plan',title:'Choose your plan',sub:'Start free. Upgrade any time.'},
  {id:'ready',label:'Ready',title:'Your studio is ready.',sub:''}
 ];
@@ -64,7 +63,7 @@ function recommendWhy(){const d=S.ob?.data||S.account?.profile||{},p=recommend()
  if(p==='pro')return d.team==='mid'||d.team==='large'?'you edit with a team':d.role==='agency'?'you work for clients as an agency':'you publish daily at a professional level';
  if(p==='creator')return cad?`you publish ${cad}`:`you're a ${({social:'social media manager',agency:'marketing team',freelance:'freelance editor',business:'business owner'})[d.role]||(LABEL.role[d.role]||'creator').toLowerCase()}`;
  return ''}
-function recommend(){const d=S.ob?.data||S.account?.profile||{};if(d.team==='mid'||d.team==='large'||d.role==='agency'||(d.experience==='pro'&&d.cadence==='daily'))return 'pro';if(['daily','weekly'].includes(d.cadence)||['creator','social','freelance'].includes(d.role))return 'creator';return 'free'}
+function recommend(){const d=S.ob?.data||S.account?.profile||{};if(d.role==='agency'||d.team==='mid'||d.team==='large')return 'pro';if(['creator','social','freelance'].includes(d.role)||['daily','weekly'].includes(d.cadence))return 'creator';return 'free'}
 function chips(k,{multi=false,icons}={}){return `<div class="ob-chips" data-set="${k}" role="${multi?'group':'radiogroup'}" aria-label="${esc(k)}">${Object.entries(LABEL[k]).map(([v,l],i)=>`<button type="button" class="ob-chip${sel(k,v)?' is-on':''}" role="${multi?'checkbox':'radio'}" aria-checked="${sel(k,v)}" data-ob-pick="${k}" data-value="${v}" data-multi="${multi}">${icons?`<span class="ob-chip-ico">${ico(icons[v]||'check')}</span>`:''}<span>${esc(l)}</span>${multi?`<i class="ob-tick">${ico('check')}</i>`:''}</button>`).join('')}</div>`}
 const AU_I={mail:'<svg class="au-fi" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 7 8 6 8-6"/></svg>',lock:'<svg class="au-fi" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>',wand:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 4 1 2 2 1-2 1-1 2-1-2-2-1 2-1zM4 20 14 10"/></svg>'};
 const MAIL_DOMAINS=['gmail.com','yahoo.com','hotmail.com','outlook.com','icloud.com','live.com','proton.me','protonmail.com','aol.com','yahoo.in','rediffmail.com','me.com','msn.com'];
@@ -107,7 +106,7 @@ function renderAuth(el){const reg=S.authMode==='register';
   <a class="au-brand" href="/" aria-label="Replotre home"><span class="ob-brand" aria-hidden="true">${brandMark()}</span><span class="au-word">replotre<b>.</b></span></a>
   <div class="au-center">
    <section class="au-card-wrap ob-content">
-    ${reg?`<div class="au-steps" aria-label="Step 1 of 7"><span class="au-dots" aria-hidden="true">${'<i></i>'.repeat(7)}</span><span>Step 1 of 7</span></div>`:''}
+    ${reg?`<div class="au-steps" aria-label="Step 1 of ${STEPS.length}"><span class="au-dots" aria-hidden="true">${'<i></i>'.repeat(STEPS.length)}</span><span>Step 1 of ${STEPS.length}</span></div>`:''}
     <h1 id="obTitle" tabindex="-1">${reg?'Create your account':'Welcome back'}</h1>
     <p class="ob-sub">${reg?'Start editing in minutes. Free, no card needed.':'Sign in to pick up where you left off.'}</p>
     ${authBody()}
@@ -124,7 +123,7 @@ function readyBody(){const d=S.ob.data,C=window.ReplotreTemplateCatalog,[w,h]=(d
  const chips=(key)=>(d[key]||[]).map(x=>LABEL[key][x]).filter(Boolean).map(x=>`<span>${esc(x)}</span>`).join('');
  const edit=(id,label='Edit')=>`<button type="button" class="rd-edit" data-ob="edit" data-step="${stepOf(id)}">${esc(label)}</button>`;
  const row=(icon,label,val,id,btn)=>`<div class="rd-row"><span class="rd-ico">${ico(icon)}</span><div class="rd-val"><small>${label}</small><div>${val||'<i>Not set</i>'}</div></div>${btn??edit(id)}</div>`;
- const firstStart=d.experience==='new'?'sample':'upload';
+ const firstStart=['hobbyist','student'].includes(d.role)||d.experience==='new'?'sample':'upload';
  const starts=[['upload','cloud-upload','Import your footage','Drop in clips from your device'],['sample','play','Try a sample clip','See the AI Director on real footage'],['templates','grid','Browse templates',favs.length?`Starting with ${esc(favs[0].name)}`:'Pick a look to start from']];
  return `<div class="rd">
   <div class="rd-next"><p class="ob-label">Start with</p><div class="rd-starts">${starts.map(([a,i,t,sub])=>`<button type="button" class="rd-start${a===firstStart?' is-rec':''}" data-ob="finish" data-start="${a}"><span class="rd-start-ico">${ico(i)}</span><span><strong>${t}</strong><small>${sub}</small></span>${a===firstStart?'<em>Suggested</em>':''}</button>`).join('')}</div></div>
@@ -134,8 +133,7 @@ function readyBody(){const d=S.ob.data,C=window.ReplotreTemplateCatalog,[w,h]=(d
    <div class="rd-rows">
     ${row('image','Look',d.aspect?`<span>${esc(d.aspect)} ${esc(LABEL.aspect[d.aspect])}</span>${d.captionStyle?`<span>${esc(LABEL.captionStyle[d.captionStyle])} captions</span>`:''}`:'','style')}
     ${row('sparkles','Pinned templates',favs.length?`<span class="rd-thumbs">${favs.map(t=>`<img src="/assets/templates/${esc(t.id)}.jpg" alt="" title="${esc(t.name)}">`).join('')}</span><span class="rd-plain">${esc(favs.map(t=>t.name).join(', '))}</span>`:'','style')}
-    ${row('clapperboard','You make',chips('goals')+chips('platforms'),'work')}
-    ${row('sliders-horizontal','Workflow',d.experience?`<span>${esc(LABEL.experience[d.experience][0])}</span>${d.team?`<span>${esc(LABEL.team[d.team])}</span>`:''}`:'','experience')}
+    ${row('clapperboard','You make',chips('goals'),'work')}
     ${row('shield-check','Plan',`<span class="${plan.id!=='free'?'is-paid':''}">${esc(plan.name)}</span>`,'plan',plan.id==='free'?`<button type="button" class="rd-edit is-up" data-ob="edit" data-step="${stepOf('plan')}">Upgrade</button>`:'')}
    </div>
   </div></div>
@@ -151,14 +149,11 @@ function stepBody(id){const d=S.ob.data;
  if(id==='about')return `<label class="ob-field"><span>What should we call you? <small>Optional</small></span><input type="text" maxlength="60" autocomplete="given-name" data-ob-text="name" value="${esc(d.name||'')}" placeholder="Your first name"></label>
   <div class="ob-group"><span class="ob-label">I'm a…</span>${chips('role')}</div>
   ${d.role==='other'?`<label class="ob-field ob-field-inline"><span>Tell us more</span><input type="text" maxlength="60" data-ob-text="roleOther" value="${esc(d.roleOther||'')}" placeholder="e.g. Teacher, musician, nonprofit"></label>`:''}`;
- if(id==='work')return `<div class="ob-group">${chips('goals',{multi:true,icons:{shorts:'monitor-play',youtube:'film',ads:'zap',podcast:'volume-2',tutorial:'captions',realestate:'layout',events:'sparkles',brand:'palette'}})}</div>
-  <div class="ob-group"><span class="ob-label">Where</span>${chips('platforms',{multi:true})}</div>
-  <div class="ob-group"><span class="ob-label">How often</span>${chips('cadence')}</div>`;
+ if(id==='work')return `<div class="ob-group">${chips('goals',{multi:true,icons:{shorts:'monitor-play',youtube:'film',ads:'zap',podcast:'volume-2',tutorial:'captions',realestate:'layout',events:'sparkles',brand:'palette'}})}</div>`;
  if(id==='style'){const C=window.ReplotreTemplateCatalog;const favs=d.favoriteTemplates||[];const want=new Set(d.goals||[]);
   const tpls=(C?.TEMPLATES||[]).slice().sort((a,b)=>score(b,want)-score(a,want)).slice(0,8);
   return `<div class="ob-group"><span class="ob-label">Default frame</span><div class="ob-aspects" role="radiogroup" aria-label="Default frame">${Object.entries(LABEL.aspect).map(([v,l])=>{const [w,h]=v.split(':').map(Number),k=34/Math.max(w,h);return `<button type="button" class="ob-aspect${sel('aspect',v)?' is-on':''}" role="radio" aria-checked="${sel('aspect',v)}" data-ob-pick="aspect" data-value="${v}"><i style="width:${(w*k).toFixed(1)}px;height:${(h*k).toFixed(1)}px"></i><strong>${v}</strong><small>${l}</small></button>`}).join('')}</div></div>
-   <div class="ob-group"><span class="ob-label">Caption style</span><div class="ob-captions" role="radiogroup" aria-label="Caption style">${Object.entries(LABEL.captionStyle).map(([v,l])=>`<button type="button" class="ob-cap ob-cap-${v}${sel('captionStyle',v)?' is-on':''}" role="radio" aria-checked="${sel('captionStyle',v)}" data-ob-pick="captionStyle" data-value="${v}"><span class="ob-cap-demo">${v==='box'?'make it <b>pop</b>':v==='karaoke'?'<b>every</b> word':v==='script'?'so <em>simple</em>':'clean & quiet'}</span><small>${l}</small></button>`).join('')}</div></div>
-   ${tpls.length?`<div class="ob-group"><span class="ob-label">Favourites <small>up to 3</small></span><div class="ob-tpls">${tpls.map(t=>`<button type="button" class="ob-tpl${favs.includes(t.id)?' is-on':''}" aria-pressed="${favs.includes(t.id)}" data-ob-tpl="${t.id}"><img src="/assets/templates/${esc(t.preview?.poster||t.id+'.jpg')}" alt="" loading="lazy" width="90" height="160"><span>${esc(t.name)}</span><i class="ob-tick">${ico('check')}</i></button>`).join('')}</div></div>`:''}`}
+   <div class="ob-group"><span class="ob-label">Caption style</span><div class="ob-captions" role="radiogroup" aria-label="Caption style">${Object.entries(LABEL.captionStyle).map(([v,l])=>`<button type="button" class="ob-cap ob-cap-${v}${sel('captionStyle',v)?' is-on':''}" role="radio" aria-checked="${sel('captionStyle',v)}" data-ob-pick="captionStyle" data-value="${v}"><span class="ob-cap-demo">${v==='box'?'make it <b>pop</b>':v==='karaoke'?'<b>every</b> word':v==='script'?'so <em>simple</em>':'clean & quiet'}</span><small>${l}</small></button>`).join('')}</div></div>`}
  if(id==='experience')return `<div class="ob-group"><div class="ob-cards" role="radiogroup" aria-label="Experience">${Object.entries(LABEL.experience).map(([v,[l,sub]],i)=>`<button type="button" class="ob-card${sel('experience',v)?' is-on':''}" role="radio" aria-checked="${sel('experience',v)}" data-ob-pick="experience" data-value="${v}"><span class="ob-card-level" aria-hidden="true">${'<i></i>'.repeat(i+1)}${'<i class="off"></i>'.repeat(2-i)}</span><strong>${l}</strong><small>${sub}</small></button>`).join('')}</div></div>
   <div class="ob-group"><span class="ob-label">Team size</span>${chips('team')}</div>`;
  if(id==='plan')return plansMarkup({compact:false,recommended:recommend(),context:'onboarding',why:recommendWhy()});
@@ -172,7 +167,7 @@ function previewPoster(d){const C=window.ReplotreTemplateCatalog;const fav=(d.fa
 function obSummary(d){const c=[];const n=(k,one,many)=>{const v=(d[k]||[]).length;if(v)c.push(v===1?LABEL[k][d[k][0]]:`${v} ${many}`)};
  if(d.aspect)c.push(`${d.aspect} ${LABEL.aspect[d.aspect]}`);if(d.captionStyle)c.push(LABEL.captionStyle[d.captionStyle]);n('goals','','formats');n('platforms','','platforms');
  if(d.cadence)c.push(LABEL.cadence[d.cadence]);if(d.experience)c.push(LABEL.experience[d.experience][0]);if(d.team)c.push(LABEL.team[d.team]);
- const ids=['about','work','style','experience'],done=ids.filter(id=>valid(STEPS.findIndex(x=>x.id===id))).length,total=ids.length;
+ const ids=['about','work','style'],done=ids.filter(id=>valid(STEPS.findIndex(x=>x.id===id))).length,total=ids.length;
  return `<div class="obp-sum"><div class="obp-chips">${c.length?c.slice(0,4).map(x=>`<span>${esc(x)}</span>`).join('')+(c.length>4?`<span class="more">+${c.length-4}</span>`:''):'<em>Your picks will show up here</em>'}</div><span class="obp-prog" aria-label="${done} of ${total} sections done"><i style="--p:${(done/total*100).toFixed(0)}%"></i>${done}/${total}</span></div>`}
 function obPreview(){const d=S.ob.data,i=S.ob.step,id=STEPS[i].id;
  const name=(d.name||'').trim(),role=d.role==='other'?(d.roleOther||'').trim()||'Other':LABEL.role[d.role]||'';
@@ -185,10 +180,8 @@ function obPreview(){const d=S.ob.data,i=S.ob.step,id=STEPS[i].id;
   <div class="obp-head"><span class="obp-avatar" aria-hidden="true">${esc((name||'R')[0].toUpperCase())}</span><div><strong class="obp-name">${esc(name||'Your studio')}</strong><small>${esc(role||'Live preview')}</small></div><span class="obp-live" aria-hidden="true"><i></i>Live</span></div>
   <div class="obp-stage${id==='style'?' is-active':''}" aria-hidden="true"><div class="obp-frame" style="--fw:${(w*k).toFixed(0)}px;--fh:${(h*k).toFixed(0)}px"><img src="/assets/templates/${esc(poster)}.jpg" alt=""><span class="obp-cap obp-cap-${cs}">${CAP_DEMO[cs]}</span><span class="obp-ar">${esc(d.aspect||'9:16')}</span></div></div>
   <dl class="obp-facts">
-   ${row('Makes',list('goals'),id==='work')}
-   ${row('Publishes to',list('platforms'),id==='work')}
+   ${row('Makes',list('goals',4),id==='work')}
    ${row('Look',d.aspect?`<span>${esc(d.aspect)} ${esc(LABEL.aspect[d.aspect])}</span>${d.captionStyle?`<span>${esc(LABEL.captionStyle[d.captionStyle])}</span>`:''}${tpls.length?`<span>${esc(tpls.length)} favourite${tpls.length>1?'s':''}</span>`:''}`:'',id==='style')}
-   ${row('Workflow',exp?`<span>${esc(exp)}</span>${team?`<span>${esc(team)}</span>`:''}`:'',id==='experience')}
   </dl>${obSummary(d)}</div>
   <p class="obp-note">${ico('sparkles')}Everything here becomes your studio’s defaults. Change it any time.</p></aside>`}
 function renderOb(){const el=document.querySelector('.ob');if(!el||!S.ob)return;const i=S.ob.step,st=STEPS[i],total=STEPS.length-1;const last=i===total;
@@ -198,7 +191,7 @@ function renderOb(){const el=document.querySelector('.ob');if(!el||!S.ob)return;
  <header class="ob-top obx-top"><span class="ob-brand" aria-hidden="true">${brandMark()}</span>
   <div class="obx-progress" role="progressbar" aria-valuemin="1" aria-valuemax="${total}" aria-valuenow="${i}" aria-label="Setup progress">
    <div class="obx-label"><span>Step ${i} of ${total}</span><b>${esc(st.label)}</b></div>
-   <div class="obx-segs">${STEPS.slice(1).map((s,k)=>`<i class="${k+1<i||last?'is-done':k+1===i?'is-current':''}" title="${esc(s.label)}"></i>`).join('')}</div></div>
+   <div class="obx-segs" style="--n:${total}">${STEPS.slice(1).map((s,k)=>`<i class="${k+1<i||last?'is-done':k+1===i?'is-current':''}" title="${esc(s.label)}"></i>`).join('')}</div></div>
   ${last?'<span class="obx-spacer"></span>':`<button type="button" class="ob-skip obx-signout" data-ob="signout">${ico('link')}<span>Sign out</span></button>`}</header>
  <main class="ob-main obx-main${anim?` ob-dir-${S.ob.dir>0?'next':'prev'} is-anim`:''}" data-step="${st.id}">
   <div class="obx-grid${side?' has-side':''}">

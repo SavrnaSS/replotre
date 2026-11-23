@@ -872,3 +872,16 @@ html.rp-gate body>*:not(.ob){visibility:hidden}
  .obx-main .ob-captions{gap:8px}
 }
 @media (max-width:360px){.obx-main .ob-chips[data-set=cadence],.obx-main .ob-chips[data-set=team]{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.obx-segs{grid-template-columns:repeat(var(--n,5),1fr)}
+/* Style step on phones: frames in one row, compact caption tiles, so it fits without scrolling */
+@media (max-width:640px){
+ .obx-main .ob-aspects{grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+ .obx-main .ob-aspects button.ob-aspect{padding:10px 4px 8px;gap:2px;border-radius:12px}
+ .obx-main .ob-aspects button.ob-aspect i{transform:scale(.7);margin-bottom:0}
+ .obx-main .ob-aspects button.ob-aspect strong{font-size:13px}
+ .obx-main .ob-aspects button.ob-aspect small{font-size:10.5px}
+ .obx-main .ob-captions{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+ .obx-main .ob-captions button.ob-cap{padding:8px;gap:6px;border-radius:12px}
+ .obx-main .ob-captions .ob-cap-demo{min-height:0;padding:8px 6px;font-size:13px}
+ .obx-main .ob-captions .ob-cap small{font-size:11.5px}
+}
