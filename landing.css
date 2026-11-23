@@ -3129,3 +3129,4 @@ section[id]{scroll-margin-top:72px}
   .studio .monitor{grid-template-columns:1fr auto 1fr}
   .studio .monitor-transport{grid-column:2}
 }
+html{overflow-x:clip}

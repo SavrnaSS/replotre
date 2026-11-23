@@ -1,0 +1,66 @@
+/* Replotre typography: one type system for the landing page, sign-up, onboarding and the studio.
+   Self-hosted variable fonts (SIL Open Font License), loaded last so it wins over older stacks.
+   Inter: interface and body text (optical sizing keeps small editor labels crisp).
+   Plus Jakarta Sans: headings, titles and the wordmark.
+   JetBrains Mono: timecodes and numbers (fixed-width digits, no jitter while playing). */
+
+@font-face{font-family:"Inter";src:url("/assets/fonts/inter-opsz.woff2") format("woff2-variations"),url("/assets/fonts/inter-opsz.woff2") format("woff2");font-weight:100 900;font-style:normal;font-display:swap;unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Plus Jakarta Sans";src:url("/assets/fonts/jakarta.woff2") format("woff2-variations"),url("/assets/fonts/jakarta.woff2") format("woff2");font-weight:200 800;font-style:normal;font-display:swap;unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"JetBrains Mono";src:url("/assets/fonts/jetbrains-mono.woff2") format("woff2-variations"),url("/assets/fonts/jetbrains-mono.woff2") format("woff2");font-weight:100 800;font-style:normal;font-display:swap;unicode-range:U+0000-00FF,U+2000-206F,U+2212}
+/* Metric-matched fallbacks: text keeps its size and line breaks while the real fonts load. */
+@font-face{font-family:"Inter Fallback";src:local("Arial"),local("Helvetica Neue"),local("Roboto");size-adjust:107.1%;ascent-override:90.4%;descent-override:22.5%;line-gap-override:0%}
+@font-face{font-family:"Jakarta Fallback";src:local("Arial"),local("Helvetica Neue"),local("Roboto");size-adjust:103.6%;ascent-override:99%;descent-override:21%;line-gap-override:0%}
+
+:root{
+ --font-ui:"Inter","Inter Fallback",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+ --font-display:"Plus Jakarta Sans","Jakarta Fallback","Inter",ui-sans-serif,system-ui,sans-serif;
+ --font-mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+ /* Fluid type scale: grows smoothly from phone (360px) to large desktop (1920px). */
+ --fs-2xs:clamp(10px,.08vw + 9.7px,11px);
+ --fs-xs:clamp(11px,.1vw + 10.6px,12.5px);
+ --fs-sm:clamp(12.5px,.12vw + 12px,14px);
+ --fs-md:clamp(14px,.16vw + 13.4px,16px);
+ --fs-lg:clamp(16px,.3vw + 14.9px,19px);
+ --fs-xl:clamp(19px,.6vw + 16.8px,25px);
+ --fs-2xl:clamp(24px,1.2vw + 19.6px,36px);
+ --fs-3xl:clamp(30px,2.2vw + 22px,52px);
+ --fs-4xl:clamp(38px,4.2vw + 23px,86px);
+ /* Landing tokens now point at the shared fonts. */
+ --sans:var(--font-ui);--display:var(--font-display);--mono:var(--font-mono);
+}
+
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;font-optical-sizing:auto;font-kerning:normal}
+html,body{font-family:var(--font-ui);font-feature-settings:"calt" 1,"cv05" 1,"cv08" 1;font-synthesis-weight:none}
+button,input,textarea,select,optgroup{font-family:inherit;font-feature-settings:inherit}
+input,textarea{font-size:max(16px,1em)}            /* never below 16px on phones: stops iOS zooming into fields */
+@media (pointer:fine){input,textarea{font-size:inherit}}
+
+/* Headings and titles */
+h1,h2,h3,.au-word,.logo,.studio-wordmark,.ob h1,.ac h2,.ac h3{font-family:var(--font-display);font-feature-settings:"calt" 1,"ss01" 1;text-wrap:balance}
+h1{letter-spacing:-.03em}
+h2,h3{letter-spacing:-.022em}
+p,li,dd,figcaption{text-wrap:pretty;hyphens:manual}
+small,.ob-legal,.ob-strength-label{letter-spacing:.005em}
+
+/* Numbers: timecodes, counters, prices and usage stay aligned */
+kbd,code,pre,samp,.time-value,.time-total,.thumb-time,.timeline-clip-count,.ob-count b,[class*="timecode"],[class*="-time"]{font-variant-numeric:tabular-nums slashed-zero}
+.time-value,.time-total,.thumb-time,kbd,code,pre,samp,[class*="timecode"]{font-family:var(--font-mono);font-feature-settings:"zero" 0,"calt" 0}
+.pl-price,.ac-usage,[class*="price"],[class*="usage"]{font-variant-numeric:tabular-nums}
+
+/* Landing page: fluid body and display scale */
+html:not(:has(#app)) body{font-size:var(--fs-md)}
+
+/* Studio: dense UI, gently larger on big screens */
+#app,#app button,#app input{font-family:var(--font-ui)}
+@media (min-width:1500px){html:has(#app) body{font-size:clamp(13px,.12vw + 11.2px,14px)}}
+
+/* Sign-up and onboarding headings */
+.ob h1{font-weight:800;letter-spacing:-.035em}
+.au-main h1{font-size:var(--fs-2xl);font-weight:800;letter-spacing:-.03em}
+.au-main .ob-sub,.ob-sub{font-size:var(--fs-md)}
+.ob-field>span,.au-row{font-size:var(--fs-sm)}
+.au-word{font-weight:800;letter-spacing:-.035em}
+
+/* Accessibility: respect users who need heavier strokes or system fonts */
+@media (prefers-contrast:more){html,body{-webkit-font-smoothing:auto;font-weight:500}}
+@media print{html,body{font-family:var(--font-ui);font-size:11pt}}

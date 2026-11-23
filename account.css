@@ -372,3 +372,36 @@ html.rp-gate body>*:not(.ob){visibility:hidden}
  .au-main h1{font-size:28px}
 }
 @media (max-height:760px) and (min-width:641px){.au-card-wrap{padding:26px 32px 22px}.au-tabs{margin:18px 0 16px}.au-center{gap:16px}}
+
+/* Premium layer: cinematic backdrop, glass card, gradient border */
+.au-wall{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;
+ -webkit-mask-image:radial-gradient(ellipse 34% 52% at 50% 50%,transparent 30%,#000 100%);mask-image:radial-gradient(ellipse 34% 52% at 50% 50%,transparent 30%,#000 100%)}
+.au-wall:after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,#0c0d0f 0%,#0c0d0fb3 22%,#0c0d0f99 50%,#0c0d0fb3 78%,#0c0d0f 100%)}
+.au-wall-grid{position:absolute;left:50%;top:50%;width:150vw;height:190vh;display:grid;grid-template-columns:repeat(6,1fr);gap:18px;transform:translate(-50%,-50%) rotate(-8deg);opacity:.42;filter:saturate(.75) brightness(.8)}
+.au-col{display:flex;flex-direction:column;gap:18px;animation:auDrift var(--d) linear infinite;animation-delay:var(--o)}
+.au-col:nth-child(even){animation-direction:reverse}
+.au-col img{width:100%;aspect-ratio:9/16;height:auto;object-fit:cover;border-radius:18px;display:block;box-shadow:0 0 0 1px #ffffff0f}
+@keyframes auDrift{from{transform:translateY(0)}to{transform:translateY(-50%)}}
+.au-main{z-index:1}
+.au-card-wrap{position:relative;isolation:isolate;padding-top:30px;background:linear-gradient(180deg,#191a1dcc,#121315e6);backdrop-filter:blur(22px) saturate(1.2);-webkit-backdrop-filter:blur(22px) saturate(1.2);border:1px solid transparent;box-shadow:0 40px 120px #000c,0 0 0 1px #ffffff0d,0 1px 0 #ffffff14 inset}
+.au-card-wrap:before{content:'';position:absolute;inset:-1px;z-index:-1;border-radius:inherit;padding:1px;background:linear-gradient(160deg,#e2ab7799,#ffffff14 35%,#ffffff08 60%,#7b5cff55);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
+.au-card-wrap:after{content:'';position:absolute;left:15%;right:15%;top:-1px;height:1px;background:linear-gradient(90deg,transparent,#efbd8e,transparent);opacity:.8;pointer-events:none}
+.au-mark{display:grid;place-items:center;width:52px;height:52px;margin:0 auto 18px;border-radius:16px;color:var(--a-acc);background:radial-gradient(circle at 30% 25%,#2a2420,#151413);box-shadow:0 0 0 1px #e2ab7733,0 10px 30px #e2ab7726,0 1px 0 #ffffff1a inset}
+.au-mark svg{width:26px;height:auto}
+.au-bg{background:radial-gradient(38% 40% at 50% 46%,#e2ab771f,transparent 70%),radial-gradient(30% 30% at 50% 100%,#7b5cff12,transparent 70%)}
+.ob .ob-auth button.au-submit{position:relative;overflow:hidden;background:linear-gradient(180deg,#efbd8e,#e2ab77);box-shadow:0 10px 30px #e2ab7740,0 1px 0 #ffffff66 inset}
+.ob .ob-auth button.au-submit:before{content:'';position:absolute;top:0;bottom:0;left:-40%;width:30%;background:linear-gradient(100deg,transparent,#ffffff59,transparent);transform:skewX(-20deg);transition:left .7s var(--a-ease)}
+.ob .ob-auth button.au-submit:hover:not(:disabled):before{left:120%}
+.ob .ob-auth button.au-submit:hover:not(:disabled){box-shadow:0 14px 40px #e2ab7759,0 1px 0 #ffffff66 inset;transform:translateY(-1px)}
+.au-tabs{background:#0000004d}
+.au-input input{background:#0000004d}
+.au-values{gap:10px}
+.au-values li{gap:10px;padding:9px 14px 9px 10px;border-radius:14px;background:#15161999;border:1px solid #ffffff0f;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.au-values li svg{width:16px;height:16px;padding:7px;box-sizing:content-box;border-radius:9px;background:#e2ab771a;opacity:1}
+.au-values li span{display:flex;flex-direction:column;line-height:1.25;font-size:11.5px;font-weight:500;color:var(--a-faint)}
+.au-values li b{font-size:12.5px;font-weight:700;color:var(--a-text)}
+@media (max-width:640px){.au-mark{width:44px;height:44px;margin-bottom:14px}.au-values{display:grid;grid-template-columns:1fr;width:100%;padding:0 16px}.au-card-wrap:before,.au-card-wrap:after{display:none}.au-card-wrap{backdrop-filter:none;-webkit-backdrop-filter:none}}
+@media (max-height:760px) and (min-width:641px){.au-mark{width:44px;height:44px;margin-bottom:12px}.au-values li span{font-size:0}.au-values li b{font-size:12.5px}}
+@media (prefers-reduced-motion:reduce){.au-col{animation:none}.ob .ob-auth button.au-submit:before{display:none}}
+.au-wall-grid{opacity:.34}
+@media (max-height:720px) and (min-width:641px){.au-mark{display:none}.au-card-wrap{padding-top:24px}}
