@@ -726,3 +726,28 @@ html.rp-gate body>*:not(.ob){visibility:hidden}
 .ob-auth-error{align-items:center;flex-wrap:wrap;gap:6px}
 @media (max-width:380px){.ob button.au-suggest{font-size:11px;padding:2px 6px}.au-reqs{gap:4px 10px}}
 .au-f.is-tip .au-ok,.au-f.is-error .au-ok{opacity:0;transform:scale(.6)}
+/* "Last used" lives inside the Google button (no clipping) */
+.ob button.au-google .au-last{position:absolute;top:50%;right:12px;transform:translateY(-50%);display:inline-flex;align-items:center;gap:6px;padding:4px 9px 4px 8px;border-radius:999px;background:#e2ab771f;border:1px solid #e2ab7759;color:#f0c49a;font-style:normal;font-size:11px;font-weight:700;letter-spacing:.02em;white-space:nowrap;line-height:1}
+.ob button.au-google .au-last i{width:6px;height:6px;border-radius:50%;background:#e2ab77;box-shadow:0 0 0 3px #e2ab7726}
+.ob button.au-google.has-last .au-g-go{display:none}
+.ob button.au-google.has-last{border-color:#e2ab7740}
+.ob button.au-google.is-busy .au-last{display:none}
+@media (max-width:420px){.ob button.au-google.has-last{padding-right:96px;justify-content:flex-start;padding-left:56px}.ob button.au-google .au-last{right:8px;padding:4px 7px;font-size:10.5px}}
+/* Template wall on phones: 3 columns, dimmer, glass panel behind the form */
+.au-wall.is-phone{-webkit-mask-image:linear-gradient(180deg,#000 0%,#0008 45%,#000 100%);mask-image:linear-gradient(180deg,#000 0%,#0008 45%,#000 100%)}
+.au-wall.is-phone .au-wall-grid{width:175vw;height:170vh;grid-template-columns:repeat(3,1fr);gap:12px;opacity:.3;transform:translate(-50%,-50%) rotate(-10deg)}
+.au-wall.is-phone .au-col{gap:12px}
+.au-wall.is-phone .au-col img{border-radius:14px}
+.au-wall.is-phone:after{background:linear-gradient(180deg,#0c0d0fcc 0%,#0c0d0f99 30%,#0c0d0fb3 70%,#0c0d0f 100%)}
+@media (max-width:520px){
+ .ob:has(.au-wall) .au-card-wrap{background:#101113c7;border:1px solid #ffffff12;border-radius:22px;box-shadow:0 24px 60px #0009;backdrop-filter:blur(16px) saturate(1.1);-webkit-backdrop-filter:blur(16px) saturate(1.1);margin:0 10px;width:calc(100% - 20px);padding:18px 14px 8px}
+ .ob:has(.au-wall) .au-feats-row{padding:0 10px}
+ .ob:has(.au-wall) .au-feats-row li{background:#101113c7;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+}
+.au-wall.is-phone{-webkit-mask-image:none;mask-image:none}
+.au-wall.is-phone .au-wall-grid{opacity:.55;filter:saturate(.85) brightness(.85)}
+.au-wall.is-phone:after{background:linear-gradient(180deg,#0c0d0f8c 0%,#0c0d0f59 35%,#0c0d0f73 75%,#0c0d0fb3 100%)}
+@media (max-width:520px){
+ .ob:has(.au-wall) .au-card-wrap{background:#0f1012a8;backdrop-filter:blur(18px) saturate(1.2);-webkit-backdrop-filter:blur(18px) saturate(1.2)}
+}
+@media (max-width:380px){.ob:has(.au-wall) .au-card-wrap{padding:14px 12px 6px}.ob:has(.au-wall) .au-center{gap:8px}}
