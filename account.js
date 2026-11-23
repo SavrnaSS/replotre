@@ -53,7 +53,7 @@ function ensureOb(){let el=document.querySelector('.ob');if(!el){el=document.cre
   el._inert=[...document.body.children].filter(n=>n!==el&&!n.inert);for(const n of el._inert)n.inert=true;document.body.style.overflow='hidden'}return el}
 async function startOnboarding(fromStep){await Promise.all([S.account?null:loadAccount(),loadPlans()]);if(!S.account)return;
  const p=S.account.profile||{};const first=fromStep??Math.min(STEPS.length-1,Math.max(1,p.onboardedAt?1:(p.step||1)));
- S.ob={step:first,data:{...p},dir:1};ensureOb();renderOb();ungate()}
+ S.ob={step:first,data:{...p},dir:1,anim:true};ensureOb();renderOb();ungate()}
 /* Account gate: the studio is for signed-in creators. Step 0 of the same flow is sign up / sign in. */
 function startGate(){try{const e=localStorage.getItem('replotre_last_email');if(e&&!S.authEmail){S.authEmail=e;S.authMode='login'}}catch{}S.ob={step:0,data:{},dir:1,gate:true};ensureOb();renderOb();ungate()}
 function ungate(){document.documentElement.classList.remove('rp-gate')}
@@ -119,28 +119,54 @@ function stepBody(id){const d=S.ob.data;
   return `<div class="ob-ready"><div class="ob-ready-mark" aria-hidden="true">${ico('check')}</div><p class="ob-ready-lead">You're all set${name}. Here's what we tuned for you:</p><dl class="ob-facts">${facts.map(([v,k])=>`<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl></div>`}
  return ''}
 function score(t,want){const map={shorts:['crimson','beat-keyword','pop-captions','neon-pulse','candlelit','interview-glow'],youtube:['cinematic-wide','documentary','editorial','motion-deck'],ads:['hero-float','quote-card','pop-captions'],podcast:['interview-glow','documentary','pop-captions'],tutorial:['motion-deck','pop-captions','editorial'],realestate:['property-reel','cinematic-wide'],events:['field-journal','cinematic-wide','candlelit'],brand:['editorial','hero-float','quote-card']};let n=0;for(const g of want)if(map[g]?.includes(t.id))n+=2;return n+(t.tag?1:0)}
+const CAP_DEMO={box:'make it <b>pop</b>',karaoke:'<b>every</b> word',script:'so <em>simple</em>',minimal:'clean &amp; quiet'};
+const STEP_HINT={about:'You',work:'Makes',style:'Look',experience:'Level',plan:'Plan',ready:''};
+function previewPoster(d){const C=window.ReplotreTemplateCatalog;const fav=(d.favoriteTemplates||[])[0];if(fav)return fav;
+ const want=new Set(d.goals||[]);const best=(C?.TEMPLATES||[]).slice().sort((x,y)=>score(y,want)-score(x,want))[0];return best?.id||'crimson'}
+function obPreview(){const d=S.ob.data,i=S.ob.step,id=STEPS[i].id;
+ const name=(d.name||'').trim(),role=d.role==='other'?(d.roleOther||'').trim()||'Other':LABEL.role[d.role]||'';
+ const [w,h]=(d.aspect||'9:16').split(':').map(Number),k=250/Math.max(w,h),cs=d.captionStyle||'box',poster=previewPoster(d);
+ const list=(key,max=3)=>{const v=(d[key]||[]).map(x=>LABEL[key][x]).filter(Boolean);return v.length?v.slice(0,max).map(x=>`<span>${esc(x)}</span>`).join('')+(v.length>max?`<span class="more">+${v.length-max}</span>`:''):''};
+ const exp=d.experience?LABEL.experience[d.experience][0]:'',team=d.team?LABEL.team[d.team]:'';
+ const row=(label,val,active)=>`<div class="obp-row${active?' is-active':''}${val?'':' is-empty'}"><dt>${label}</dt><dd>${val||'<i>Not set yet</i>'}</dd></div>`;
+ const tpls=(d.favoriteTemplates||[]).map(x=>window.ReplotreTemplateCatalog?.get(x)?.name).filter(Boolean);
+ return `<aside class="obp" aria-label="Your studio preview"><div class="obp-card">
+  <div class="obp-head"><span class="obp-avatar" aria-hidden="true">${esc((name||'R')[0].toUpperCase())}</span><div><strong class="obp-name">${esc(name||'Your studio')}</strong><small>${esc(role||'Live preview')}</small></div><span class="obp-live" aria-hidden="true"><i></i>Live</span></div>
+  <div class="obp-stage${id==='style'?' is-active':''}" aria-hidden="true"><div class="obp-frame" style="--fw:${(w*k).toFixed(0)}px;--fh:${(h*k).toFixed(0)}px"><img src="/assets/templates/${esc(poster)}.jpg" alt=""><span class="obp-cap obp-cap-${cs}">${CAP_DEMO[cs]}</span><span class="obp-ar">${esc(d.aspect||'9:16')}</span></div></div>
+  <dl class="obp-facts">
+   ${row('Makes',list('goals'),id==='work')}
+   ${row('Publishes to',list('platforms'),id==='work')}
+   ${row('Look',d.aspect?`<span>${esc(d.aspect)} ${esc(LABEL.aspect[d.aspect])}</span>${d.captionStyle?`<span>${esc(LABEL.captionStyle[d.captionStyle])}</span>`:''}${tpls.length?`<span>${esc(tpls.length)} favourite${tpls.length>1?'s':''}</span>`:''}`:'',id==='style')}
+   ${row('Workflow',exp?`<span>${esc(exp)}</span>${team?`<span>${esc(team)}</span>`:''}`:'',id==='experience')}
+  </dl></div>
+  <p class="obp-note">${ico('sparkles')}Everything here becomes your studio’s defaults. Change it any time.</p></aside>`}
 function renderOb(){const el=document.querySelector('.ob');if(!el||!S.ob)return;const i=S.ob.step,st=STEPS[i],total=STEPS.length-1;const last=i===total;
  if(i===0)return renderAuth(el);
- el.innerHTML=`<div class="ob-bg" aria-hidden="true"></div>
- <header class="ob-top"><span class="ob-brand" aria-hidden="true">${brandMark()}</span>
-  <ol class="ob-steps">${STEPS.map((s,k)=>`<li class="${k<i?'is-done':k===i?'is-current':''}"><span>${k<i?ico('check'):''}${esc(s.label)}</span></li>`).join('')}</ol>
-  <div class="ob-mstep" aria-hidden="true"><span>${i?`Step ${i} of ${total}`:S.authMode==='login'?'Sign in':'Create your account'}</span><i style="--p:${(i/total*100).toFixed(1)}%"></i></div>
-  ${i===0?'':last?'':`<button type="button" class="ob-skip" data-ob="signout">${ico('link')}<span>Sign out</span></button>`}</header>
- <main class="ob-main ob-dir-${S.ob.dir>0?'next':'prev'}" data-step="${st.id}">
-  <div class="ob-count" aria-hidden="true">${i?`<b>${String(i).padStart(2,'0')}</b><span>of ${String(total).padStart(2,'0')}</span>`:''}</div>
-  <div class="ob-content"><h1 id="obTitle" tabindex="-1">${esc(i===0&&S.authMode==='login'?'Welcome back.':st.title)}</h1>${(i===0&&S.authMode==='login')?`<p class="ob-sub">Sign in to open your studio.</p>`:st.sub?`<p class="ob-sub">${esc(st.sub)}</p>`:''}
-   <div class="ob-body">${stepBody(st.id)}</div>
-   ${i===0?'':`<div class="ob-actions">`}${i===0?'':i>1&&!last?`<button type="button" class="ob-back" data-ob="back">${ico('chevron-down')}<span>Back</span></button>`:''}
-    ${st.id==='plan'||i===0?'':`<button type="button" class="ob-next" data-ob="next" ${valid(i)?'':'disabled'}><span>${last?'Open the studio':'Continue'}</span>${ico('arrow-up')}</button>`}
-    ${st.id==='plan'?`<button type="button" class="ob-link" data-ob="next">Continue with ${esc(S.account?.plan?.id&&S.account.plan.id!=='free'?S.account.plan.name:'Free')}</button>`:''}
-    ${i===0?'':!last&&st.id!=='plan'?`<span class="ob-hint" aria-hidden="true">press <kbd>Enter ↵</kbd></span>`:''}${i===0?'':'</div>'}
-  </div></main>`;
- requestAnimationFrame(()=>{const f=i===0?el.querySelector('.ob-auth input[name=email]'):null;(f||el.querySelector('#obTitle'))?.focus({preventScroll:true});el.querySelector('.ob-main')?.scrollTo?.(0,0)})}
+ const anim=S.ob.anim!==false;S.ob.anim=false;const side=st.id!=='plan';
+ el.innerHTML=`<div class="ob-bg obx-bg" aria-hidden="true"></div>
+ <header class="ob-top obx-top"><span class="ob-brand" aria-hidden="true">${brandMark()}</span>
+  <div class="obx-progress" role="progressbar" aria-valuemin="1" aria-valuemax="${total}" aria-valuenow="${i}" aria-label="Setup progress">
+   <div class="obx-label"><span>Step ${i} of ${total}</span><b>${esc(st.label)}</b></div>
+   <div class="obx-segs">${STEPS.slice(1).map((s,k)=>`<i class="${k+1<i||last?'is-done':k+1===i?'is-current':''}" title="${esc(s.label)}"></i>`).join('')}</div></div>
+  ${last?'<span class="obx-spacer"></span>':`<button type="button" class="ob-skip obx-signout" data-ob="signout">${ico('link')}<span>Sign out</span></button>`}</header>
+ <main class="ob-main obx-main${anim?` ob-dir-${S.ob.dir>0?'next':'prev'} is-anim`:''}" data-step="${st.id}">
+  <div class="obx-grid${side?' has-side':''}">
+   <section class="ob-content obx-content"><p class="obx-kicker">${esc(st.label)}</p><h1 id="obTitle" tabindex="-1">${esc(st.title)}</h1>${st.sub?`<p class="ob-sub">${esc(st.sub)}</p>`:''}
+    <div class="ob-body">${stepBody(st.id)}</div></section>
+   ${side?obPreview():''}
+  </div></main>
+ <footer class="obx-bar"><div class="obx-bar-in">
+  ${i>1&&!last?`<button type="button" class="ob-back" data-ob="back">${ico('chevron-down')}<span>Back</span></button>`:'<span></span>'}
+  <div class="obx-bar-end">
+   ${!last&&st.id!=='plan'?`<span class="ob-hint" aria-hidden="true">${valid(i)?'Press':'Choose an option, then press'} <kbd>Enter ↵</kbd></span>`:''}
+   ${st.id==='plan'?`<button type="button" class="ob-next" data-ob="next"><span>Continue with ${esc(S.account?.plan?.id&&S.account.plan.id!=='free'?S.account.plan.name:'Free')}</span>${ico('arrow-up')}</button>`:`<button type="button" class="ob-next" data-ob="next" ${valid(i)?'':'disabled'}><span>${last?'Open the studio':'Continue'}</span>${ico('arrow-up')}</button>`}
+  </div></div></footer>`;
+ if(anim)requestAnimationFrame(()=>{el.querySelector('#obTitle')?.focus({preventScroll:true});el.querySelector('.ob-main')?.scrollTo?.(0,0)})}
 async function go(delta){const o=S.ob;if(!o)return;const next=o.step+delta;if(delta>0&&!valid(o.step))return;
  if(delta>0)await saveProfile({},{step:next});
  if(next>=STEPS.length){await saveProfile({},{step:STEPS.length-1,complete:true});applyPrefs();closeOnboarding();E()?.notify('Welcome to Replotre');return}
  if(STEPS[next].id==='ready')await saveProfile({},{step:next,complete:true});
- o.dir=delta;o.step=Math.max(1,next);renderOb()}
+ o.dir=delta;o.anim=true;o.step=Math.max(1,next);renderOb()}
 function applyPrefs(){const d=S.account?.profile||S.ob?.data||{};try{localStorage.setItem('replotre_prefs',JSON.stringify({aspect:d.aspect,captionStyle:d.captionStyle,favoriteTemplates:d.favoriteTemplates||[]}))}catch{}
  const snap=E()?.snapshot?.();if(d.aspect&&snap&&!snap.clips?.length&&snap.aspect!==d.aspect)E().loadSavedEdit({...snap,aspect:d.aspect});window.ReplotreTemplates?.rerender?.()}
 async function onObClick(e){const b=e.target.closest('button');if(!b)return;
@@ -159,7 +185,7 @@ function strength(pw){let n=0;if(pw.length>=12)n++;if(pw.length>=16)n++;if(/[a-z
 function onObInput(e){if(e.target.name==='password'&&S.authMode==='register'){const n=strength(e.target.value),m=e.target.closest('.ob-field');m?.querySelectorAll('.ob-strength i').forEach((x,i)=>x.classList.toggle('on',i<n));m?.querySelector('.ob-strength')?.setAttribute('data-n',String(n));const l=m?.querySelector('.ob-strength-label');if(l)l.textContent=e.target.value?(e.target.value.length<12?`${12-e.target.value.length} more character${12-e.target.value.length===1?'':'s'}`:['','Okay','Good','Strong','Excellent'][n]):'';m?.querySelector('.au-meter')?.classList.toggle('is-on',!!e.target.value)}
  if(e.target.name==='email')validateEmail(e.target);
  const err=document.querySelector('.ob-auth-error');if(err&&e.target.closest('.ob-auth'))err.hidden=true;
- const k=e.target.dataset.obText;if(!k)return;S.ob.data[k]=e.target.value;saveProfile({[k]:e.target.value});const n=document.querySelector('.ob-next');if(n)n.disabled=!valid(S.ob.step)}
+ const k=e.target.dataset.obText;if(!k)return;S.ob.data[k]=e.target.value;saveProfile({[k]:e.target.value});const n=document.querySelector('.ob-next');if(n)n.disabled=!valid(S.ob.step);if(k==='name'){const v=e.target.value.trim(),pn=document.querySelector('.obp-name'),pa=document.querySelector('.obp-avatar');if(pn)pn.textContent=v||'Your studio';if(pa)pa.textContent=(v||'R')[0].toUpperCase()}}
 function onObKey(e){if(e.target.name==='password'&&e.getModifierState){const c=document.querySelector('.au-caps');if(c)c.hidden=!e.getModifierState('CapsLock')}
  if(e.key==='Enter'&&!e.isComposing&&e.target.tagName!=='BUTTON'&&S.ob.step>0&&STEPS[S.ob.step].id!=='plan'){e.preventDefault();go(1)}}
 async function onAuthSubmit(e){e.preventDefault();const f=e.target,btn=f.querySelector('[type=submit]'),err=f.querySelector('.ob-auth-error'),fd=new FormData(f),reg=S.authMode==='register';
