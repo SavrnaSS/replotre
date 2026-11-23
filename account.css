@@ -690,3 +690,39 @@ html.rp-gate body>*:not(.ob){visibility:hidden}
 @media (max-width:380px){.ob button.au-google{height:48px;padding:0 46px;font-size:14px}.au-g-chip{width:32px;height:32px;margin-top:-16px;left:7px}}
 @media (prefers-reduced-motion:reduce){.ob button.au-google:before{display:none}}
 .au-or{margin:18px 0 14px}
+
+/* ===== Smart auth form ===== */
+.ob-auth .au-f{gap:7px}
+.au-f>label,.au-f .au-row>label{font-size:var(--fs-sm,13px);font-weight:600;color:var(--a-muted)}
+.au-row{display:flex;align-items:center;gap:8px;min-height:22px}
+.au-input.has-ico input{padding-left:44px}
+.au-fi{position:absolute;left:15px;top:50%;width:18px;height:18px;margin-top:-9px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;color:var(--a-faint);pointer-events:none;transition:color .15s}
+.au-input:focus-within .au-fi{color:var(--a-acc)}
+.au-input input{transition:border-color .15s,box-shadow .2s,background .15s}
+.au-input input:hover{border-color:#3a3c40}
+.au-input input:focus{border-color:var(--a-acc);box-shadow:0 0 0 4px #e2ab771f}
+.au-f.is-error .au-input input{border-color:#e0705b;box-shadow:0 0 0 4px #e0705b1f}
+.au-f.is-error .au-fi{color:#e0705b}
+.au-msg{margin:0;min-height:0;font-size:12.5px;line-height:1.4;color:var(--a-muted)}
+.au-msg:empty{display:none}
+.au-f.is-error .au-msg{color:#f0a58e}
+.au-f.is-tip .au-msg{color:var(--a-muted)}
+.ob button.au-fix{display:inline;padding:1px 7px;margin:0 1px;border-radius:6px;background:#e2ab7722;color:var(--a-acc2);font:inherit;font-weight:700;border:1px solid #e2ab7744}
+.ob button.au-fix:hover{background:#e2ab7733}
+.ob button.au-fix b{color:var(--a-text)}
+.ob button.au-suggest{margin-left:auto;display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:999px;font-size:12px;font-weight:700;color:var(--a-acc2);border:1px solid transparent}
+.ob button.au-suggest:hover{background:#e2ab7714;border-color:#e2ab7733}
+.ob button.au-suggest svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.au-caps{margin-left:0 !important}
+.au-reqs{list-style:none;margin:2px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:6px 14px;max-height:0;overflow:hidden;opacity:0;transition:max-height .25s var(--a-ease),opacity .2s}
+.au-f.is-typing .au-reqs,.au-f[data-f=password]:focus-within .au-reqs{max-height:60px;opacity:1}
+.au-reqs li{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--a-faint);transition:color .2s}
+.au-reqs li svg{width:12px;height:12px;padding:2px;box-sizing:content-box;border-radius:50%;border:1px solid var(--a-line);color:transparent;stroke-width:3;transition:.2s}
+.au-reqs li.is-ok{color:var(--a-muted)}
+.au-reqs li.is-ok svg{background:#3fae7a;border-color:#3fae7a;color:#08130d}
+.au-meter{margin-top:2px}
+.au-secure{display:flex;align-items:center;justify-content:center;gap:6px;margin:0;font-size:11.5px;color:var(--a-faint)}
+.au-secure .au-fi{position:static;margin:0;width:13px;height:13px;color:#4cc48a}
+.ob-auth-error{align-items:center;flex-wrap:wrap;gap:6px}
+@media (max-width:380px){.ob button.au-suggest{font-size:11px;padding:2px 6px}.au-reqs{gap:4px 10px}}
+.au-f.is-tip .au-ok,.au-f.is-error .au-ok{opacity:0;transform:scale(.6)}

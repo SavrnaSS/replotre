@@ -49,7 +49,7 @@ function renderChip(){let chip=document.getElementById('planChip');const a=S.acc
  const paid=a.plan.id!=='free';chip.className=`acct-chip${paid?' is-paid':''}`;chip.innerHTML=paid?`${ico('sparkles')}<span>${esc(a.plan.name)}</span>`:`<span>Free</span><b>Upgrade</b>`;chip.title=paid?'Plan & billing':'See plans'}
 
 /* ---------- Onboarding ---------- */
-function ensureOb(){let el=document.querySelector('.ob');if(!el){el=document.createElement('div');el.className='ob';el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.setAttribute('aria-labelledby','obTitle');document.body.appendChild(el);el.addEventListener('click',onObClick);el.addEventListener('input',onObInput);el.addEventListener('keydown',onObKey);el.addEventListener('submit',onAuthSubmit);
+function ensureOb(){let el=document.querySelector('.ob');if(!el){el=document.createElement('div');el.className='ob';el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.setAttribute('aria-labelledby','obTitle');document.body.appendChild(el);el.addEventListener('click',onObClick);el.addEventListener('input',onObInput);el.addEventListener('keydown',onObKey);el.addEventListener('submit',onAuthSubmit);el.addEventListener('focusout',e=>{if(e.target.id==='auEmail'&&!e.relatedTarget?.matches?.('[data-ob=fix-email]'))checkEmailField(e.target,true)});
   el._inert=[...document.body.children].filter(n=>n!==el&&!n.inert);for(const n of el._inert)n.inert=true;document.body.style.overflow='hidden'}return el}
 async function startOnboarding(fromStep){await Promise.all([S.account?null:loadAccount(),loadPlans()]);if(!S.account)return;
  const p=S.account.profile||{};const first=fromStep??Math.min(STEPS.length-1,Math.max(1,p.onboardedAt?1:(p.step||1)));
@@ -66,6 +66,17 @@ function recommendWhy(){const d=S.ob?.data||S.account?.profile||{},p=recommend()
  return ''}
 function recommend(){const d=S.ob?.data||S.account?.profile||{};if(d.team==='mid'||d.team==='large'||d.role==='agency'||(d.experience==='pro'&&d.cadence==='daily'))return 'pro';if(['daily','weekly'].includes(d.cadence)||['creator','social','freelance'].includes(d.role))return 'creator';return 'free'}
 function chips(k,{multi=false,icons}={}){return `<div class="ob-chips" role="${multi?'group':'radiogroup'}" aria-label="${esc(k)}">${Object.entries(LABEL[k]).map(([v,l],i)=>`<button type="button" class="ob-chip${sel(k,v)?' is-on':''}" role="${multi?'checkbox':'radio'}" aria-checked="${sel(k,v)}" data-ob-pick="${k}" data-value="${v}" data-multi="${multi}">${icons?`<span class="ob-chip-ico">${ico(icons[v]||'check')}</span>`:''}<span>${esc(l)}</span>${multi?`<i class="ob-tick">${ico('check')}</i>`:''}</button>`).join('')}</div>`}
+const AU_I={mail:'<svg class="au-fi" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 7 8 6 8-6"/></svg>',lock:'<svg class="au-fi" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>',wand:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 4 1 2 2 1-2 1-1 2-1-2-2-1 2-1zM4 20 14 10"/></svg>'};
+const MAIL_DOMAINS=['gmail.com','yahoo.com','hotmail.com','outlook.com','icloud.com','live.com','proton.me','protonmail.com','aol.com','yahoo.in','rediffmail.com','me.com','msn.com'];
+function editDist(a,b){const m=a.length,n=b.length,d=Array.from({length:m+1},(_,i)=>[i,...Array(n).fill(0)]);for(let j=1;j<=n;j++)d[0][j]=j;for(let i=1;i<=m;i++)for(let j=1;j<=n;j++)d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1),i>1&&j>1&&a[i-1]===b[j-2]&&a[i-2]===b[j-1]?d[i-2][j-2]+1:99);return d[m][n]}
+function emailSuggestion(v){const m=/^([^\s@]+)@([^\s@]+)$/.exec(v.trim().toLowerCase());if(!m)return '';const dom=m[2];if(MAIL_DOMAINS.includes(dom))return '';let best='',bd=3;for(const d of MAIL_DOMAINS){const x=editDist(dom,d);if(x<bd){bd=x;best=d}}return best&&bd<=2?`${m[1]}@${best}`:''}
+function pwChecks(pw){return {len:pw.length>=12,case:/[a-z]/.test(pw)&&/[A-Z]/.test(pw),mix:/[\d\W_]/.test(pw)}}
+function strongPassword(){const sets=['abcdefghijkmnpqrstuvwxyz','ABCDEFGHJKLMNPQRSTUVWXYZ','23456789','!@#$%&*?-_+='],all=sets.join(''),r=n=>{const a=new Uint32Array(1);crypto.getRandomValues(a);return a[0]%n};
+ let out=sets.map(x=>x[r(x.length)]);while(out.length<18)out.push(all[r(all.length)]);for(let i=out.length-1;i>0;i--){const j=r(i+1);[out[i],out[j]]=[out[j],out[i]]}return out.join('')}
+function fieldMsg(name,text,kind='error',html=false){const f=document.querySelector(`.au-f[data-f="${name}"]`);if(!f)return;const m=f.querySelector('.au-msg');f.classList.toggle('is-error',!!text&&kind==='error');f.classList.toggle('is-tip',!!text&&kind==='tip');if(html)m.innerHTML=text;else m.textContent=text||'';f.querySelector('input')?.setAttribute('aria-invalid',String(!!text&&kind==='error'))}
+function checkEmailField(inp,final){const v=inp.value.trim();if(!v){fieldMsg('email','');return}
+ if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)){if(final)fieldMsg('email','Enter a full email address, like name@example.com.');else fieldMsg('email','');return}
+ const sug=emailSuggestion(v);if(sug)fieldMsg('email',`Did you mean <button type="button" class="au-fix" data-ob="fix-email" data-v="${esc(sug)}">${esc(sug.split('@')[0])}@<b>${esc(sug.split('@')[1])}</b></button>?`,'tip',true);else fieldMsg('email','')}
 const lastMethod=()=>{try{return localStorage.getItem('replotre_last_method')}catch{return null}};
 function authBody(){const reg=S.authMode==='register',st=S.status||{},closed=reg&&st.signup===false;
  return `<div class="au-tabs" role="tablist" aria-label="Account">
@@ -75,13 +86,16 @@ function authBody(){const reg=S.authMode==='register',st=S.status||{},closed=reg
  <div class="au-or" role="separator"><span>or ${reg?'sign up':'sign in'} with email</span></div>`:''}
  <form class="ob-auth" novalidate>
   ${closed?`<p class="ob-auth-note">${ico('shield-check')}<span>New sign-ups are paused right now. If you already have an account, sign in.</span></p>`:''}
-  <label class="ob-field"><span>Email</span><span class="au-input"><input type="email" name="email" autocomplete="${reg?'email':'username'}" inputmode="email" autocapitalize="off" spellcheck="false" required maxlength="254" placeholder="you@studio.com" value="${esc(S.authEmail||'')}"><i class="au-ok" aria-hidden="true">${ico('check')}</i></span></label>
-  <label class="ob-field"><span class="au-row">Password${reg?'<small>12+ characters</small>':''}<small class="au-caps" hidden>Caps Lock is on</small></span>
-   <span class="ob-pw au-input"><input type="password" name="password" autocomplete="${reg?'new-password':'current-password'}" required minlength="${reg?12:1}" maxlength="128" placeholder="${reg?'At least 12 characters':'Your password'}"><button type="button" class="ob-pw-toggle" data-ob="pw" aria-label="Show password" aria-pressed="false">${ico('eye')}</button></span>
-   ${reg?`<span class="au-meter"><span class="ob-strength" aria-hidden="true"><i></i><i></i><i></i><i></i></span><small class="ob-strength-label" aria-live="polite"></small></span>`:''}</label>
+  <div class="ob-field au-f" data-f="email"><label for="auEmail">Email</label><span class="au-input has-ico">${AU_I.mail}<input id="auEmail" type="email" name="email" autocomplete="${reg?'email':'username'}" inputmode="email" autocapitalize="off" spellcheck="false" required maxlength="254" placeholder="you@studio.com" aria-describedby="auEmailMsg" value="${esc(S.authEmail||'')}"><i class="au-ok" aria-hidden="true">${ico('check')}</i></span><p class="au-msg" id="auEmailMsg" aria-live="polite"></p></div>
+  <div class="ob-field au-f" data-f="password"><span class="au-row"><label for="auPw">Password</label><small class="au-caps" hidden>Caps Lock is on</small>${reg?`<button type="button" class="au-suggest" data-ob="suggest">${AU_I.wand}Suggest strong password</button>`:''}</span>
+   <span class="ob-pw au-input has-ico">${AU_I.lock}<input id="auPw" type="password" name="password" autocomplete="${reg?'new-password':'current-password'}" required minlength="${reg?12:1}" maxlength="128" placeholder="${reg?'At least 12 characters':'Your password'}" aria-describedby="auPwMsg${reg?' auReqs':''}"><button type="button" class="ob-pw-toggle" data-ob="pw" aria-label="Show password" aria-pressed="false">${ico('eye')}</button></span>
+   ${reg?`<div class="au-meter"><span class="ob-strength" aria-hidden="true"><i></i><i></i><i></i><i></i></span><small class="ob-strength-label" aria-live="polite"></small></div>
+   <ul class="au-reqs" id="auReqs" aria-label="Password requirements"><li data-r="len">${ico('check')}12+ characters</li><li data-r="case">${ico('check')}Upper &amp; lower case</li><li data-r="mix">${ico('check')}A number or symbol</li></ul>`:''}
+   <p class="au-msg" id="auPwMsg" aria-live="polite"></p></div>
   ${reg&&st.inviteRequired?`<label class="ob-field"><span>Invitation code</span><span class="au-input"><input type="text" name="invite" autocomplete="off" required maxlength="120" placeholder="From your invite email"></span></label>`:''}
   <p class="ob-auth-error" role="alert" hidden></p>
   <button type="submit" class="ob-next au-submit" ${closed?'disabled':''}><span>${reg?'Create account':'Sign in'}</span>${ico('arrow-up')}</button>
+  <p class="au-secure">${AU_I.lock}Encrypted connection · passwords stored hashed</p>
   ${reg?`<p class="ob-legal">By continuing you agree to Replotre's <a href="/terms" target="_blank" rel="noopener">Terms</a> and <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>.</p>`:`<p class="ob-legal">Forgot your password? Email support from the address on your account and we'll reset it.</p>`}
  </form>`}
 const WALL=['crimson','editorial','neon-pulse','candlelit','pop-captions','documentary','hero-float','field-journal','beat-keyword','cinematic-wide','motion-deck','quote-card'];
@@ -214,6 +228,8 @@ async function onObClick(e){const b=e.target.closest('button');if(!b)return;
  const o=S.ob;
  if(b.dataset.ob==='next')return STEPS[o.step]?.id==='ready'?finishOnboarding():go(1);
  if(b.dataset.ob==='google'){b.disabled=true;b.classList.add('is-busy');b.querySelector('.au-g-label').textContent='Redirecting to Google…';try{localStorage.setItem('replotre_last_method','google')}catch{}location.href='/api/auth/google/start?mode='+(S.authMode==='login'?'login':'register');return}
+ if(b.dataset.ob==='suggest'){const i=document.getElementById('auPw');i.value=strongPassword();i.type='text';const t=document.querySelector('[data-ob=pw]');t?.setAttribute('aria-pressed','true');t?.classList.add('is-on');i.dispatchEvent(new Event('input',{bubbles:true}));fieldMsg('password','Strong password added. Save it in your password manager before you continue.','tip');i.focus();i.select();return}
+ if(b.dataset.ob==='fix-email'){const i=document.getElementById('auEmail');i.value=b.dataset.v;i.dispatchEvent(new Event('input',{bubbles:true}));clearTimeout(S.emT);fieldMsg('email','');document.getElementById('auPw')?.focus();return}
  if(b.dataset.ob==='finish')return finishOnboarding(b.dataset.start);
  if(b.dataset.ob==='edit'){o.dir=-1;o.anim=true;o.step=Math.max(1,+b.dataset.step);renderOb();return}if(b.dataset.ob==='back')return go(-1);
  if(b.dataset.ob==='signout'){b.disabled=true;try{await Cloud()?.saveNow?.()}catch{}try{await api('/api/auth/logout',{method:'POST'})}catch{}sessionStorage.removeItem('replotre_new_account');location.reload();return}
@@ -227,21 +243,24 @@ async function onObClick(e){const b=e.target.closest('button');if(!b)return;
  if(b.dataset.interval){S.interval=b.dataset.interval;const y=document.querySelector('.ob-main')?.scrollTop;renderOb();const m=document.querySelector('.ob-main');if(m&&y)m.scrollTop=y}}
 function strength(pw){let n=0;if(pw.length>=12)n++;if(pw.length>=16)n++;if(/[a-z]/.test(pw)&&/[A-Z]/.test(pw))n++;if(/\d/.test(pw)&&/[^A-Za-z0-9]/.test(pw))n++;return pw.length<12?Math.min(n,1):Math.max(1,n)}
 function onObInput(e){if(e.target.name==='password'&&S.authMode==='register'){const n=strength(e.target.value),m=e.target.closest('.ob-field');m?.querySelectorAll('.ob-strength i').forEach((x,i)=>x.classList.toggle('on',i<n));m?.querySelector('.ob-strength')?.setAttribute('data-n',String(n));const l=m?.querySelector('.ob-strength-label');if(l)l.textContent=e.target.value?(e.target.value.length<12?`${12-e.target.value.length} more character${12-e.target.value.length===1?'':'s'}`:['','Okay','Good','Strong','Excellent'][n]):'';m?.querySelector('.au-meter')?.classList.toggle('is-on',!!e.target.value)}
- if(e.target.name==='email')validateEmail(e.target);
+ if(e.target.name==='email'){validateEmail(e.target);clearTimeout(S.emT);const t=e.target;S.emT=setTimeout(()=>checkEmailField(t,false),450)}
+ if(e.target.name==='password'){const c=pwChecks(e.target.value);document.querySelectorAll('.au-reqs li').forEach(li=>li.classList.toggle('is-ok',!!c[li.dataset.r]));document.querySelector('.au-f[data-f=password]')?.classList.toggle('is-typing',!!e.target.value);fieldMsg('password','')}
  const err=document.querySelector('.ob-auth-error');if(err&&e.target.closest('.ob-auth'))err.hidden=true;
  const k=e.target.dataset.obText;if(!k)return;S.ob.data[k]=e.target.value;saveProfile({[k]:e.target.value});const n=document.querySelector('.ob-next');if(n)n.disabled=!valid(S.ob.step);if(k==='name'){const v=e.target.value.trim(),pn=document.querySelector('.obp-name'),pa=document.querySelector('.obp-avatar');if(pn)pn.textContent=v||'Your studio';if(pa)pa.textContent=(v||'R')[0].toUpperCase()}}
 function onObKey(e){if(e.target.name==='password'&&e.getModifierState){const c=document.querySelector('.au-caps');if(c)c.hidden=!e.getModifierState('CapsLock')}
  if(e.key==='Enter'&&!e.isComposing&&e.target.tagName!=='BUTTON'&&S.ob.step>0&&STEPS[S.ob.step].id!=='plan'){e.preventDefault();go(1)}}
 async function onAuthSubmit(e){e.preventDefault();const f=e.target,btn=f.querySelector('[type=submit]'),err=f.querySelector('.ob-auth-error'),fd=new FormData(f),reg=S.authMode==='register';
  const email=String(fd.get('email')||'').trim(),password=String(fd.get('password')||'');S.authEmail=email;
- const fail=m=>{err.textContent=m;err.hidden=false;btn.disabled=false;btn.innerHTML=`<span>${reg?'Create account':'Sign in'}</span>${ico('arrow-up')}`};
- if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return fail('Enter a valid email address.');
- if(reg&&password.length<12)return fail('Use at least 12 characters for your password.');
- if(!password)return fail('Enter your password.');
+ const reset=()=>{btn.disabled=false;btn.innerHTML=`<span>${reg?'Create account':'Sign in'}</span>${ico('arrow-up')}`};
+ const fail=(m,action)=>{err.innerHTML=esc(m)+(action||'');err.hidden=false;reset()};
+ err.hidden=true;
+ if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)){fieldMsg('email','Enter a full email address, like name@example.com.');f.email.focus();return}
+ if(!password){fieldMsg('password','Enter your password.');f.password.focus();return}
+ if(reg&&password.length<12){fieldMsg('password',`Add ${12-password.length} more character${12-password.length===1?'':'s'}. Passwords need at least 12.`);f.password.focus();return}
  btn.disabled=true;btn.innerHTML='<span class="acct-spin"></span><span>'+(reg?'Creating account…':'Signing in…')+'</span>';
  try{await api(`/api/auth/${reg?'register':'login'}`,{method:'POST',body:{email,password,inviteCode:String(fd.get('invite')||'')}});
   try{localStorage.setItem('replotre_last_email',email);localStorage.setItem('replotre_last_method','email')}catch{}if(reg)sessionStorage.setItem('replotre_new_account','1');btn.innerHTML=`<span class="acct-spin"></span><span>${reg?'Setting up your studio…':'Opening your studio…'}</span>`;location.reload()}
- catch(ex){fail(ex.status===401?'That email and password don\'t match.':ex.status===409?'An account with this email already exists. Switch to Sign in.':ex.status===429?'Too many attempts. Wait a few minutes and try again.':ex.status===403?(ex.message||'Sign-ups are closed right now.'):ex.message||'Something went wrong. Try again.')}}
+ catch(ex){const msg=(ex.status===401?'That email and password don\'t match.':ex.status===409?(()=>{fail('An account with this email already exists.',' <button type="button" class="au-fix" data-ob="auth-mode" data-mode="login">Sign in instead</button>');return null})():ex.status===429?'Too many attempts. Wait a few minutes and try again.':ex.status===403?(ex.message||'Sign-ups are closed right now.'):ex.message||'Something went wrong. Try again.');if(msg)fail(msg)}}
 
 /* ---------- Plans ---------- */
 function planPrice(p){const yearly=S.interval==='year';if(!p.price.month)return {main:money(0),note:'Free forever'};const per=yearly?p.price.year/12:p.price.month;return {main:money(Math.round(per*100)/100),note:yearly?`${money(p.price.year)} billed yearly`:'Billed monthly'}}
