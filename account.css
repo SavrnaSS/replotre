@@ -673,3 +673,20 @@ html.rp-gate body>*:not(.ob){visibility:hidden}
 @keyframes auGSpin{to{transform:rotate(360deg)}}
 .au-last{position:absolute;top:-9px;right:12px;padding:2px 8px;border-radius:999px;background:#e2ab77;color:#1a1410;font-style:normal;font-size:10px;font-weight:800;letter-spacing:.04em}
 @media (prefers-reduced-motion:reduce){.au-g-spin{animation-duration:2s}}
+/* Google button v3: logo chip, raised surface, sheen and arrow on hover */
+.ob button.au-google{position:relative;overflow:hidden;height:52px;padding:0 52px;background:linear-gradient(180deg,#202124,#151618);border:1px solid #ffffff1c;box-shadow:0 1px 0 #ffffff14 inset,0 -1px 0 #0000004d inset,0 6px 18px #0000004d;color:#ececec;font-size:15px;font-weight:600}
+.ob button.au-google:before{content:'';position:absolute;top:0;bottom:0;left:-35%;width:30%;background:linear-gradient(100deg,transparent,#ffffff1a,transparent);transform:skewX(-18deg);transition:left .7s var(--a-ease);pointer-events:none}
+.ob button.au-google:hover:not(:disabled):before{left:115%}
+.ob button.au-google:hover:not(:disabled){background:linear-gradient(180deg,#25262a,#18191b);border-color:#ffffff33;box-shadow:0 1px 0 #ffffff1a inset,0 0 0 4px #ffffff0a,0 12px 30px #00000073;transform:translateY(-1px)}
+.au-g-chip{position:absolute;left:8px;top:50%;width:36px;height:36px;margin-top:-18px;border-radius:10px;display:grid;place-items:center;background:#fff;box-shadow:0 2px 6px #00000059,0 0 0 1px #00000014}
+.au-g-chip>*{grid-area:1/1}
+.ob button.au-google .au-g-chip .g-logo{width:20px;height:20px}
+.au-g-chip .au-g-spin{border-color:#1f1f1f33;border-top-color:#1f1f1f}
+.au-g-go{position:absolute;right:16px;top:50%;margin-top:-8px;width:16px;height:16px;display:grid;place-items:center;color:#ececec;opacity:0;transform:translateX(-6px);transition:opacity .2s,transform .25s var(--a-ease)}
+.au-g-go svg{width:16px;height:16px;transform:rotate(90deg)}
+.ob button.au-google:hover:not(:disabled) .au-g-go,.ob button.au-google:focus-visible .au-g-go{opacity:.85;transform:none}
+.ob button.au-google.is-busy .au-g-go{display:none}
+@media (hover:none){.au-g-go{opacity:.6;transform:none}}
+@media (max-width:380px){.ob button.au-google{height:48px;padding:0 46px;font-size:14px}.au-g-chip{width:32px;height:32px;margin-top:-16px;left:7px}}
+@media (prefers-reduced-motion:reduce){.ob button.au-google:before{display:none}}
+.au-or{margin:18px 0 14px}
