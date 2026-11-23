@@ -62,7 +62,7 @@ const sel=(k,v)=>Array.isArray(S.ob.data[k])?S.ob.data[k].includes(v):S.ob.data[
 function valid(step){const d=S.ob.data;switch(STEPS[step].id){case 'about':return !!d.role&&(d.role!=='other'||!!(d.roleOther||'').trim());case 'work':return (d.goals||[]).length>0;case 'style':return !!d.aspect;case 'experience':return !!d.experience&&!!d.team;default:return true}}
 function recommend(){const d=S.ob?.data||S.account?.profile||{};if(d.team==='mid'||d.team==='large'||d.role==='agency'||(d.experience==='pro'&&d.cadence==='daily'))return 'pro';if(['daily','weekly'].includes(d.cadence)||['creator','social','freelance'].includes(d.role))return 'creator';return 'free'}
 function chips(k,{multi=false,icons}={}){return `<div class="ob-chips" role="${multi?'group':'radiogroup'}" aria-label="${esc(k)}">${Object.entries(LABEL[k]).map(([v,l],i)=>`<button type="button" class="ob-chip${sel(k,v)?' is-on':''}" role="${multi?'checkbox':'radio'}" aria-checked="${sel(k,v)}" data-ob-pick="${k}" data-value="${v}" data-multi="${multi}">${icons?`<span class="ob-chip-ico">${ico(icons[v]||'check')}</span>`:''}<span>${esc(l)}</span>${multi?`<i class="ob-tick">${ico('check')}</i>`:''}</button>`).join('')}</div>`}
-const SHOWCASE=[{id:'crimson',label:'Speech-synced headlines'},{id:'pop-captions',label:'Word-pop captions'},{id:'candlelit',label:'Cinematic grade'}];
+const SHOWCASE={id:'pop-captions'};
 function authBody(){const reg=S.authMode==='register',st=S.status||{},closed=reg&&st.signup===false;
  return `<div class="au-tabs" role="tablist" aria-label="Account">
    <button type="button" role="tab" aria-selected="${reg}" class="${reg?'is-on':''}" data-ob="auth-mode" data-mode="register">Create account</button>
@@ -79,13 +79,16 @@ function authBody(){const reg=S.authMode==='register',st=S.status||{},closed=reg
   ${reg?`<ul class="au-perks" aria-label="Included"><li>${ico('check')}Free plan</li><li>${ico('check')}No card needed</li><li>${ico('check')}Upgrade any time</li></ul>
   <p class="ob-legal">By continuing you agree to Replotre's terms and privacy policy.</p>`:`<p class="ob-legal">Forgot your password? Email support from the address on your account and we'll reset it.</p>`}
  </form>`}
-function showcase(){const lite=document.documentElement.classList.contains('lite')||matchMedia('(prefers-reduced-motion: reduce)').matches;
+function showcase(){const lite=document.documentElement.classList.contains('lite')||matchMedia('(prefers-reduced-motion: reduce)').matches,t=SHOWCASE.id;
  return `<aside class="au-show" aria-hidden="true"><div class="au-glow"></div>
-  <div class="au-stack">${SHOWCASE.map((t,k)=>`<figure class="au-card au-card-${k}">${lite?`<img src="/assets/templates/${t.id}.jpg" alt="">`:`<video src="/assets/templates/${t.id}.mp4" poster="/assets/templates/${t.id}.jpg" muted loop autoplay playsinline preload="metadata"></video>`}<figcaption>${esc(t.label)}</figcaption></figure>`).join('')}</div>
-  <div class="au-pitch"><p class="au-kicker">${ico('sparkles')}Replotre Studio</p><h2>Edit like a pro.<br>In plain words.</h2>
-   <ul><li><b>${ico('wand-sparkles')}</b><span><strong>AI Director</strong>Describe the edit; it lands on your timeline.</span></li>
-    <li><b>${ico('captions')}</b><span><strong>Auto captions</strong>Transcribed and synced to every word.</span></li>
-    <li><b>${ico('zap')}</b><span><strong>Templates that fit</strong>Styled to your footage, not the other way round.</span></li></ul></div></aside>`}
+  <div class="au-head"><p class="au-kicker">${ico('sparkles')}Replotre Studio</p><h2>Edit like a pro.<br><span>In plain words.</span></h2></div>
+  <div class="au-scene">
+   <figure class="au-phone">${lite?`<img src="/assets/templates/${t}.jpg" alt="">`:`<video src="/assets/templates/${t}.mp4" poster="/assets/templates/${t}.jpg" muted loop autoplay playsinline preload="metadata"></video>`}</figure>
+   <div class="au-bubble au-ask"><span class="au-bubble-ico">${ico('wand-sparkles')}</span><span><small>AI Director</small>Add word-pop captions and a punchy hook</span></div>
+   <div class="au-bubble au-done"><span class="au-bubble-ico is-ok">${ico('check')}</span><span><small>Applied in 4s</small>Captions synced to 112 words</span></div>
+  </div>
+  <ul class="au-feats"><li>${ico('wand-sparkles')}<span><strong>AI Director</strong>Describe it, it's done</span></li><li>${ico('captions')}<span><strong>Auto captions</strong>Synced word by word</span></li><li>${ico('zap')}<span><strong>Smart templates</strong>Fitted to your footage</span></li></ul>
+ </aside>`}
 function renderAuth(el){const reg=S.authMode==='register';
  el.innerHTML=`<div class="ob-bg" aria-hidden="true"></div>
  <header class="ob-top au-top"><span class="ob-brand" aria-hidden="true">${brandMark()}</span><span class="au-word">replotre<b>.</b></span>
@@ -95,7 +98,7 @@ function renderAuth(el){const reg=S.authMode==='register';
    ${reg?`<p class="au-steps">${ico('sparkles')}<span>Step 1 of 7 · then a 60-second setup</span></p>`:''}
    <h1 id="obTitle" tabindex="-1">${reg?'Create your account':'Welcome back'}</h1>
    <p class="ob-sub">${reg?'Your projects, media and plan, saved to your Replotre account.':'Sign in to pick up where you left off.'}</p>
-   ${authBody()}</div></section>${showcase()}</main>`;
+   ${authBody()}</div></section>${matchMedia('(min-width:1001px)').matches?showcase():''}</main>`;
  requestAnimationFrame(()=>{const em=el.querySelector('input[name=email]');(em&&!em.value?em:el.querySelector('input[name=password]'))?.focus({preventScroll:true});validateEmail(em)})}
 function validateEmail(inp){if(!inp)return;inp.closest('.au-input')?.classList.toggle('is-ok',/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(inp.value.trim()))}
 function stepBody(id){const d=S.ob.data;
