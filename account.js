@@ -81,8 +81,12 @@ function authBody(){const reg=S.authMode==='register',st=S.status||{},closed=reg
   <button type="submit" class="ob-next au-submit" ${closed?'disabled':''}><span>${reg?'Create account':'Sign in'}</span>${ico('arrow-up')}</button>
   ${reg?`<p class="ob-legal">By continuing you agree to Replotre's terms and privacy policy.</p>`:`<p class="ob-legal">Forgot your password? Email support from the address on your account and we'll reset it.</p>`}
  </form>`}
+const WALL=['crimson','editorial','neon-pulse','candlelit','pop-captions','documentary','hero-float','field-journal','beat-keyword','cinematic-wide','motion-deck','quote-card'];
+function wall(){if(!matchMedia('(min-width:721px)').matches||document.documentElement.classList.contains('lite'))return '';
+ const cols=[0,1,2,3,4,5].map(c=>[0,1,2,3].map(r=>WALL[(c*5+r*3)%WALL.length]));
+ return `<div class="au-wall" aria-hidden="true"><div class="au-wall-grid">${cols.map((col,c)=>`<div class="au-col" style="--d:${55+c%3*12}s;--o:${-(c*7)}s">${[...col,...col].map(id=>`<img src="/assets/templates/${id}.jpg" alt="" loading="lazy" decoding="async" width="360" height="640">`).join('')}</div>`).join('')}</div></div>`}
 function renderAuth(el){const reg=S.authMode==='register';
- el.innerHTML=`<div class="ob-bg au-bg" aria-hidden="true"><i class="au-orb a"></i><i class="au-orb b"></i><i class="au-dots-bg"></i></div>
+ el.innerHTML=`<div class="ob-bg au-bg" aria-hidden="true"><i class="au-orb a"></i><i class="au-orb b"></i><i class="au-dots-bg"></i></div>${wall()}
  <main class="au-main" data-step="account" data-mode="${S.authMode}">
   <a class="au-brand" href="/" aria-label="Replotre home"><span class="ob-brand" aria-hidden="true">${brandMark()}</span><span class="au-word">replotre<b>.</b></span></a>
   <div class="au-center">

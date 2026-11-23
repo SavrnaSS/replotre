@@ -646,3 +646,6 @@ html.rp-gate body>*:not(.ob){visibility:hidden}
 .rd-mark{width:60px;height:60px;margin-bottom:16px}
 .rd-mark svg{width:26px;height:26px}
 @media (max-width:760px){.rd-card{grid-template-columns:1fr}.rd-stage{display:none}}
+/* Template wall restored behind the compact card */
+.au-wall~.au-main .au-feats-row li{background:#121315cc;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.ob:has(.au-wall) .au-dots-bg{display:none}
