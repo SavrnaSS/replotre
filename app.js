@@ -1577,7 +1577,7 @@ $('#tracks').addEventListener('dblclick',e=>{if(e.target.closest('[data-trim],.c
  else if(cb){state.selectedClipId=cb.dataset.clip;state.selectedTextId=null;state.rightTab='properties';if(innerWidth<=700){$('#rightPanel').classList.add('is-open');$('#assetPanel').classList.remove('is-open');setMobileNav('ai')}else if(innerWidth<=980)setRightCollapsed(false);renderTimeline();renderRightPanel()}});
 // Logo → home. Work is autosaved on unload, but a running WebM export would be lost, so hold the navigation.
 {const tt=$('#themeToggle'),meta=document.querySelector('meta[name="theme-color"]');const sync=()=>{const dark=document.documentElement.dataset.theme==='dark';tt?.setAttribute('aria-label',dark?'Switch to light theme':'Switch to dark theme');meta?.setAttribute('content',dark?'#0b0c11':'#f7f4ee')};sync();
- tt?.addEventListener('click',()=>{const next=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=next;try{localStorage.setItem('replotre_theme',next)}catch(e){}sync()})}
+ tt?.addEventListener('click',()=>{const next=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=next;try{localStorage.setItem('replotre_studio_theme',next)}catch(e){}sync()})}
 $('#brandHome')?.addEventListener('click',e=>{if(state.exporting){e.preventDefault();toast('Export in progress · wait for it to finish before leaving')}else saveState()});
 let scrubFrame=null,scrubTarget=null,scrubGeometry=null;
 /* Pointer reorder for clips (mouse + touch). Touch: tap to select first, then drag the selected clip. */
