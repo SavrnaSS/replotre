@@ -839,3 +839,36 @@ html.rp-gate body>*:not(.ob){visibility:hidden}
  .obp-prog i:after{content:'';position:absolute;inset:0 auto 0 0;width:var(--p);background:var(--a-acc);border-radius:2px;transition:width .4s var(--a-ease)}
 }
 @media (max-width:420px){.obp-stage{width:60px;height:72px}.obp-frame{width:calc(var(--fw)*.24)!important;height:calc(var(--fh)*.24)!important}.obp-prog i{display:none}}
+
+/* ===== Onboarding steps v3: tidy grids, less text, phone-first ===== */
+.obx-main .ob-group{gap:10px}
+.obx-main .ob-label{font-size:11px;letter-spacing:.12em}
+.obx-main .ob-chips{display:grid;gap:8px}
+.obx-main .ob-chips[data-set=role]{grid-template-columns:repeat(4,minmax(0,1fr))}
+.obx-main .ob-chips[data-set=goals]{grid-template-columns:repeat(4,minmax(0,1fr))}
+.obx-main .ob-chips[data-set=platforms]{grid-template-columns:repeat(6,minmax(0,1fr))}
+.obx-main .ob-chips[data-set=cadence],.obx-main .ob-chips[data-set=team]{grid-template-columns:repeat(4,minmax(0,1fr))}
+.obx-main button.ob-chip{justify-content:center;min-height:44px;padding:0 10px;border-radius:12px;font-size:13.5px;white-space:nowrap;min-width:0}
+.obx-main button.ob-chip>span:not(.ob-chip-ico){overflow:hidden;text-overflow:ellipsis}
+.obx-main .ob-chips[data-set=goals] button.ob-chip{justify-content:flex-start;padding:0 12px;gap:8px}
+.obx-main button.ob-chip .ob-tick{position:absolute;top:-6px;right:-6px;width:18px;height:18px;margin:0;box-shadow:0 0 0 2px var(--a-bg)}
+.obx-main button.ob-chip.is-on .ob-tick{display:grid}
+.obx-main .ob-field{max-width:none}
+@media (max-width:900px){
+ .obx-main .ob-chips[data-set=platforms]{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .obx-main .ob-chips[data-set=role],.obx-main .ob-chips[data-set=goals]{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:640px){
+ .obx-kicker{display:none}
+ .obx-main h1{font-size:26px}
+ .obx-main .ob-sub{margin-top:6px;font-size:14px}
+ .obx-main .ob-body{margin-top:18px;gap:20px}
+ .obx-main button.ob-chip{min-height:42px;font-size:13px;padding:0 8px}
+ .obx-main .ob-chips{gap:7px}
+ .obx-main .ob-chips[data-set=cadence],.obx-main .ob-chips[data-set=team]{grid-template-columns:repeat(4,minmax(0,1fr))}
+ .obx-main .ob-chip-ico svg{width:15px;height:15px}
+ .obx-main .ob-aspects{gap:8px}
+ .obx-main .ob-aspects button.ob-aspect{padding:12px 6px 10px}
+ .obx-main .ob-captions{gap:8px}
+}
+@media (max-width:360px){.obx-main .ob-chips[data-set=cadence],.obx-main .ob-chips[data-set=team]{grid-template-columns:repeat(2,minmax(0,1fr))}}

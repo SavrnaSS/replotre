@@ -14,22 +14,22 @@ const money=(n,cur='usd')=>new Intl.NumberFormat(cur==='usd'?'en-US':undefined,{
 const brandMark=()=>{const m=document.querySelector('svg.r-mark');return m?m.outerHTML:ico('sparkles')};
 const S={authMode:'register',status:null,gated:false,account:null,plans:null,mode:'off',interval:'year',ob:null,center:null,tab:'overview'};
 const LABEL={
- role:{creator:'Content creator / YouTuber',social:'Social media manager',agency:'Marketing team / agency',freelance:'Freelance video editor',business:'Business owner',hobbyist:'Hobbyist',student:'Student',other:'Other'},
- goals:{shorts:'Short-form reels',youtube:'YouTube videos',ads:'Ads & promos',podcast:'Podcasts & interviews',tutorial:'Tutorials & explainers',realestate:'Property tours',events:'Events & weddings',brand:'Brand storytelling'},
- platforms:{tiktok:'TikTok',reels:'Instagram Reels',shorts:'YouTube Shorts',youtube:'YouTube',linkedin:'LinkedIn',x:'X'},
- cadence:{daily:'Every day',weekly:'Every week',monthly:'A few a month',occasional:'Now and then'},
+ role:{creator:'Creator',social:'Social media',agency:'Agency / team',freelance:'Freelance editor',business:'Business owner',hobbyist:'Hobbyist',student:'Student',other:'Other'},
+ goals:{shorts:'Short reels',youtube:'YouTube',ads:'Ads & promos',podcast:'Podcasts',tutorial:'Tutorials',realestate:'Property tours',events:'Events',brand:'Brand stories'},
+ platforms:{tiktok:'TikTok',reels:'Instagram',shorts:'Shorts',youtube:'YouTube',linkedin:'LinkedIn',x:'X'},
+ cadence:{daily:'Daily',weekly:'Weekly',monthly:'Monthly',occasional:'Rarely'},
  experience:{new:['New to editing','Guide me with templates and smart defaults'],some:['Comfortable','I know the basics and want speed'],pro:['Professional','Give me precision and every control']},
- team:{solo:'Just me',small:'2–5 people',mid:'6–20 people',large:'20+ people'},
+ team:{solo:'Just me',small:'2–5',mid:'6–20',large:'20+'},
  aspect:{'9:16':'Vertical','16:9':'Landscape','1:1':'Square','4:5':'Portrait'},
  captionStyle:{box:'Highlight box',karaoke:'Karaoke',script:'Script accent',minimal:'Minimal'}
 };
 const STEPS=[
  {id:'account',label:'Sign up',title:'Create your account.',sub:'Your projects, media and plan live in your Replotre account. It takes a minute.'},
- {id:'about',label:'About you',title:'Who are you?',sub:'We’ll shape Replotre around how you work.'},
- {id:'work',label:'Your work',title:'What will you make?',sub:'Pick everything that applies. We’ll surface the right templates first.'},
- {id:'style',label:'Style',title:'Set your default look.',sub:'Your projects start here. Change it any time.'},
- {id:'experience',label:'Workflow',title:'How do you edit?',sub:'This tunes the amount of guidance you see.'},
- {id:'plan',label:'Plan',title:'Choose your plan.',sub:'Start free. Upgrade when you need more AI, storage or 1080p.'},
+ {id:'about',label:'About you',title:'Who are you?',sub:'We’ll tailor the studio to you.'},
+ {id:'work',label:'Your work',title:'What will you make?',sub:'Pick all that apply.'},
+ {id:'style',label:'Style',title:'Your default look',sub:'Change it any time.'},
+ {id:'experience',label:'Workflow',title:'How do you edit?',sub:'We’ll set the right amount of guidance.'},
+ {id:'plan',label:'Plan',title:'Choose your plan',sub:'Start free. Upgrade any time.'},
  {id:'ready',label:'Ready',title:'Your studio is ready.',sub:''}
 ];
 
@@ -62,10 +62,10 @@ const sel=(k,v)=>Array.isArray(S.ob.data[k])?S.ob.data[k].includes(v):S.ob.data[
 function valid(step){const d=S.ob.data;switch(STEPS[step].id){case 'about':return !!d.role&&(d.role!=='other'||!!(d.roleOther||'').trim());case 'work':return (d.goals||[]).length>0;case 'style':return !!d.aspect;case 'experience':return !!d.experience&&!!d.team;default:return true}}
 function recommendWhy(){const d=S.ob?.data||S.account?.profile||{},p=recommend(),cad={daily:'every day',weekly:'every week'}[d.cadence];
  if(p==='pro')return d.team==='mid'||d.team==='large'?'you edit with a team':d.role==='agency'?'you work for clients as an agency':'you publish daily at a professional level';
- if(p==='creator')return cad?`you publish ${cad}`:`you're a ${(LABEL.role[d.role]||'creator').toLowerCase()}`;
+ if(p==='creator')return cad?`you publish ${cad}`:`you're a ${({social:'social media manager',agency:'marketing team',freelance:'freelance editor',business:'business owner'})[d.role]||(LABEL.role[d.role]||'creator').toLowerCase()}`;
  return ''}
 function recommend(){const d=S.ob?.data||S.account?.profile||{};if(d.team==='mid'||d.team==='large'||d.role==='agency'||(d.experience==='pro'&&d.cadence==='daily'))return 'pro';if(['daily','weekly'].includes(d.cadence)||['creator','social','freelance'].includes(d.role))return 'creator';return 'free'}
-function chips(k,{multi=false,icons}={}){return `<div class="ob-chips" role="${multi?'group':'radiogroup'}" aria-label="${esc(k)}">${Object.entries(LABEL[k]).map(([v,l],i)=>`<button type="button" class="ob-chip${sel(k,v)?' is-on':''}" role="${multi?'checkbox':'radio'}" aria-checked="${sel(k,v)}" data-ob-pick="${k}" data-value="${v}" data-multi="${multi}">${icons?`<span class="ob-chip-ico">${ico(icons[v]||'check')}</span>`:''}<span>${esc(l)}</span>${multi?`<i class="ob-tick">${ico('check')}</i>`:''}</button>`).join('')}</div>`}
+function chips(k,{multi=false,icons}={}){return `<div class="ob-chips" data-set="${k}" role="${multi?'group':'radiogroup'}" aria-label="${esc(k)}">${Object.entries(LABEL[k]).map(([v,l],i)=>`<button type="button" class="ob-chip${sel(k,v)?' is-on':''}" role="${multi?'checkbox':'radio'}" aria-checked="${sel(k,v)}" data-ob-pick="${k}" data-value="${v}" data-multi="${multi}">${icons?`<span class="ob-chip-ico">${ico(icons[v]||'check')}</span>`:''}<span>${esc(l)}</span>${multi?`<i class="ob-tick">${ico('check')}</i>`:''}</button>`).join('')}</div>`}
 const AU_I={mail:'<svg class="au-fi" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 7 8 6 8-6"/></svg>',lock:'<svg class="au-fi" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>',wand:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 4 1 2 2 1-2 1-1 2-1-2-2-1 2-1zM4 20 14 10"/></svg>'};
 const MAIL_DOMAINS=['gmail.com','yahoo.com','hotmail.com','outlook.com','icloud.com','live.com','proton.me','protonmail.com','aol.com','yahoo.in','rediffmail.com','me.com','msn.com'];
 function editDist(a,b){const m=a.length,n=b.length,d=Array.from({length:m+1},(_,i)=>[i,...Array(n).fill(0)]);for(let j=1;j<=n;j++)d[0][j]=j;for(let i=1;i<=m;i++)for(let j=1;j<=n;j++)d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1),i>1&&j>1&&a[i-1]===b[j-2]&&a[i-2]===b[j-1]?d[i-2][j-2]+1:99);return d[m][n]}
@@ -152,13 +152,13 @@ function stepBody(id){const d=S.ob.data;
   <div class="ob-group"><span class="ob-label">I'm a…</span>${chips('role')}</div>
   ${d.role==='other'?`<label class="ob-field ob-field-inline"><span>Tell us more</span><input type="text" maxlength="60" data-ob-text="roleOther" value="${esc(d.roleOther||'')}" placeholder="e.g. Teacher, musician, nonprofit"></label>`:''}`;
  if(id==='work')return `<div class="ob-group">${chips('goals',{multi:true,icons:{shorts:'monitor-play',youtube:'film',ads:'zap',podcast:'volume-2',tutorial:'captions',realestate:'layout',events:'sparkles',brand:'palette'}})}</div>
-  <div class="ob-group"><span class="ob-label">Where do you publish?</span>${chips('platforms',{multi:true})}</div>
-  <div class="ob-group"><span class="ob-label">How often?</span>${chips('cadence')}</div>`;
+  <div class="ob-group"><span class="ob-label">Where</span>${chips('platforms',{multi:true})}</div>
+  <div class="ob-group"><span class="ob-label">How often</span>${chips('cadence')}</div>`;
  if(id==='style'){const C=window.ReplotreTemplateCatalog;const favs=d.favoriteTemplates||[];const want=new Set(d.goals||[]);
   const tpls=(C?.TEMPLATES||[]).slice().sort((a,b)=>score(b,want)-score(a,want)).slice(0,8);
   return `<div class="ob-group"><span class="ob-label">Default frame</span><div class="ob-aspects" role="radiogroup" aria-label="Default frame">${Object.entries(LABEL.aspect).map(([v,l])=>{const [w,h]=v.split(':').map(Number),k=34/Math.max(w,h);return `<button type="button" class="ob-aspect${sel('aspect',v)?' is-on':''}" role="radio" aria-checked="${sel('aspect',v)}" data-ob-pick="aspect" data-value="${v}"><i style="width:${(w*k).toFixed(1)}px;height:${(h*k).toFixed(1)}px"></i><strong>${v}</strong><small>${l}</small></button>`}).join('')}</div></div>
    <div class="ob-group"><span class="ob-label">Caption style</span><div class="ob-captions" role="radiogroup" aria-label="Caption style">${Object.entries(LABEL.captionStyle).map(([v,l])=>`<button type="button" class="ob-cap ob-cap-${v}${sel('captionStyle',v)?' is-on':''}" role="radio" aria-checked="${sel('captionStyle',v)}" data-ob-pick="captionStyle" data-value="${v}"><span class="ob-cap-demo">${v==='box'?'make it <b>pop</b>':v==='karaoke'?'<b>every</b> word':v==='script'?'so <em>simple</em>':'clean & quiet'}</span><small>${l}</small></button>`).join('')}</div></div>
-   ${tpls.length?`<div class="ob-group"><span class="ob-label">Favourite looks <small>Pick up to 3</small></span><div class="ob-tpls">${tpls.map(t=>`<button type="button" class="ob-tpl${favs.includes(t.id)?' is-on':''}" aria-pressed="${favs.includes(t.id)}" data-ob-tpl="${t.id}"><img src="/assets/templates/${esc(t.preview?.poster||t.id+'.jpg')}" alt="" loading="lazy" width="90" height="160"><span>${esc(t.name)}</span><i class="ob-tick">${ico('check')}</i></button>`).join('')}</div></div>`:''}`}
+   ${tpls.length?`<div class="ob-group"><span class="ob-label">Favourites <small>up to 3</small></span><div class="ob-tpls">${tpls.map(t=>`<button type="button" class="ob-tpl${favs.includes(t.id)?' is-on':''}" aria-pressed="${favs.includes(t.id)}" data-ob-tpl="${t.id}"><img src="/assets/templates/${esc(t.preview?.poster||t.id+'.jpg')}" alt="" loading="lazy" width="90" height="160"><span>${esc(t.name)}</span><i class="ob-tick">${ico('check')}</i></button>`).join('')}</div></div>`:''}`}
  if(id==='experience')return `<div class="ob-group"><div class="ob-cards" role="radiogroup" aria-label="Experience">${Object.entries(LABEL.experience).map(([v,[l,sub]],i)=>`<button type="button" class="ob-card${sel('experience',v)?' is-on':''}" role="radio" aria-checked="${sel('experience',v)}" data-ob-pick="experience" data-value="${v}"><span class="ob-card-level" aria-hidden="true">${'<i></i>'.repeat(i+1)}${'<i class="off"></i>'.repeat(2-i)}</span><strong>${l}</strong><small>${sub}</small></button>`).join('')}</div></div>
   <div class="ob-group"><span class="ob-label">Team size</span>${chips('team')}</div>`;
  if(id==='plan')return plansMarkup({compact:false,recommended:recommend(),context:'onboarding',why:recommendWhy()});
