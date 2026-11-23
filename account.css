@@ -288,3 +288,20 @@ button.acct-chip.is-paid{border-color:#e2ab7755;background:linear-gradient(120de
  .ac-invoices li{grid-template-columns:1fr auto;row-gap:6px}
  .ac-plan-hero .ac-btn{width:100%}
 }
+/* Account gate: hide the studio until the account check decides */
+html.rp-gate body>*:not(.ob){visibility:hidden}
+.ob-auth{display:flex;flex-direction:column;gap:18px;max-width:420px}
+.ob-pw{position:relative;display:flex}
+.ob-pw input{flex:1;padding-right:48px}
+.ob button.ob-pw-toggle{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:36px;height:36px;border-radius:9px;color:var(--a-muted);display:grid;place-items:center}
+.ob button.ob-pw-toggle:hover,.ob button.ob-pw-toggle.is-on{color:var(--a-text)}
+.ob-strength{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:2px}
+.ob-strength i{height:3px;border-radius:2px;background:var(--a-line);transition:background .2s}
+.ob-strength i.on{background:var(--a-acc)}
+.ob-strength[data-n="1"] i.on{background:#d9775b}
+.ob-strength-label{font-size:12px;color:var(--a-muted);min-height:15px}
+.ob-auth-error{margin:0;padding:10px 14px;border-radius:10px;background:#d9775b1f;border:1px solid #d9775b55;color:#f0a58e;font-size:13px}
+.ob-auth-note{margin:0;font-size:13px;color:var(--a-muted)}
+.ob-auth-actions{display:flex;flex-wrap:wrap;align-items:center;gap:14px}
+.ob-legal{margin:0;font-size:12px;color:var(--a-muted)}
+.ob button.ob-skip{display:inline-flex;align-items:center;gap:6px}

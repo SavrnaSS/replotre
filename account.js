@@ -12,7 +12,7 @@ const fmtDate=t=>t?new Date(t).toLocaleDateString(undefined,{day:'numeric',month
 const money=(n,cur='usd')=>new Intl.NumberFormat(cur==='usd'?'en-US':undefined,{style:'currency',currency:cur.toUpperCase(),maximumFractionDigits:n%1?2:0}).format(n);
 
 const brandMark=()=>{const m=document.querySelector('svg.r-mark');return m?m.outerHTML:ico('sparkles')};
-const S={account:null,plans:null,mode:'off',interval:'year',ob:null,center:null,tab:'overview'};
+const S={authMode:'register',status:null,gated:false,account:null,plans:null,mode:'off',interval:'year',ob:null,center:null,tab:'overview'};
 const LABEL={
  role:{creator:'Content creator / YouTuber',social:'Social media manager',agency:'Marketing team / agency',freelance:'Freelance video editor',business:'Business owner',hobbyist:'Hobbyist',student:'Student',other:'Other'},
  goals:{shorts:'Short-form reels',youtube:'YouTube videos',ads:'Ads & promos',podcast:'Podcasts & interviews',tutorial:'Tutorials & explainers',realestate:'Property tours',events:'Events & weddings',brand:'Brand storytelling'},
@@ -24,7 +24,7 @@ const LABEL={
  captionStyle:{box:'Highlight box',karaoke:'Karaoke',script:'Script accent',minimal:'Minimal'}
 };
 const STEPS=[
- {id:'account',label:'Account'},
+ {id:'account',label:'Sign up',title:'Create your account.',sub:'Your projects, media and plan live in your Replotre account. It takes a minute.'},
  {id:'about',label:'About you',title:'Who are you?',sub:'We’ll shape Replotre around how you work.'},
  {id:'work',label:'Your work',title:'What will you make?',sub:'Pick everything that applies. We’ll surface the right templates first.'},
  {id:'style',label:'Style',title:'Set your default look.',sub:'Your projects start here. Change it any time.'},
@@ -49,18 +49,33 @@ function renderChip(){let chip=document.getElementById('planChip');const a=S.acc
  const paid=a.plan.id!=='free';chip.className=`acct-chip${paid?' is-paid':''}`;chip.innerHTML=paid?`${ico('sparkles')}<span>${esc(a.plan.name)}</span>`:`<span>Free</span><b>Upgrade</b>`;chip.title=paid?'Plan & billing':'See plans'}
 
 /* ---------- Onboarding ---------- */
+function ensureOb(){let el=document.querySelector('.ob');if(!el){el=document.createElement('div');el.className='ob';el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.setAttribute('aria-labelledby','obTitle');document.body.appendChild(el);el.addEventListener('click',onObClick);el.addEventListener('input',onObInput);el.addEventListener('keydown',onObKey);el.addEventListener('submit',onAuthSubmit);
+  el._inert=[...document.body.children].filter(n=>n!==el&&!n.inert);for(const n of el._inert)n.inert=true;document.body.style.overflow='hidden'}return el}
 async function startOnboarding(fromStep){await Promise.all([S.account?null:loadAccount(),loadPlans()]);if(!S.account)return;
  const p=S.account.profile||{};const first=fromStep??Math.min(STEPS.length-1,Math.max(1,p.onboardedAt?1:(p.step||1)));
- S.ob={step:first,data:{...p},dir:1};
- let el=document.querySelector('.ob');if(!el){el=document.createElement('div');el.className='ob';el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.setAttribute('aria-labelledby','obTitle');document.body.appendChild(el);el.addEventListener('click',onObClick);el.addEventListener('input',onObInput);el.addEventListener('keydown',onObKey);
-  el._inert=[...document.body.children].filter(n=>n!==el&&!n.inert);for(const n of el._inert)n.inert=true;document.body.style.overflow='hidden'}
- renderOb()}
-function closeOnboarding(){const el=document.querySelector('.ob');if(!el)return;for(const n of el._inert||[])n.inert=false;document.body.style.overflow='';el.remove();S.ob=null;renderChip()}
+ S.ob={step:first,data:{...p},dir:1};ensureOb();renderOb();ungate()}
+/* Account gate: the studio is for signed-in creators. Step 0 of the same flow is sign up / sign in. */
+function startGate(){S.ob={step:0,data:{},dir:1,gate:true};ensureOb();renderOb();ungate()}
+function ungate(){document.documentElement.classList.remove('rp-gate')}
+function closeOnboarding(){const el=document.querySelector('.ob');ungate();if(!el)return;for(const n of el._inert||[])n.inert=false;document.body.style.overflow='';el.remove();S.ob=null;renderChip()}
 const sel=(k,v)=>Array.isArray(S.ob.data[k])?S.ob.data[k].includes(v):S.ob.data[k]===v;
 function valid(step){const d=S.ob.data;switch(STEPS[step].id){case 'about':return !!d.role&&(d.role!=='other'||!!(d.roleOther||'').trim());case 'work':return (d.goals||[]).length>0;case 'style':return !!d.aspect;case 'experience':return !!d.experience&&!!d.team;default:return true}}
 function recommend(){const d=S.ob?.data||S.account?.profile||{};if(d.team==='mid'||d.team==='large'||d.role==='agency'||(d.experience==='pro'&&d.cadence==='daily'))return 'pro';if(['daily','weekly'].includes(d.cadence)||['creator','social','freelance'].includes(d.role))return 'creator';return 'free'}
 function chips(k,{multi=false,icons}={}){return `<div class="ob-chips" role="${multi?'group':'radiogroup'}" aria-label="${esc(k)}">${Object.entries(LABEL[k]).map(([v,l],i)=>`<button type="button" class="ob-chip${sel(k,v)?' is-on':''}" role="${multi?'checkbox':'radio'}" aria-checked="${sel(k,v)}" data-ob-pick="${k}" data-value="${v}" data-multi="${multi}">${icons?`<span class="ob-chip-ico">${ico(icons[v]||'check')}</span>`:''}<span>${esc(l)}</span>${multi?`<i class="ob-tick">${ico('check')}</i>`:''}</button>`).join('')}</div>`}
+function authBody(){const reg=S.authMode==='register',st=S.status||{},closed=reg&&st.signup===false;
+ return `<form class="ob-auth" novalidate>
+  ${closed?`<p class="ob-auth-note">New sign-ups are closed right now. Sign in if you already have an account.</p>`:''}
+  <label class="ob-field"><span>Email</span><input type="email" name="email" autocomplete="email" inputmode="email" required maxlength="254" placeholder="you@example.com" value="${esc(S.authEmail||'')}"></label>
+  <label class="ob-field"><span>Password${reg?' <small>12+ characters</small>':''}</span><span class="ob-pw"><input type="password" name="password" autocomplete="${reg?'new-password':'current-password'}" required minlength="${reg?12:1}" maxlength="128" placeholder="${reg?'Create a strong password':'Your password'}"><button type="button" class="ob-pw-toggle" data-ob="pw" aria-label="Show password">${ico('eye')}</button></span>
+   ${reg?`<span class="ob-strength" aria-hidden="true"><i></i><i></i><i></i><i></i></span><small class="ob-strength-label" aria-live="polite"></small>`:''}</label>
+  ${reg&&st.inviteRequired?`<label class="ob-field"><span>Invitation code</span><input type="text" name="invite" autocomplete="off" required maxlength="120" placeholder="From your invite email"></label>`:''}
+  <p class="ob-auth-error" role="alert" hidden></p>
+  <div class="ob-actions ob-auth-actions"><button type="submit" class="ob-next" ${closed?'disabled':''}><span>${reg?'Create account':'Sign in'}</span>${ico('arrow-up')}</button>
+   <button type="button" class="ob-link" data-ob="auth-mode">${reg?'I already have an account':'New to Replotre? Create an account'}</button></div>
+  ${reg?`<p class="ob-legal">By creating an account you agree to Replotre's terms and privacy policy.</p>`:''}
+ </form>`}
 function stepBody(id){const d=S.ob.data;
+ if(id==='account')return authBody();
  if(id==='about')return `<label class="ob-field"><span>What should we call you? <small>Optional</small></span><input type="text" maxlength="60" autocomplete="given-name" data-ob-text="name" value="${esc(d.name||'')}" placeholder="Your first name"></label>
   <div class="ob-group"><span class="ob-label">I'm a…</span>${chips('role')}</div>
   ${d.role==='other'?`<label class="ob-field ob-field-inline"><span>Tell us more</span><input type="text" maxlength="60" data-ob-text="roleOther" value="${esc(d.roleOther||'')}" placeholder="e.g. Teacher, musician, nonprofit"></label>`:''}`;
@@ -84,18 +99,18 @@ function renderOb(){const el=document.querySelector('.ob');if(!el||!S.ob)return;
  el.innerHTML=`<div class="ob-bg" aria-hidden="true"></div>
  <header class="ob-top"><span class="ob-brand" aria-hidden="true">${brandMark()}</span>
   <ol class="ob-steps">${STEPS.map((s,k)=>`<li class="${k<i?'is-done':k===i?'is-current':''}"><span>${k<i?ico('check'):''}${esc(s.label)}</span></li>`).join('')}</ol>
-  <div class="ob-mstep" aria-hidden="true"><span>Step ${i} of ${total}</span><i style="--p:${(i/total*100).toFixed(1)}%"></i></div>
-  ${last?'':`<button type="button" class="ob-skip" data-ob="skip">Skip for now</button>`}</header>
+  <div class="ob-mstep" aria-hidden="true"><span>${i?`Step ${i} of ${total}`:'Create your account'}</span><i style="--p:${(i/total*100).toFixed(1)}%"></i></div>
+  ${i===0?'':last?'':`<button type="button" class="ob-skip" data-ob="signout">${ico('link')}<span>Sign out</span></button>`}</header>
  <main class="ob-main ob-dir-${S.ob.dir>0?'next':'prev'}" data-step="${st.id}">
-  <div class="ob-count" aria-hidden="true"><b>${String(i).padStart(2,'0')}</b><span>of ${String(total).padStart(2,'0')}</span></div>
-  <div class="ob-content"><h1 id="obTitle" tabindex="-1">${esc(st.title)}</h1>${st.sub?`<p class="ob-sub">${esc(st.sub)}</p>`:''}
+  <div class="ob-count" aria-hidden="true">${i?`<b>${String(i).padStart(2,'0')}</b><span>of ${String(total).padStart(2,'0')}</span>`:''}</div>
+  <div class="ob-content"><h1 id="obTitle" tabindex="-1">${esc(i===0&&S.authMode==='login'?'Welcome back.':st.title)}</h1>${(i===0&&S.authMode==='login')?`<p class="ob-sub">Sign in to open your studio.</p>`:st.sub?`<p class="ob-sub">${esc(st.sub)}</p>`:''}
    <div class="ob-body">${stepBody(st.id)}</div>
-   <div class="ob-actions">${i>1&&!last?`<button type="button" class="ob-back" data-ob="back">${ico('chevron-down')}<span>Back</span></button>`:''}
+   ${i===0?'':`<div class="ob-actions">`}${i===0?'':i>1&&!last?`<button type="button" class="ob-back" data-ob="back">${ico('chevron-down')}<span>Back</span></button>`:''}
     ${st.id==='plan'?'':`<button type="button" class="ob-next" data-ob="next" ${valid(i)?'':'disabled'}><span>${last?'Open the studio':'Continue'}</span>${ico('arrow-up')}</button>`}
     ${st.id==='plan'?`<button type="button" class="ob-link" data-ob="next">Continue with ${esc(S.account?.plan?.id&&S.account.plan.id!=='free'?S.account.plan.name:'Free')}</button>`:''}
-    ${!last&&st.id!=='plan'?`<span class="ob-hint" aria-hidden="true">press <kbd>Enter ↵</kbd></span>`:''}</div>
+    ${i===0?'':!last&&st.id!=='plan'?`<span class="ob-hint" aria-hidden="true">press <kbd>Enter ↵</kbd></span>`:''}${i===0?'':'</div>'}
   </div></main>`;
- requestAnimationFrame(()=>{const h=el.querySelector('#obTitle');h?.focus({preventScroll:true});el.querySelector('.ob-main')?.scrollTo?.(0,0)})}
+ requestAnimationFrame(()=>{const f=i===0?el.querySelector('.ob-auth input[name=email]'):null;(f||el.querySelector('#obTitle'))?.focus({preventScroll:true});el.querySelector('.ob-main')?.scrollTo?.(0,0)})}
 async function go(delta){const o=S.ob;if(!o)return;const next=o.step+delta;if(delta>0&&!valid(o.step))return;
  if(delta>0)await saveProfile({},{step:next});
  if(next>=STEPS.length){await saveProfile({},{step:STEPS.length-1,complete:true});applyPrefs();closeOnboarding();E()?.notify('Welcome to Replotre');return}
@@ -103,18 +118,32 @@ async function go(delta){const o=S.ob;if(!o)return;const next=o.step+delta;if(de
  o.dir=delta;o.step=Math.max(1,next);renderOb()}
 function applyPrefs(){const d=S.account?.profile||S.ob?.data||{};try{localStorage.setItem('replotre_prefs',JSON.stringify({aspect:d.aspect,captionStyle:d.captionStyle,favoriteTemplates:d.favoriteTemplates||[]}))}catch{}
  const snap=E()?.snapshot?.();if(d.aspect&&snap&&!snap.clips?.length&&snap.aspect!==d.aspect)E().loadSavedEdit({...snap,aspect:d.aspect});window.ReplotreTemplates?.rerender?.()}
-function onObClick(e){const b=e.target.closest('button');if(!b)return;const o=S.ob;
+async function onObClick(e){const b=e.target.closest('button');if(!b)return;const o=S.ob;
  if(b.dataset.ob==='next')return go(1);if(b.dataset.ob==='back')return go(-1);
- if(b.dataset.ob==='skip'){saveProfile({},{step:o.step});closeOnboarding();E()?.notify('You can finish setup any time from the header');return}
+ if(b.dataset.ob==='signout'){b.disabled=true;try{await Cloud()?.saveNow?.()}catch{}try{await api('/api/auth/logout',{method:'POST'})}catch{}sessionStorage.removeItem('replotre_new_account');location.reload();return}
+ if(b.dataset.ob==='auth-mode'){S.authEmail=document.querySelector('.ob-auth input[name=email]')?.value||S.authEmail;S.authMode=S.authMode==='register'?'login':'register';renderOb();return}
+ if(b.dataset.ob==='pw'){const inp=b.parentElement.querySelector('input');const show=inp.type==='password';inp.type=show?'text':'password';b.setAttribute('aria-label',show?'Hide password':'Show password');b.classList.toggle('is-on',show);inp.focus();return}
  if(b.dataset.obPick){const k=b.dataset.obPick,v=b.dataset.value;if(b.dataset.multi==='true'){const set=new Set(o.data[k]||[]);set.has(v)?set.delete(v):set.add(v);o.data[k]=[...set];saveProfile({[k]:o.data[k]})}else{o.data[k]=v;saveProfile({[k]:v})}
   const y=document.querySelector('.ob-main')?.scrollTop;renderOb();const m=document.querySelector('.ob-main');if(m&&y)m.scrollTop=y;document.querySelector(`[data-ob-pick="${k}"][data-value="${CSS.escape(v)}"]`)?.focus({preventScroll:true});
   if(!b.dataset.multi||b.dataset.multi==='false'){if(['about','experience'].includes(STEPS[o.step].id)&&k!=='role'&&valid(o.step)){}}return}
  if(b.dataset.obTpl){const id=b.dataset.obTpl;let f=o.data.favoriteTemplates||[];f=f.includes(id)?f.filter(x=>x!==id):[...f,id].slice(-3);o.data.favoriteTemplates=f;saveProfile({favoriteTemplates:f});const y=document.querySelector('.ob-main')?.scrollTop;renderOb();const m=document.querySelector('.ob-main');if(m&&y)m.scrollTop=y;document.querySelector(`[data-ob-tpl="${id}"]`)?.focus({preventScroll:true});return}
  if(b.dataset.plan)return choosePlan(b.dataset.plan,'onboarding');
  if(b.dataset.interval){S.interval=b.dataset.interval;const y=document.querySelector('.ob-main')?.scrollTop;renderOb();const m=document.querySelector('.ob-main');if(m&&y)m.scrollTop=y}}
-function onObInput(e){const k=e.target.dataset.obText;if(!k)return;S.ob.data[k]=e.target.value;saveProfile({[k]:e.target.value});const n=document.querySelector('.ob-next');if(n)n.disabled=!valid(S.ob.step)}
-function onObKey(e){if(e.key==='Enter'&&!e.isComposing&&!(e.target.tagName==='BUTTON')&&STEPS[S.ob.step].id!=='plan'){e.preventDefault();go(1)}
- if(e.key==='Escape'&&STEPS[S.ob.step].id!=='ready'){e.preventDefault();saveProfile({},{step:S.ob.step});closeOnboarding()}}
+function strength(pw){let n=0;if(pw.length>=12)n++;if(pw.length>=16)n++;if(/[a-z]/.test(pw)&&/[A-Z]/.test(pw))n++;if(/\d/.test(pw)&&/[^A-Za-z0-9]/.test(pw))n++;return pw.length<12?Math.min(n,1):Math.max(1,n)}
+function onObInput(e){if(e.target.name==='password'&&S.authMode==='register'){const n=strength(e.target.value),m=e.target.closest('.ob-field');m?.querySelectorAll('.ob-strength i').forEach((x,i)=>x.classList.toggle('on',i<n));m?.querySelector('.ob-strength')?.setAttribute('data-n',String(n));const l=m?.querySelector('.ob-strength-label');if(l)l.textContent=e.target.value?(e.target.value.length<12?`${12-e.target.value.length} more characters`:['','Okay','Good','Strong','Excellent'][n]):'';}
+ const err=document.querySelector('.ob-auth-error');if(err&&e.target.closest('.ob-auth'))err.hidden=true;
+ const k=e.target.dataset.obText;if(!k)return;S.ob.data[k]=e.target.value;saveProfile({[k]:e.target.value});const n=document.querySelector('.ob-next');if(n)n.disabled=!valid(S.ob.step)}
+function onObKey(e){if(e.key==='Enter'&&!e.isComposing&&e.target.tagName!=='BUTTON'&&S.ob.step>0&&STEPS[S.ob.step].id!=='plan'){e.preventDefault();go(1)}}
+async function onAuthSubmit(e){e.preventDefault();const f=e.target,btn=f.querySelector('[type=submit]'),err=f.querySelector('.ob-auth-error'),fd=new FormData(f),reg=S.authMode==='register';
+ const email=String(fd.get('email')||'').trim(),password=String(fd.get('password')||'');S.authEmail=email;
+ const fail=m=>{err.textContent=m;err.hidden=false;btn.disabled=false;btn.innerHTML=`<span>${reg?'Create account':'Sign in'}</span>${ico('arrow-up')}`};
+ if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return fail('Enter a valid email address.');
+ if(reg&&password.length<12)return fail('Use at least 12 characters for your password.');
+ if(!password)return fail('Enter your password.');
+ btn.disabled=true;btn.innerHTML='<span class="acct-spin"></span><span>'+(reg?'Creating account…':'Signing in…')+'</span>';
+ try{await api(`/api/auth/${reg?'register':'login'}`,{method:'POST',body:{email,password,inviteCode:String(fd.get('invite')||'')}});
+  if(reg)sessionStorage.setItem('replotre_new_account','1');location.reload()}
+ catch(ex){fail(ex.status===401?'That email and password don\'t match.':ex.status===409?'An account with this email already exists. Sign in instead.':ex.message||'Something went wrong. Try again.')}}
 
 /* ---------- Plans ---------- */
 function planPrice(p){const yearly=S.interval==='year';if(!p.price.month)return {main:money(0),note:'Free forever'};const per=yearly?p.price.year/12:p.price.month;return {main:money(Math.round(per*100)/100),note:yearly?`${money(p.price.year)} billed yearly`:'Billed monthly'}}
@@ -213,10 +242,17 @@ let wasConnected=false;
 async function onConnection(){const c=!!Cloud()?.isConnected?.();if(c===wasConnected)return;wasConnected=c;if(!c){S.account=null;renderChip();return}
  await loadAccount();if(!S.account)return;
  if(new URL(location.href).searchParams.get('billing'))return billingReturn();
- const fresh=sessionStorage.getItem('replotre_new_account')==='1';sessionStorage.removeItem('replotre_new_account');
- if(!S.account.profile.onboardedAt&&(fresh||!sessionStorage.getItem('replotre_ob_seen'))){sessionStorage.setItem('replotre_ob_seen','1');startOnboarding()}}
+ sessionStorage.removeItem('replotre_new_account');
+ if(!S.account.profile.onboardedAt)startOnboarding();else ungate()}
+/* Studio entry: decide between the account gate, setup and the studio before the studio is shown. */
+async function boot(){let status=null,me=null;
+ try{[status,me]=await Promise.all([fetch('/api/status',{credentials:'same-origin'}).then(r=>r.ok?r.json():null),fetch('/api/auth/me',{credentials:'same-origin'}).then(r=>r.ok?r.json():null)])}catch{}
+ S.status=status;
+ if(!status?.cloud){ungate();return} // no account server (static preview): open the local studio
+ if(!me?.user){startGate();return}
+ setTimeout(()=>{if(document.documentElement.classList.contains('rp-gate'))onConnection()},4000)}
 window.addEventListener('replotre:cloud',onConnection);
 document.addEventListener('visibilitychange',async()=>{if(document.visibilityState!=='visible'||!sessionStorage.getItem('replotre_portal_open'))return;sessionStorage.removeItem('replotre_portal_open');try{S.account=(await api('/api/billing/refresh',{method:'POST'})).account;renderChip();renderCenter()}catch{}});
-window.addEventListener('replotre:ready',()=>setTimeout(onConnection,800),{once:true});
+window.addEventListener('replotre:ready',boot,{once:true});
 window.ReplotreAccount={open:openCenter,openPlans:reason=>openCenter('plans',reason),upgrade,startOnboarding,refresh:loadAccount,get:()=>S.account};
 })();

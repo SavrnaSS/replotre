@@ -3,4 +3,5 @@
    remembers its own choice; the landing page defaults to light. A saved toggle choice always wins. */
 (()=>{const d=document.documentElement;d.classList.add('js');const studio=d.dataset.app==='studio',key=studio?'replotre_studio_theme':'replotre_theme',fallback=studio?'dark':'light';
  try{const saved=localStorage.getItem(key);d.dataset.theme=saved==='dark'||saved==='light'?saved:fallback}catch(e){d.dataset.theme=fallback}
+ if(studio){d.classList.add('rp-gate');setTimeout(()=>d.classList.remove('rp-gate'),15000)} // hidden until the account check decides (failsafe 15s)
  try{const c=navigator.connection;if((c&&c.saveData)||(navigator.deviceMemory&&navigator.deviceMemory<=2)||matchMedia('(prefers-reduced-data: reduce)').matches)d.classList.add('lite');if(localStorage.getItem('replotre_motion')==='off')d.classList.add('calm')}catch(e){}})();

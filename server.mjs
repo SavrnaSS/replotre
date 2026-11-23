@@ -71,7 +71,7 @@ const server=http.createServer(async(req,res)=>{
   if(pathname.startsWith('/api/')&&pathname!=='/api/billing/webhook')csrf(req);
   if((pathname.startsWith('/api/account')||pathname.startsWith('/api/billing/'))&&await accountRoutes({req,res,pathname,method,db,authorized,origin,rate}))return;
   if(method==='GET'&&pathname==='/api/healthz')return json(res,200,{status:'ok',service:'replotre',version:'2.1.0'});
-  if(method==='GET'&&pathname==='/api/status')return json(res,200,{cloud:true,authenticated:!!currentUser(req),ai:!!process.env.OPENAI_API_KEY,mp4:true,realtime:true,analysis:true,transcription:!!process.env.OPENAI_API_KEY,vision:!!process.env.OPENAI_API_KEY,director:true,maxRenderClips:120,claude:claudeConfigured(),claudeModel:claudeConfigured()?CLAUDE_MODEL:null});
+  if(method==='GET'&&pathname==='/api/status')return json(res,200,{cloud:true,authenticated:!!currentUser(req),ai:!!process.env.OPENAI_API_KEY,mp4:true,realtime:true,analysis:true,transcription:!!process.env.OPENAI_API_KEY,vision:!!process.env.OPENAI_API_KEY,director:true,maxRenderClips:120,signup:process.env.ALLOW_SIGNUP!=='false',inviteRequired:!!process.env.SIGNUP_INVITE_CODE,claude:claudeConfigured(),claudeModel:claudeConfigured()?CLAUDE_MODEL:null});
   if(method==='GET'&&pathname==='/api/events'){const user=authorized(req);return hub.connect(req,res,user,()=>!!currentUser(req))}
   if(method==='GET'&&pathname==='/api/auth/me'){const user=currentUser(req);return json(res,200,{user:user?publicUser(user):null})}
   if(pathname==='/api/workspace'){
