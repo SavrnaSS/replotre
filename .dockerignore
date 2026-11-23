@@ -1,0 +1,15 @@
+.git
+.env
+.env.*
+!.env.example
+node_modules
+*.zip
+*.png
+data
+previews
+*.log
+tests
+README.md
+DESIGN_NOTES.md
+ARCHITECTURE_AND_ROADMAP.md
+replotre-standalone.html

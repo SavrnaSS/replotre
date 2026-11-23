@@ -1,0 +1,43 @@
+name: replotre
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: '4173'
+      DATA_DIR: /data
+      APP_ORIGIN: https://${DOMAIN:?Set DOMAIN in .env}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4.1-mini}
+      SIGNUP_INVITE_CODE: ${SIGNUP_INVITE_CODE:-}
+      ALLOW_SIGNUP: ${ALLOW_SIGNUP:-true}
+      MAX_FILE_MB: ${MAX_FILE_MB:-300}
+      USER_STORAGE_GB: ${USER_STORAGE_GB:-2}
+      MAX_USERS: ${MAX_USERS:-10000}
+    volumes:
+      - replotre_data:/data
+    expose:
+      - '4173'
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
+    mem_limit: 3g
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - app
+    environment:
+      DOMAIN: ${DOMAIN:?Set DOMAIN in .env}
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+volumes:
+  replotre_data:
+  caddy_data:
+  caddy_config:

@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.example
+node_modules
+data
+output
+tests
+previews
+*.log
+*.zip
+backups
+coverage
+.DS_Store

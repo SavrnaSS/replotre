@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 112" width="640" height="112"><title>Replotre</title>
+<!-- Official Replotre lockup (light backgrounds). Mark height = wordmark ascender height; gap ≈ one mark height.
+     Wordmark is live text (Inter / SF Pro Bold, -3.4% tracking): outline it with a licensed copy of Inter before print use. -->
+<path fill="#B8834F" fill-rule="evenodd" transform="translate(0 6) scale(.97)" d="M0 0H58C82 0 96 12 96 28C96 40 89 49 77 53L100 88H65L46 56H30V88H0ZM30 20V37H56C63 37 67 33 67 28.5C67 24 63 20 56 20Z"/>
+<text x="176" y="92" font-family="Inter, 'SF Pro Display', -apple-system, 'Helvetica Neue', Arial, sans-serif" font-weight="700" font-size="118" letter-spacing="-4" fill="#17130F">replotre<tspan fill="#B8834F">.</tspan></text>
+</svg>

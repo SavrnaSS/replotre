@@ -1,0 +1,1 @@
+MediaPipe Tasks Vision 1.2.3 (Apache-2.0) and selfie_segmenter float16 model (Apache-2.0), vendored for on-device subject segmentation.
