@@ -55,7 +55,7 @@ async function startOnboarding(fromStep){await Promise.all([S.account?null:loadA
  const p=S.account.profile||{};const first=fromStep??Math.min(STEPS.length-1,Math.max(1,p.onboardedAt?1:(p.step||1)));
  S.ob={step:first,data:{...p},dir:1,anim:true};ensureOb();renderOb();ungate()}
 /* Account gate: the studio is for signed-in creators. Step 0 of the same flow is sign up / sign in. */
-function startGate(){try{const e=localStorage.getItem('replotre_last_email');if(e&&!S.authEmail){S.authEmail=e;S.authMode='login'}}catch{}S.ob={step:0,data:{},dir:1,gate:true};ensureOb();renderOb();ungate()}
+function startGate(){try{const e=localStorage.getItem('replotre_last_email'),m=localStorage.getItem('replotre_last_method');if(m==='google')S.authMode='login';else if(e&&!S.authEmail){S.authEmail=e;S.authMode='login'}}catch{}S.ob={step:0,data:{},dir:1,gate:true};ensureOb();renderOb();ungate()}
 function ungate(){document.documentElement.classList.remove('rp-gate')}
 function closeOnboarding(){const el=document.querySelector('.ob');ungate();if(!el)return;for(const n of el._inert||[])n.inert=false;document.body.style.overflow='';el.remove();S.ob=null;renderChip()}
 const sel=(k,v)=>Array.isArray(S.ob.data[k])?S.ob.data[k].includes(v):S.ob.data[k]===v;
@@ -66,11 +66,12 @@ function recommendWhy(){const d=S.ob?.data||S.account?.profile||{},p=recommend()
  return ''}
 function recommend(){const d=S.ob?.data||S.account?.profile||{};if(d.team==='mid'||d.team==='large'||d.role==='agency'||(d.experience==='pro'&&d.cadence==='daily'))return 'pro';if(['daily','weekly'].includes(d.cadence)||['creator','social','freelance'].includes(d.role))return 'creator';return 'free'}
 function chips(k,{multi=false,icons}={}){return `<div class="ob-chips" role="${multi?'group':'radiogroup'}" aria-label="${esc(k)}">${Object.entries(LABEL[k]).map(([v,l],i)=>`<button type="button" class="ob-chip${sel(k,v)?' is-on':''}" role="${multi?'checkbox':'radio'}" aria-checked="${sel(k,v)}" data-ob-pick="${k}" data-value="${v}" data-multi="${multi}">${icons?`<span class="ob-chip-ico">${ico(icons[v]||'check')}</span>`:''}<span>${esc(l)}</span>${multi?`<i class="ob-tick">${ico('check')}</i>`:''}</button>`).join('')}</div>`}
+const lastMethod=()=>{try{return localStorage.getItem('replotre_last_method')}catch{return null}};
 function authBody(){const reg=S.authMode==='register',st=S.status||{},closed=reg&&st.signup===false;
  return `<div class="au-tabs" role="tablist" aria-label="Account">
    <button type="button" role="tab" aria-selected="${reg}" class="${reg?'is-on':''}" data-ob="auth-mode" data-mode="register">Create account</button>
    <button type="button" role="tab" aria-selected="${!reg}" class="${reg?'':'is-on'}" data-ob="auth-mode" data-mode="login">Sign in</button><i aria-hidden="true"></i></div>
- ${st.google?`<button type="button" class="au-google" data-ob="google"><svg class="g-logo" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg><span>${reg?'Sign up with Google':'Continue with Google'}</span></button>
+ ${st.google?`<button type="button" class="au-google" data-ob="google"><span class="au-g-spin" aria-hidden="true"></span><svg class="g-logo" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg><span class="au-g-label">${reg?'Sign up with Google':'Continue with Google'}</span>${lastMethod()==='google'?'<em class="au-last">Last used</em>':''}</button>
  <div class="au-or" role="separator"><span>or ${reg?'sign up':'sign in'} with email</span></div>`:''}
  <form class="ob-auth" novalidate>
   ${closed?`<p class="ob-auth-note">${ico('shield-check')}<span>New sign-ups are paused right now. If you already have an account, sign in.</span></p>`:''}
@@ -212,7 +213,7 @@ function applyPrefs(){const d=S.account?.profile||S.ob?.data||{};try{localStorag
 async function onObClick(e){const b=e.target.closest('button');if(!b)return;
  const o=S.ob;
  if(b.dataset.ob==='next')return STEPS[o.step]?.id==='ready'?finishOnboarding():go(1);
- if(b.dataset.ob==='google'){b.disabled=true;b.classList.add('is-busy');b.querySelector('span').textContent='Opening Google…';location.href='/api/auth/google/start?mode='+(S.authMode==='login'?'login':'register');return}
+ if(b.dataset.ob==='google'){b.disabled=true;b.classList.add('is-busy');b.querySelector('.au-g-label').textContent='Redirecting to Google…';try{localStorage.setItem('replotre_last_method','google')}catch{}location.href='/api/auth/google/start?mode='+(S.authMode==='login'?'login':'register');return}
  if(b.dataset.ob==='finish')return finishOnboarding(b.dataset.start);
  if(b.dataset.ob==='edit'){o.dir=-1;o.anim=true;o.step=Math.max(1,+b.dataset.step);renderOb();return}if(b.dataset.ob==='back')return go(-1);
  if(b.dataset.ob==='signout'){b.disabled=true;try{await Cloud()?.saveNow?.()}catch{}try{await api('/api/auth/logout',{method:'POST'})}catch{}sessionStorage.removeItem('replotre_new_account');location.reload();return}
@@ -239,7 +240,7 @@ async function onAuthSubmit(e){e.preventDefault();const f=e.target,btn=f.querySe
  if(!password)return fail('Enter your password.');
  btn.disabled=true;btn.innerHTML='<span class="acct-spin"></span><span>'+(reg?'Creating account…':'Signing in…')+'</span>';
  try{await api(`/api/auth/${reg?'register':'login'}`,{method:'POST',body:{email,password,inviteCode:String(fd.get('invite')||'')}});
-  try{localStorage.setItem('replotre_last_email',email)}catch{}if(reg)sessionStorage.setItem('replotre_new_account','1');btn.innerHTML=`<span class="acct-spin"></span><span>${reg?'Setting up your studio…':'Opening your studio…'}</span>`;location.reload()}
+  try{localStorage.setItem('replotre_last_email',email);localStorage.setItem('replotre_last_method','email')}catch{}if(reg)sessionStorage.setItem('replotre_new_account','1');btn.innerHTML=`<span class="acct-spin"></span><span>${reg?'Setting up your studio…':'Opening your studio…'}</span>`;location.reload()}
  catch(ex){fail(ex.status===401?'That email and password don\'t match.':ex.status===409?'An account with this email already exists. Switch to Sign in.':ex.status===429?'Too many attempts. Wait a few minutes and try again.':ex.status===403?(ex.message||'Sign-ups are closed right now.'):ex.message||'Something went wrong. Try again.')}}
 
 /* ---------- Plans ---------- */

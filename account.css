@@ -661,3 +661,15 @@ html.rp-gate body>*:not(.ob){visibility:hidden}
 .au-tabs+.au-google{margin-top:0}
 @media (max-width:380px){.ob button.au-google{height:46px;font-size:14px}.au-or{margin:14px 0 4px}}
 .ob-legal a{color:var(--a-muted);text-decoration:underline;text-underline-offset:2px}.ob-legal a:hover{color:var(--a-text)}
+/* Google button v2: Google's dark theme, loading state, last-used badge */
+.ob button.au-google{height:50px;gap:12px;background:#131314;color:#e3e3e3;border:1px solid #8e918f66;box-shadow:0 1px 0 #ffffff0a inset;font-weight:600;letter-spacing:.005em}
+.ob button.au-google:hover:not(:disabled){background:#1c1d1f;border-color:#8e918f;transform:translateY(-1px);box-shadow:0 10px 26px #0006}
+.ob button.au-google:active:not(:disabled){background:#202124;transform:none}
+.ob button.au-google .g-logo{width:20px;height:20px}
+.au-g-spin{display:none;width:18px;height:18px;border-radius:50%;border:2px solid #e3e3e355;border-top-color:#e3e3e3;animation:auGSpin .8s linear infinite}
+.ob button.au-google.is-busy{opacity:1;cursor:progress}
+.ob button.au-google.is-busy .g-logo{display:none}
+.ob button.au-google.is-busy .au-g-spin{display:block}
+@keyframes auGSpin{to{transform:rotate(360deg)}}
+.au-last{position:absolute;top:-9px;right:12px;padding:2px 8px;border-radius:999px;background:#e2ab77;color:#1a1410;font-style:normal;font-size:10px;font-weight:800;letter-spacing:.04em}
+@media (prefers-reduced-motion:reduce){.au-g-spin{animation-duration:2s}}
