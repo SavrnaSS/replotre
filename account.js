@@ -70,6 +70,8 @@ function authBody(){const reg=S.authMode==='register',st=S.status||{},closed=reg
  return `<div class="au-tabs" role="tablist" aria-label="Account">
    <button type="button" role="tab" aria-selected="${reg}" class="${reg?'is-on':''}" data-ob="auth-mode" data-mode="register">Create account</button>
    <button type="button" role="tab" aria-selected="${!reg}" class="${reg?'':'is-on'}" data-ob="auth-mode" data-mode="login">Sign in</button><i aria-hidden="true"></i></div>
+ ${st.google?`<button type="button" class="au-google" data-ob="google"><svg class="g-logo" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg><span>${reg?'Sign up with Google':'Continue with Google'}</span></button>
+ <div class="au-or" role="separator"><span>or ${reg?'sign up':'sign in'} with email</span></div>`:''}
  <form class="ob-auth" novalidate>
   ${closed?`<p class="ob-auth-note">${ico('shield-check')}<span>New sign-ups are paused right now. If you already have an account, sign in.</span></p>`:''}
   <label class="ob-field"><span>Email</span><span class="au-input"><input type="email" name="email" autocomplete="${reg?'email':'username'}" inputmode="email" autocapitalize="off" spellcheck="false" required maxlength="254" placeholder="you@studio.com" value="${esc(S.authEmail||'')}"><i class="au-ok" aria-hidden="true">${ico('check')}</i></span></label>
@@ -99,6 +101,7 @@ function renderAuth(el){const reg=S.authMode==='register';
    <ul class="au-feats-row" aria-label="What you get"><li>${ico('wand-sparkles')}<span>AI Director</span></li><li>${ico('captions')}<span>Auto captions</span></li><li>${ico('zap')}<span>Smart templates</span></li></ul>
   </div>
  </main>`;
+ if(S.authError){const er=el.querySelector('.ob-auth-error');if(er){er.textContent=S.authError;er.hidden=false}S.authError=''}
  requestAnimationFrame(()=>{const em=el.querySelector('input[name=email]');(em&&!em.value?em:el.querySelector('input[name=password]'))?.focus({preventScroll:true});validateEmail(em)})}
 function validateEmail(inp){if(!inp)return;inp.closest('.au-input')?.classList.toggle('is-ok',/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(inp.value.trim()))}
 const stepOf=id=>STEPS.findIndex(s=>s.id===id);
@@ -209,6 +212,7 @@ function applyPrefs(){const d=S.account?.profile||S.ob?.data||{};try{localStorag
 async function onObClick(e){const b=e.target.closest('button');if(!b)return;
  const o=S.ob;
  if(b.dataset.ob==='next')return STEPS[o.step]?.id==='ready'?finishOnboarding():go(1);
+ if(b.dataset.ob==='google'){b.disabled=true;b.classList.add('is-busy');b.querySelector('span').textContent='Opening Google…';location.href='/api/auth/google/start?mode='+(S.authMode==='login'?'login':'register');return}
  if(b.dataset.ob==='finish')return finishOnboarding(b.dataset.start);
  if(b.dataset.ob==='edit'){o.dir=-1;o.anim=true;o.step=Math.max(1,+b.dataset.step);renderOb();return}if(b.dataset.ob==='back')return go(-1);
  if(b.dataset.ob==='signout'){b.disabled=true;try{await Cloud()?.saveNow?.()}catch{}try{await api('/api/auth/logout',{method:'POST'})}catch{}sessionStorage.removeItem('replotre_new_account');location.reload();return}
@@ -340,7 +344,12 @@ async function onConnection(){const c=!!Cloud()?.isConnected?.();if(c===wasConne
  sessionStorage.removeItem('replotre_new_account');
  if(!S.account.profile.onboardedAt)startOnboarding();else ungate()}
 /* Studio entry: decide between the account gate, setup and the studio before the studio is shown. */
-async function boot(){let status=null,me=null;
+const GOOGLE_ERR={google_cancelled:'Google sign-in was cancelled. Try again, or use your email.',google_expired:'That sign-in took too long. Try Google again.',google_unverified:'Your Google account email isn’t verified yet.',signup_closed:'New sign-ups are closed right now. Sign in if you already have an account.',invite_required:'Sign-ups need an invitation code. Create your account with email and the code.',capacity:'We’re at capacity for new accounts right now. Please try again later.',google_unavailable:'Google sign-in isn’t available right now. Use your email instead.'};
+function readAuthReturn(){const u=new URL(location.href),e=u.searchParams.get('auth_error'),g=u.searchParams.get('auth');if(!e&&!g)return;
+ if(e)S.authError=GOOGLE_ERR[e]||'Google sign-in didn’t work. Try again, or use your email.';
+ if(g==='google'&&u.searchParams.get('new')==='1')sessionStorage.setItem('replotre_new_account','1');
+ ['auth_error','auth','new'].forEach(k=>u.searchParams.delete(k));history.replaceState(null,'',u.pathname+(u.search||'')+u.hash)}
+async function boot(){readAuthReturn();let status=null,me=null;
  try{[status,me]=await Promise.all([fetch('/api/status',{credentials:'same-origin'}).then(r=>r.ok?r.json():null),fetch('/api/auth/me',{credentials:'same-origin'}).then(r=>r.ok?r.json():null)])}catch{}
  S.status=status;
  if(!status?.cloud){ungate();return} // no account server (static preview): open the local studio

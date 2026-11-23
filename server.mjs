@@ -15,6 +15,7 @@ import {AnalysisQueue,readAnalysis} from './src/analysis.mjs';
 import {commitProject,assertAssets} from './src/projects.mjs';
 import {applyOperations,planDirector,subtitleFile} from './src/director.mjs';
 import {initAccountSchema,accountRoutes,entitlements,planById} from './src/account.mjs';
+import {initGoogleSchema,googleRoutes,googleConfigured} from './src/google-auth.mjs';
 import {claudeConfigured,claudeTemplate,localTemplate,timelineContext,CLAUDE_MODEL} from './src/template-ai.mjs';
 import {readActiveWorkspace,readProjectWorkspace,saveWorkspace} from './src/workspace.mjs';
 const root=path.dirname(fileURLToPath(import.meta.url));
@@ -28,7 +29,7 @@ fs.mkdirSync(dataDir,{recursive:true,mode:0o700});
 // Keep a copy of bundled template previews on the volume, so builds that omit some (git deploys exclude third-party media) still serve them.
 try{const src=path.join(root,'assets','templates'),dst=path.join(dataDir,'templates');fs.mkdirSync(dst,{recursive:true});for(const f of fs.readdirSync(src))if(/^[a-z0-9-]{1,40}\.(mp4|jpg)$/.test(f)&&!fs.existsSync(path.join(dst,f)))fs.copyFileSync(path.join(src,f),path.join(dst,f))}catch(e){console.warn('[templates] preview mirror skipped:',e.message)}
 const db=openDatabase(path.join(dataDir,'replotre.sqlite'));
-initAccountSchema(db);
+initAccountSchema(db);initGoogleSchema(db);
 const hub=new EventHub(db);
 const queue=new RenderQueue(db,dataDir,hub);
 const analysisQueue=new AnalysisQueue(db,dataDir,hub,aiQuota);
@@ -54,6 +55,8 @@ function ownTask(id,user){const t=db.prepare('SELECT * FROM tasks WHERE id=? AND
 function ownAsset(id,projectId,user){const a=db.prepare('SELECT * FROM assets WHERE id=? AND project_id=? AND user_id=?').get(id,projectId,user.id);if(!a)err(404,'Asset not found');return a}
 function upgradeErr(message,feature){const e=new ApiError(402,message);e.feature=feature;throw e}
 function aiQuota(user){const limit=entitlements(db,user.id).aiDaily,count=db.prepare('SELECT COUNT(*) n FROM ai_usage WHERE user_id=? AND created_at>?').get(user.id,now()-86400000).n;if(count>=limit)upgradeErr(`You've used today's ${limit} AI requests. Upgrade for more, or try again tomorrow.`,'ai');db.prepare('INSERT INTO ai_usage(id,user_id,created_at) VALUES(?,?,?)').run(uuid(),user.id,now())}
+function createSessionCookie(user){const token=randomToken(),t=now();db.prepare('INSERT INTO sessions(token_hash,user_id,created_at,expires_at) VALUES(?,?,?,?)').run(hashToken(token),user.id,t,t+authTTL);return cookieHeaders(token)['Set-Cookie']}
+let googleHandler=null;
 async function startSession(res,user){const token=randomToken(),t=now();db.prepare('INSERT INTO sessions(token_hash,user_id,created_at,expires_at) VALUES(?,?,?,?)').run(hashToken(token),user.id,t,t+authTTL);return json(res,200,{user:publicUser(user)},cookieHeaders(token))}
 async function aiPlan(prompt,project){
  const actions=['set_aspect','add_text','set_text_color','set_text_position','remove_text','trim_clip','split_clip','set_speed','set_volume','remove_music','generate_script_captions'];
@@ -69,9 +72,10 @@ const server=http.createServer(async(req,res)=>{
   // Health checks and the billing webhook answer on every host (Railway probes internally; Whop does not follow redirects).
   if(production&&canonicalHost&&req.headers.host&&req.headers.host.toLowerCase()!==canonicalHost&&pathname!=='/api/healthz'&&pathname!=='/api/billing/webhook'&&(method==='GET'||method==='HEAD')){res.writeHead(301,{Location:origin+(req.url||'/'),'Cache-Control':'public, max-age=3600'});return res.end()}
   if(pathname.startsWith('/api/')&&pathname!=='/api/billing/webhook')csrf(req);
+  if(pathname.startsWith('/api/auth/google/')&&await (googleHandler||=googleRoutes({db,origin,production,rate,cookies,createSessionCookie,maxUsers}))(req,res,pathname,method,u))return;
   if((pathname.startsWith('/api/account')||pathname.startsWith('/api/billing/'))&&await accountRoutes({req,res,pathname,method,db,authorized,origin,rate}))return;
   if(method==='GET'&&pathname==='/api/healthz')return json(res,200,{status:'ok',service:'replotre',version:'2.1.0'});
-  if(method==='GET'&&pathname==='/api/status')return json(res,200,{cloud:true,authenticated:!!currentUser(req),ai:!!process.env.OPENAI_API_KEY,mp4:true,realtime:true,analysis:true,transcription:!!process.env.OPENAI_API_KEY,vision:!!process.env.OPENAI_API_KEY,director:true,maxRenderClips:120,signup:process.env.ALLOW_SIGNUP!=='false',inviteRequired:!!process.env.SIGNUP_INVITE_CODE,claude:claudeConfigured(),claudeModel:claudeConfigured()?CLAUDE_MODEL:null});
+  if(method==='GET'&&pathname==='/api/status')return json(res,200,{cloud:true,authenticated:!!currentUser(req),ai:!!process.env.OPENAI_API_KEY,mp4:true,realtime:true,analysis:true,transcription:!!process.env.OPENAI_API_KEY,vision:!!process.env.OPENAI_API_KEY,director:true,maxRenderClips:120,signup:process.env.ALLOW_SIGNUP!=='false',google:googleConfigured(),inviteRequired:!!process.env.SIGNUP_INVITE_CODE,claude:claudeConfigured(),claudeModel:claudeConfigured()?CLAUDE_MODEL:null});
   if(method==='GET'&&pathname==='/api/events'){const user=authorized(req);return hub.connect(req,res,user,()=>!!currentUser(req))}
   if(method==='GET'&&pathname==='/api/auth/me'){const user=currentUser(req);return json(res,200,{user:user?publicUser(user):null})}
   if(pathname==='/api/workspace'){

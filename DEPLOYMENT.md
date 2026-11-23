@@ -83,3 +83,12 @@ Add verified email ownership, password reset, signup abuse prevention, productio
 - Deploys: pushing to `main` on SavrnaSS/replotre auto-deploys through Railway's GitHub integration. `railway up --detach` from this folder still works for manual deploys, but move `.git` aside first: the CLI uploads it despite `.railwayignore` and times out. Third-party template previews are not in git; they live on the volume (`/data/templates`) and are served from there.
 - Whop webhook "Replotre studio" → https://replotre.com/api/billing/webhook (verified with Whop's test event). The webhook and `/api/healthz` are exempt from the canonical-host redirect.
 - `railway.json` is read until 2026-12-01. Do NOT apply `railway config migrate` output as generated: it omits `studio-volume`. Add the volume first, or keep settings in the dashboard.
+
+## Continue with Google
+
+Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` on Railway (service `studio`). Create them in Google Cloud Console > APIs & Services > Credentials > Create credentials > OAuth client ID > Web application, with:
+
+- Authorized JavaScript origin: `https://replotre.com`
+- Authorized redirect URI: `https://replotre.com/api/auth/google/callback`
+
+The OAuth consent screen needs the app name, support email and the `openid`, `email` and `profile` scopes (no Google verification is needed for these). Until both variables are set the button stays hidden. Sign-in uses the authorization code flow with PKCE and a signed state cookie; accounts are matched by Google ID, then by verified email (which links Google to an existing account).
