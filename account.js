@@ -55,25 +55,49 @@ async function startOnboarding(fromStep){await Promise.all([S.account?null:loadA
  const p=S.account.profile||{};const first=fromStep??Math.min(STEPS.length-1,Math.max(1,p.onboardedAt?1:(p.step||1)));
  S.ob={step:first,data:{...p},dir:1};ensureOb();renderOb();ungate()}
 /* Account gate: the studio is for signed-in creators. Step 0 of the same flow is sign up / sign in. */
-function startGate(){S.ob={step:0,data:{},dir:1,gate:true};ensureOb();renderOb();ungate()}
+function startGate(){try{const e=localStorage.getItem('replotre_last_email');if(e&&!S.authEmail){S.authEmail=e;S.authMode='login'}}catch{}S.ob={step:0,data:{},dir:1,gate:true};ensureOb();renderOb();ungate()}
 function ungate(){document.documentElement.classList.remove('rp-gate')}
 function closeOnboarding(){const el=document.querySelector('.ob');ungate();if(!el)return;for(const n of el._inert||[])n.inert=false;document.body.style.overflow='';el.remove();S.ob=null;renderChip()}
 const sel=(k,v)=>Array.isArray(S.ob.data[k])?S.ob.data[k].includes(v):S.ob.data[k]===v;
 function valid(step){const d=S.ob.data;switch(STEPS[step].id){case 'about':return !!d.role&&(d.role!=='other'||!!(d.roleOther||'').trim());case 'work':return (d.goals||[]).length>0;case 'style':return !!d.aspect;case 'experience':return !!d.experience&&!!d.team;default:return true}}
 function recommend(){const d=S.ob?.data||S.account?.profile||{};if(d.team==='mid'||d.team==='large'||d.role==='agency'||(d.experience==='pro'&&d.cadence==='daily'))return 'pro';if(['daily','weekly'].includes(d.cadence)||['creator','social','freelance'].includes(d.role))return 'creator';return 'free'}
 function chips(k,{multi=false,icons}={}){return `<div class="ob-chips" role="${multi?'group':'radiogroup'}" aria-label="${esc(k)}">${Object.entries(LABEL[k]).map(([v,l],i)=>`<button type="button" class="ob-chip${sel(k,v)?' is-on':''}" role="${multi?'checkbox':'radio'}" aria-checked="${sel(k,v)}" data-ob-pick="${k}" data-value="${v}" data-multi="${multi}">${icons?`<span class="ob-chip-ico">${ico(icons[v]||'check')}</span>`:''}<span>${esc(l)}</span>${multi?`<i class="ob-tick">${ico('check')}</i>`:''}</button>`).join('')}</div>`}
+const SHOWCASE=[{id:'crimson',label:'Speech-synced headlines'},{id:'pop-captions',label:'Word-pop captions'},{id:'candlelit',label:'Cinematic grade'}];
 function authBody(){const reg=S.authMode==='register',st=S.status||{},closed=reg&&st.signup===false;
- return `<form class="ob-auth" novalidate>
-  ${closed?`<p class="ob-auth-note">New sign-ups are closed right now. Sign in if you already have an account.</p>`:''}
-  <label class="ob-field"><span>Email</span><input type="email" name="email" autocomplete="email" inputmode="email" required maxlength="254" placeholder="you@example.com" value="${esc(S.authEmail||'')}"></label>
-  <label class="ob-field"><span>Password${reg?' <small>12+ characters</small>':''}</span><span class="ob-pw"><input type="password" name="password" autocomplete="${reg?'new-password':'current-password'}" required minlength="${reg?12:1}" maxlength="128" placeholder="${reg?'Create a strong password':'Your password'}"><button type="button" class="ob-pw-toggle" data-ob="pw" aria-label="Show password">${ico('eye')}</button></span>
-   ${reg?`<span class="ob-strength" aria-hidden="true"><i></i><i></i><i></i><i></i></span><small class="ob-strength-label" aria-live="polite"></small>`:''}</label>
-  ${reg&&st.inviteRequired?`<label class="ob-field"><span>Invitation code</span><input type="text" name="invite" autocomplete="off" required maxlength="120" placeholder="From your invite email"></label>`:''}
+ return `<div class="au-tabs" role="tablist" aria-label="Account">
+   <button type="button" role="tab" aria-selected="${reg}" class="${reg?'is-on':''}" data-ob="auth-mode" data-mode="register">Create account</button>
+   <button type="button" role="tab" aria-selected="${!reg}" class="${reg?'':'is-on'}" data-ob="auth-mode" data-mode="login">Sign in</button><i aria-hidden="true"></i></div>
+ <form class="ob-auth" novalidate>
+  ${closed?`<p class="ob-auth-note">${ico('shield-check')}<span>New sign-ups are paused right now. If you already have an account, sign in.</span></p>`:''}
+  <label class="ob-field"><span>Email</span><span class="au-input"><input type="email" name="email" autocomplete="${reg?'email':'username'}" inputmode="email" autocapitalize="off" spellcheck="false" required maxlength="254" placeholder="you@studio.com" value="${esc(S.authEmail||'')}"><i class="au-ok" aria-hidden="true">${ico('check')}</i></span></label>
+  <label class="ob-field"><span class="au-row">Password${reg?'<small>12+ characters</small>':''}<small class="au-caps" hidden>Caps Lock is on</small></span>
+   <span class="ob-pw au-input"><input type="password" name="password" autocomplete="${reg?'new-password':'current-password'}" required minlength="${reg?12:1}" maxlength="128" placeholder="${reg?'At least 12 characters':'Your password'}"><button type="button" class="ob-pw-toggle" data-ob="pw" aria-label="Show password" aria-pressed="false">${ico('eye')}</button></span>
+   ${reg?`<span class="au-meter"><span class="ob-strength" aria-hidden="true"><i></i><i></i><i></i><i></i></span><small class="ob-strength-label" aria-live="polite">Use a phrase you'll remember</small></span>`:''}</label>
+  ${reg&&st.inviteRequired?`<label class="ob-field"><span>Invitation code</span><span class="au-input"><input type="text" name="invite" autocomplete="off" required maxlength="120" placeholder="From your invite email"></span></label>`:''}
   <p class="ob-auth-error" role="alert" hidden></p>
-  <div class="ob-actions ob-auth-actions"><button type="submit" class="ob-next" ${closed?'disabled':''}><span>${reg?'Create account':'Sign in'}</span>${ico('arrow-up')}</button>
-   <button type="button" class="ob-link" data-ob="auth-mode">${reg?'I already have an account':'New to Replotre? Create an account'}</button></div>
-  ${reg?`<p class="ob-legal">By creating an account you agree to Replotre's terms and privacy policy.</p>`:''}
+  <button type="submit" class="ob-next au-submit" ${closed?'disabled':''}><span>${reg?'Create free account':'Sign in'}</span>${ico('arrow-up')}</button>
+  ${reg?`<ul class="au-perks" aria-label="Included"><li>${ico('check')}Free plan</li><li>${ico('check')}No card needed</li><li>${ico('check')}Upgrade any time</li></ul>
+  <p class="ob-legal">By continuing you agree to Replotre's terms and privacy policy.</p>`:`<p class="ob-legal">Forgot your password? Email support from the address on your account and we'll reset it.</p>`}
  </form>`}
+function showcase(){const lite=document.documentElement.classList.contains('lite')||matchMedia('(prefers-reduced-motion: reduce)').matches;
+ return `<aside class="au-show" aria-hidden="true"><div class="au-glow"></div>
+  <div class="au-stack">${SHOWCASE.map((t,k)=>`<figure class="au-card au-card-${k}">${lite?`<img src="/assets/templates/${t.id}.jpg" alt="">`:`<video src="/assets/templates/${t.id}.mp4" poster="/assets/templates/${t.id}.jpg" muted loop autoplay playsinline preload="metadata"></video>`}<figcaption>${esc(t.label)}</figcaption></figure>`).join('')}</div>
+  <div class="au-pitch"><p class="au-kicker">${ico('sparkles')}Replotre Studio</p><h2>Edit like a pro.<br>In plain words.</h2>
+   <ul><li><b>${ico('wand-sparkles')}</b><span><strong>AI Director</strong>Describe the edit; it lands on your timeline.</span></li>
+    <li><b>${ico('captions')}</b><span><strong>Auto captions</strong>Transcribed and synced to every word.</span></li>
+    <li><b>${ico('zap')}</b><span><strong>Templates that fit</strong>Styled to your footage, not the other way round.</span></li></ul></div></aside>`}
+function renderAuth(el){const reg=S.authMode==='register';
+ el.innerHTML=`<div class="ob-bg" aria-hidden="true"></div>
+ <header class="ob-top au-top"><span class="ob-brand" aria-hidden="true">${brandMark()}</span><span class="au-word">replotre<b>.</b></span>
+  <span class="au-switch"><span>${reg?'Have an account?':'New here?'}</span><button type="button" class="ob-link" data-ob="auth-mode" data-mode="${reg?'login':'register'}">${reg?'Sign in':'Create one'}</button></span></header>
+ <main class="au-main" data-step="account" data-mode="${S.authMode}">
+  <section class="au-pane"><div class="au-form ob-content">
+   ${reg?`<p class="au-steps">${ico('sparkles')}<span>Step 1 of 7 · then a 60-second setup</span></p>`:''}
+   <h1 id="obTitle" tabindex="-1">${reg?'Create your account':'Welcome back'}</h1>
+   <p class="ob-sub">${reg?'Your projects, media and plan, saved to your Replotre account.':'Sign in to pick up where you left off.'}</p>
+   ${authBody()}</div></section>${showcase()}</main>`;
+ requestAnimationFrame(()=>{const em=el.querySelector('input[name=email]');(em&&!em.value?em:el.querySelector('input[name=password]'))?.focus({preventScroll:true});validateEmail(em)})}
+function validateEmail(inp){if(!inp)return;inp.closest('.au-input')?.classList.toggle('is-ok',/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(inp.value.trim()))}
 function stepBody(id){const d=S.ob.data;
  if(id==='account')return authBody();
  if(id==='about')return `<label class="ob-field"><span>What should we call you? <small>Optional</small></span><input type="text" maxlength="60" autocomplete="given-name" data-ob-text="name" value="${esc(d.name||'')}" placeholder="Your first name"></label>
@@ -96,6 +120,7 @@ function stepBody(id){const d=S.ob.data;
  return ''}
 function score(t,want){const map={shorts:['crimson','beat-keyword','pop-captions','neon-pulse','candlelit','interview-glow'],youtube:['cinematic-wide','documentary','editorial','motion-deck'],ads:['hero-float','quote-card','pop-captions'],podcast:['interview-glow','documentary','pop-captions'],tutorial:['motion-deck','pop-captions','editorial'],realestate:['property-reel','cinematic-wide'],events:['field-journal','cinematic-wide','candlelit'],brand:['editorial','hero-float','quote-card']};let n=0;for(const g of want)if(map[g]?.includes(t.id))n+=2;return n+(t.tag?1:0)}
 function renderOb(){const el=document.querySelector('.ob');if(!el||!S.ob)return;const i=S.ob.step,st=STEPS[i],total=STEPS.length-1;const last=i===total;
+ if(i===0)return renderAuth(el);
  el.innerHTML=`<div class="ob-bg" aria-hidden="true"></div>
  <header class="ob-top"><span class="ob-brand" aria-hidden="true">${brandMark()}</span>
   <ol class="ob-steps">${STEPS.map((s,k)=>`<li class="${k<i?'is-done':k===i?'is-current':''}"><span>${k<i?ico('check'):''}${esc(s.label)}</span></li>`).join('')}</ol>
@@ -121,8 +146,8 @@ function applyPrefs(){const d=S.account?.profile||S.ob?.data||{};try{localStorag
 async function onObClick(e){const b=e.target.closest('button');if(!b)return;const o=S.ob;
  if(b.dataset.ob==='next')return go(1);if(b.dataset.ob==='back')return go(-1);
  if(b.dataset.ob==='signout'){b.disabled=true;try{await Cloud()?.saveNow?.()}catch{}try{await api('/api/auth/logout',{method:'POST'})}catch{}sessionStorage.removeItem('replotre_new_account');location.reload();return}
- if(b.dataset.ob==='auth-mode'){S.authEmail=document.querySelector('.ob-auth input[name=email]')?.value||S.authEmail;S.authMode=S.authMode==='register'?'login':'register';renderOb();return}
- if(b.dataset.ob==='pw'){const inp=b.parentElement.querySelector('input');const show=inp.type==='password';inp.type=show?'text':'password';b.setAttribute('aria-label',show?'Hide password':'Show password');b.classList.toggle('is-on',show);inp.focus();return}
+ if(b.dataset.ob==='auth-mode'){const m=b.dataset.mode||(S.authMode==='register'?'login':'register');if(m===S.authMode)return;S.authEmail=document.querySelector('.ob-auth input[name=email]')?.value||S.authEmail;S.authMode=m;renderOb();return}
+ if(b.dataset.ob==='pw'){const inp=b.parentElement.querySelector('input');const show=inp.type==='password';inp.type=show?'text':'password';b.setAttribute('aria-label',show?'Hide password':'Show password');b.setAttribute('aria-pressed',String(show));b.classList.toggle('is-on',show);inp.focus();return}
  if(b.dataset.obPick){const k=b.dataset.obPick,v=b.dataset.value;if(b.dataset.multi==='true'){const set=new Set(o.data[k]||[]);set.has(v)?set.delete(v):set.add(v);o.data[k]=[...set];saveProfile({[k]:o.data[k]})}else{o.data[k]=v;saveProfile({[k]:v})}
   const y=document.querySelector('.ob-main')?.scrollTop;renderOb();const m=document.querySelector('.ob-main');if(m&&y)m.scrollTop=y;document.querySelector(`[data-ob-pick="${k}"][data-value="${CSS.escape(v)}"]`)?.focus({preventScroll:true});
   if(!b.dataset.multi||b.dataset.multi==='false'){if(['about','experience'].includes(STEPS[o.step].id)&&k!=='role'&&valid(o.step)){}}return}
@@ -130,20 +155,22 @@ async function onObClick(e){const b=e.target.closest('button');if(!b)return;cons
  if(b.dataset.plan)return choosePlan(b.dataset.plan,'onboarding');
  if(b.dataset.interval){S.interval=b.dataset.interval;const y=document.querySelector('.ob-main')?.scrollTop;renderOb();const m=document.querySelector('.ob-main');if(m&&y)m.scrollTop=y}}
 function strength(pw){let n=0;if(pw.length>=12)n++;if(pw.length>=16)n++;if(/[a-z]/.test(pw)&&/[A-Z]/.test(pw))n++;if(/\d/.test(pw)&&/[^A-Za-z0-9]/.test(pw))n++;return pw.length<12?Math.min(n,1):Math.max(1,n)}
-function onObInput(e){if(e.target.name==='password'&&S.authMode==='register'){const n=strength(e.target.value),m=e.target.closest('.ob-field');m?.querySelectorAll('.ob-strength i').forEach((x,i)=>x.classList.toggle('on',i<n));m?.querySelector('.ob-strength')?.setAttribute('data-n',String(n));const l=m?.querySelector('.ob-strength-label');if(l)l.textContent=e.target.value?(e.target.value.length<12?`${12-e.target.value.length} more characters`:['','Okay','Good','Strong','Excellent'][n]):'';}
+function onObInput(e){if(e.target.name==='password'&&S.authMode==='register'){const n=strength(e.target.value),m=e.target.closest('.ob-field');m?.querySelectorAll('.ob-strength i').forEach((x,i)=>x.classList.toggle('on',i<n));m?.querySelector('.ob-strength')?.setAttribute('data-n',String(n));const l=m?.querySelector('.ob-strength-label');if(l)l.textContent=e.target.value?(e.target.value.length<12?`${12-e.target.value.length} more character${12-e.target.value.length===1?'':'s'}`:['','Okay','Good','Strong','Excellent'][n]):'Use a phrase you\'ll remember';}
+ if(e.target.name==='email')validateEmail(e.target);
  const err=document.querySelector('.ob-auth-error');if(err&&e.target.closest('.ob-auth'))err.hidden=true;
  const k=e.target.dataset.obText;if(!k)return;S.ob.data[k]=e.target.value;saveProfile({[k]:e.target.value});const n=document.querySelector('.ob-next');if(n)n.disabled=!valid(S.ob.step)}
-function onObKey(e){if(e.key==='Enter'&&!e.isComposing&&e.target.tagName!=='BUTTON'&&S.ob.step>0&&STEPS[S.ob.step].id!=='plan'){e.preventDefault();go(1)}}
+function onObKey(e){if(e.target.name==='password'&&e.getModifierState){const c=document.querySelector('.au-caps');if(c)c.hidden=!e.getModifierState('CapsLock')}
+ if(e.key==='Enter'&&!e.isComposing&&e.target.tagName!=='BUTTON'&&S.ob.step>0&&STEPS[S.ob.step].id!=='plan'){e.preventDefault();go(1)}}
 async function onAuthSubmit(e){e.preventDefault();const f=e.target,btn=f.querySelector('[type=submit]'),err=f.querySelector('.ob-auth-error'),fd=new FormData(f),reg=S.authMode==='register';
  const email=String(fd.get('email')||'').trim(),password=String(fd.get('password')||'');S.authEmail=email;
- const fail=m=>{err.textContent=m;err.hidden=false;btn.disabled=false;btn.innerHTML=`<span>${reg?'Create account':'Sign in'}</span>${ico('arrow-up')}`};
+ const fail=m=>{err.textContent=m;err.hidden=false;btn.disabled=false;btn.innerHTML=`<span>${reg?'Create free account':'Sign in'}</span>${ico('arrow-up')}`};
  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return fail('Enter a valid email address.');
  if(reg&&password.length<12)return fail('Use at least 12 characters for your password.');
  if(!password)return fail('Enter your password.');
  btn.disabled=true;btn.innerHTML='<span class="acct-spin"></span><span>'+(reg?'Creating account…':'Signing in…')+'</span>';
  try{await api(`/api/auth/${reg?'register':'login'}`,{method:'POST',body:{email,password,inviteCode:String(fd.get('invite')||'')}});
-  if(reg)sessionStorage.setItem('replotre_new_account','1');location.reload()}
- catch(ex){fail(ex.status===401?'That email and password don\'t match.':ex.status===409?'An account with this email already exists. Sign in instead.':ex.message||'Something went wrong. Try again.')}}
+  try{localStorage.setItem('replotre_last_email',email)}catch{}if(reg)sessionStorage.setItem('replotre_new_account','1');btn.innerHTML=`<span class="acct-spin"></span><span>${reg?'Setting up your studio…':'Opening your studio…'}</span>`;location.reload()}
+ catch(ex){fail(ex.status===401?'That email and password don\'t match.':ex.status===409?'An account with this email already exists. Switch to Sign in.':ex.status===429?'Too many attempts. Wait a few minutes and try again.':ex.status===403?(ex.message||'Sign-ups are closed right now.'):ex.message||'Something went wrong. Try again.')}}
 
 /* ---------- Plans ---------- */
 function planPrice(p){const yearly=S.interval==='year';if(!p.price.month)return {main:money(0),note:'Free forever'};const per=yearly?p.price.year/12:p.price.month;return {main:money(Math.round(per*100)/100),note:yearly?`${money(p.price.year)} billed yearly`:'Billed monthly'}}
