@@ -3130,3 +3130,14 @@ section[id]{scroll-margin-top:72px}
   .studio .monitor-transport{grid-column:2}
 }
 html{overflow-x:clip}
+
+/* ---------- Smoothness ---------- */
+/* Grain: a static texture at the same strength (no blend-mode recompositing of the whole hero, no 5 fps shuffle) */
+.hl-grain{animation:none!important;mix-blend-mode:normal;opacity:calc(var(--grain-o) * .45);will-change:auto}
+/* While the page is scrolling, decorative motion holds still so every frame goes to the scroll */
+.is-scrolling .fw-col{animation-play-state:paused}
+/* Adaptive lighter mode for devices that can't keep up: wall stops drifting, light leak holds a still frame */
+.fx-lite .fw-col{animation-play-state:paused}
+.fx-lite .hl-grain{display:none}
+/* Sections far below the fold skip rendering work until they come near the viewport */
+#looks,#craft,#why,#faq,#final{content-visibility:auto;contain-intrinsic-size:auto 900px}

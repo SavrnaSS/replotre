@@ -119,8 +119,10 @@ const vids=$$('.scene-vid',studio),bgs=$$('.scene-bg',studio).map(c=>c.getContex
 // keep a <video> at the demo's time: play while the preview runs, otherwise pause on the exact frame
 const syncVid=(v,t,rate,on)=>{if(!v||v.readyState<1||!v.duration)return;t=Math.max(0,Math.min(v.duration-.05,t));if(v.playbackRate!==rate)v.playbackRate=rate;
  const run=on&&canRun()&&!reduce&&!document.documentElement.classList.contains('lite');
- if(run){if(v.paused)v.play().catch(()=>{});if(Math.abs(v.currentTime-t)>.25)v.currentTime=t}
- else{if(!v.paused)v.pause();if(!v.seeking&&Math.abs(v.currentTime-t)>.05)v.currentTime=t}};
+ if(run){if(v.paused)v.play().catch(()=>{});if(!v.seeking&&Math.abs(v.currentTime-t)>.35)v.currentTime=t}
+ // while the demo runs, a clip that isn't playing just holds its frame (no per-frame seeking); it's re-synced once when it plays again.
+ // When the demo is stopped (scrubbing, stills), paused clips follow the playhead exactly.
+ else{if(!v.paused)v.pause();if(!canRun()||reduce||document.documentElement.classList.contains('lite')){if(!v.seeking&&Math.abs(v.currentTime-t)>.05)v.currentTime=t}}};
 vids.forEach(v=>v.addEventListener('loadeddata',()=>paint()));
 const ORDER=['a','d','b','e','c','f'],seekEl=$('#demoSeek'),playBtn=$('#demoPlayback'),compareBtn=$('#demoCompare');
 const shortTime=t=>`${String(Math.floor(t/60)).padStart(2,'0')}:${(t%60).toFixed(1).padStart(4,'0')}`;
@@ -131,18 +133,20 @@ if(wave){let d='';for(let x=1;x<840;x+=4){const envelope=.45+.55*Math.sin(x*.007
 
 // paint() runs ~30×/s: cache its nodes and skip writes whose value hasn't changed
 const P={head:$('.tl-head',studio),headTc:$('#demoHeadTc'),src:$('#demoSource')},lastTxt=new Map();
+const setAttr=(el,k,v)=>{if(el&&el.getAttribute(k)!==v)el.setAttribute(k,v)};
 const setTxt=(el,v)=>{if(el&&lastTxt.get(el)!==v){lastTxt.set(el,v);el.textContent=v}};
 function paint(){
  const s=SC[current],edited=applied&&!comparing,clip=playTime<cutTime?0:1;
  // on the playhead itself, not the studio root: a custom property on the root restyles the whole demo every frame
  (P.head||studio).style.setProperty('--progress',Math.max(0,Math.min(1,playTime/duration)).toFixed(4));
- setTxt(tcEl,tc(playTime));seekEl.value=playTime;seekEl.setAttribute('aria-valuetext',`${playTime.toFixed(1)} seconds of ${duration}`);
+ setTxt(tcEl,tc(playTime));seekEl.value=playTime;setAttr(seekEl,'aria-valuetext',`${playTime.toFixed(1)} seconds of ${duration}`);
  setTxt(P.headTc,shortTime(playTime));setTxt(P.src,clip?'FRIENDS / 002':'VLOG / 001');
  $('.s2',studio).style.opacity=edited&&current==='a'?Math.max(0,Math.min(1,(playTime-(cutTime-.3))/.6)):(clip?1:0);
  $('.veil',studio).style.opacity=edited&&current==='b'?Math.max(0,1-playTime):0;
  // real footage follows the demo clock: speed changes are real playbackRate, the crossfade overlaps both clips
  const k=current,slow=edited&&k==='b'?.5:1,bStart=edited&&k==='a'?cutTime-.3:cutTime;
- let tA=playTime*slow,rA=slow,onA=playTime<cutTime+.15,tB=playTime-bStart,onB=playTime>=bStart-.15;
+ // only one clip decodes at a time: the outgoing clip holds its frame while the next one fades in (two live videos crossfading dropped the page to 30 fps)
+ let tA=playTime*slow,rA=slow,onA=playTime<bStart,tB=playTime-bStart,onB=playTime>=bStart-.15;
  if(edited&&k==='e'){// speed ramp 1x → 2.5x → 0.4x into the cut: clip time is the integral of the speed curve
   let acc=0,rem=Math.min(playTime,cutTime),rate=.4;for(const [len,r] of RAMP){if(rem<=len){acc+=rem*r;rate=r;break}acc+=len*r;rem-=len}tA=acc;rA=playTime<cutTime?rate:1}
  if(edited&&k==='f'){tA=tB=playTime;onA=onB=true}
@@ -245,7 +249,7 @@ $('#demoExamples')?.addEventListener('click',e=>{const c=e.target.closest('butto
  paintFx=()=>{
   const k=studio.dataset.fx,t=playTime,v=vids[t<cutTime?0:1],other=vids[t<cutTime?1:0];
   let tr='',flt='',split=0,disp=0,freq='0.01 0.03',blurX=0,useChain=false;
-  if(layer)layer.dataset.k=k||'';
+  if(layer&&layer.dataset.k!==(k||''))layer.dataset.k=k||'';
   if(k&&!reduce){const ph=beat(t),kick=Math.exp(-ph*7);
    if(k==='punch'){tr=`scale(${(1+.14*kick).toFixed(3)})`;flt=`brightness(${(1+.12*kick).toFixed(3)})`}
    else if(k==='push'){const c=(t%6)/6,e=c<.5?2*c*c:1-Math.pow(-2*c+2,2)/2,z=1.04+.16*(c<.5?e*2:2-e*2)/2;tr=`translate(${(-2*Math.sin(t*.4)).toFixed(2)}%,${(-1.5*Math.cos(t*.33)).toFixed(2)}%) rotate(${(.6*Math.sin(t*.25)).toFixed(2)}deg) scale(${z.toFixed(3)})`}
@@ -482,7 +486,7 @@ $('#tryChips').addEventListener('click',e=>{const c=e.target.closest('.chip');if
     const g=ctx.createRadialGradient(cx,cy,0,cx,cy,rad);g.addColorStop(0,`rgba(${cr|0},${cg|0},${cb|0},${ca})`);g.addColorStop(.55,`rgba(${cr|0},${cg|0},${cb|0},${ca*.35})`);g.addColorStop(1,`rgba(${cr|0},${cg|0},${cb|0},0)`);
     ctx.fillStyle=g;ctx.fillRect(0,0,W,H)});
   };
-  const loop=t=>{raf=0;if(!visible||document.hidden||motionOff())return;if(t-last>33){last=t;draw(t)}raf=requestAnimationFrame(loop)};
+  const loop=t=>{raf=0;if(!visible||document.hidden||motionOff()||root.classList.contains('fx-lite'))return;if(t-last>50&&!root.classList.contains('is-scrolling')){last=t;draw(t)}raf=requestAnimationFrame(loop)};
   const start=()=>{if(!raf&&!motionOff())raf=requestAnimationFrame(loop)};
   addEventListener('replotre:motion',start);
   size();draw(performance.now());cv.classList.add('hl-live');
@@ -849,3 +853,15 @@ if(!reduce&&(md||(kz&&shot))){const t0=performance.now();let raf=0,last=0,on=fal
  const oio=new IntersectionObserver(es=>{for(const en of es)en.target.classList.toggle('offscreen',!en.isIntersecting)},{rootMargin:'300px 0px'});
  secs.forEach(s=>oio.observe(s))}
 })();
+
+/* ---------- Smoothness: pause decorative motion while scrolling, and an adaptive quality governor ---------- */
+{let scT=0,on=false;
+ addEventListener('scroll',()=>{if(!on){on=true;root.classList.add('is-scrolling')}clearTimeout(scT);scT=setTimeout(()=>{on=false;root.classList.remove('is-scrolling')},160)},{passive:true});
+ // Watch real frame times while the hero is on screen; if this device can't hold ~45 fps, switch the hero to its lighter mode.
+ const hero=document.querySelector('.hero-stage')||document.querySelector('.hero');
+ if(hero&&!reduce){let watching=false,samples=[],lastT=0,strikes=0;
+  const tick=t=>{if(!watching)return;if(lastT&&!document.hidden&&!root.classList.contains('is-scrolling'))samples.push(t-lastT);lastT=t;
+   if(samples.length>=90){const s=samples.slice().sort((a,b)=>a-b),p75=s[Math.floor(s.length*.75)];samples=[];
+    if(p75>22){if(++strikes>=2){root.classList.add('fx-lite');watching=false;return}}else strikes=0}
+   requestAnimationFrame(tick)};
+  new IntersectionObserver(([en])=>{const v=en.isIntersecting&&!root.classList.contains('fx-lite');if(v&&!watching){watching=true;lastT=0;samples=[];requestAnimationFrame(tick)}else if(!v)watching=false},{threshold:.25}).observe(hero)}}
