@@ -11,3 +11,4 @@ previews
 backups
 coverage
 .DS_Store
+.git
