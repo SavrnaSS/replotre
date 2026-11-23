@@ -80,6 +80,6 @@ Add verified email ownership, password reset, signup abuse prevention, productio
 - DNS (Vercel, team savrnass-projects): apex `ALIAS` → `morx10p5.up.railway.app`, `www` CNAME → `ik2owbni.up.railway.app`, TXT `_railway-verify` and `_railway-verify.www`. Leftover `studio` CNAME/TXT records can be deleted (Hobby allows 2 custom domains per service).
 - Volume `studio-volume` (5 GB) is mounted at `/data` (SQLite + media). `RAILWAY_RUN_UID=0` lets the app write to it. Grow it from the volume's Settings → Live resize. Railway bills only for data stored.
 - Variables mirror `.env`, plus `NODE_ENV=production`, `APP_ORIGIN=https://replotre.com`, `DATA_DIR=/data`, `PORT=4173`.
-- Deploy from this folder: `railway up --detach`. `.railwayignore` keeps `.env` and `data/` out of uploads.
+- Deploys: pushing to `main` on SavrnaSS/replotre auto-deploys through Railway's GitHub integration. `railway up --detach` from this folder still works for manual deploys, but move `.git` aside first: the CLI uploads it despite `.railwayignore` and times out. Third-party template previews are not in git; they live on the volume (`/data/templates`) and are served from there.
 - Whop webhook "Replotre studio" → https://replotre.com/api/billing/webhook (verified with Whop's test event). The webhook and `/api/healthz` are exempt from the canonical-host redirect.
 - `railway.json` is read until 2026-12-01. Do NOT apply `railway config migrate` output as generated: it omits `studio-volume`. Add the volume first, or keep settings in the dashboard.
