@@ -816,3 +816,5 @@ html.rp-gate body>*:not(.ob){visibility:hidden}
 @media (max-width:640px){.au-f.is-typing .au-reqs,.au-f[data-f=password]:focus-within .au-reqs{max-height:70px}}
 .au-legal{display:block}
 .au-legal .au-fi{display:inline-block;vertical-align:-1px;margin:0 5px 0 0}
+/* Headings receive focus programmatically (so screen readers announce each step); never draw a ring around them */
+.ob [tabindex="-1"]:focus,.ob [tabindex="-1"]:focus-visible,.ac [tabindex="-1"]:focus,.ac [tabindex="-1"]:focus-visible{outline:none!important;box-shadow:none!important}
