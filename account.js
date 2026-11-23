@@ -57,14 +57,11 @@ async function startOnboarding(fromStep){await Promise.all([S.account?null:loadA
 /* Account gate: the studio is for signed-in creators. Step 0 of the same flow is sign up / sign in. */
 function startGate(){try{const e=localStorage.getItem('replotre_last_email');if(e&&!S.authEmail){S.authEmail=e;S.authMode='login'}}catch{}S.ob={step:0,data:{},dir:1,gate:true};ensureOb();renderOb();ungate()}
 function ungate(){document.documentElement.classList.remove('rp-gate')}
-function closeOnboarding(){const el=document.querySelector('.ob');ungate();stopScenes();if(!el)return;for(const n of el._inert||[])n.inert=false;document.body.style.overflow='';el.remove();S.ob=null;renderChip()}
+function closeOnboarding(){const el=document.querySelector('.ob');ungate();if(!el)return;for(const n of el._inert||[])n.inert=false;document.body.style.overflow='';el.remove();S.ob=null;renderChip()}
 const sel=(k,v)=>Array.isArray(S.ob.data[k])?S.ob.data[k].includes(v):S.ob.data[k]===v;
 function valid(step){const d=S.ob.data;switch(STEPS[step].id){case 'about':return !!d.role&&(d.role!=='other'||!!(d.roleOther||'').trim());case 'work':return (d.goals||[]).length>0;case 'style':return !!d.aspect;case 'experience':return !!d.experience&&!!d.team;default:return true}}
 function recommend(){const d=S.ob?.data||S.account?.profile||{};if(d.team==='mid'||d.team==='large'||d.role==='agency'||(d.experience==='pro'&&d.cadence==='daily'))return 'pro';if(['daily','weekly'].includes(d.cadence)||['creator','social','freelance'].includes(d.role))return 'creator';return 'free'}
 function chips(k,{multi=false,icons}={}){return `<div class="ob-chips" role="${multi?'group':'radiogroup'}" aria-label="${esc(k)}">${Object.entries(LABEL[k]).map(([v,l],i)=>`<button type="button" class="ob-chip${sel(k,v)?' is-on':''}" role="${multi?'checkbox':'radio'}" aria-checked="${sel(k,v)}" data-ob-pick="${k}" data-value="${v}" data-multi="${multi}">${icons?`<span class="ob-chip-ico">${ico(icons[v]||'check')}</span>`:''}<span>${esc(l)}</span>${multi?`<i class="ob-tick">${ico('check')}</i>`:''}</button>`).join('')}</div>`}
-const SCENES=[{id:'pop-captions',feat:'Auto captions',sub:'Synced word by word',icon:'captions',ask:'Add word-pop captions',done:'Captions synced to 112 words',secs:3},
- {id:'crimson',feat:'AI Director',sub:'Describe it, it’s done',icon:'wand-sparkles',ask:'Make the first 3 seconds hit harder',done:'Hook title added at 0:00',secs:4},
- {id:'candlelit',feat:'Smart templates',sub:'Fitted to your footage',icon:'zap',ask:'Warm cinematic look, like golden hour',done:'Template fitted to 6 clips',secs:5}];
 function authBody(){const reg=S.authMode==='register',st=S.status||{},closed=reg&&st.signup===false;
  return `<div class="au-tabs" role="tablist" aria-label="Account">
    <button type="button" role="tab" aria-selected="${reg}" class="${reg?'is-on':''}" data-ob="auth-mode" data-mode="register">Create account</button>
@@ -74,49 +71,26 @@ function authBody(){const reg=S.authMode==='register',st=S.status||{},closed=reg
   <label class="ob-field"><span>Email</span><span class="au-input"><input type="email" name="email" autocomplete="${reg?'email':'username'}" inputmode="email" autocapitalize="off" spellcheck="false" required maxlength="254" placeholder="you@studio.com" value="${esc(S.authEmail||'')}"><i class="au-ok" aria-hidden="true">${ico('check')}</i></span></label>
   <label class="ob-field"><span class="au-row">Password${reg?'<small>12+ characters</small>':''}<small class="au-caps" hidden>Caps Lock is on</small></span>
    <span class="ob-pw au-input"><input type="password" name="password" autocomplete="${reg?'new-password':'current-password'}" required minlength="${reg?12:1}" maxlength="128" placeholder="${reg?'At least 12 characters':'Your password'}"><button type="button" class="ob-pw-toggle" data-ob="pw" aria-label="Show password" aria-pressed="false">${ico('eye')}</button></span>
-   ${reg?`<span class="au-meter"><span class="ob-strength" aria-hidden="true"><i></i><i></i><i></i><i></i></span><small class="ob-strength-label" aria-live="polite">Use a phrase you'll remember</small></span>`:''}</label>
+   ${reg?`<span class="au-meter"><span class="ob-strength" aria-hidden="true"><i></i><i></i><i></i><i></i></span><small class="ob-strength-label" aria-live="polite"></small></span>`:''}</label>
   ${reg&&st.inviteRequired?`<label class="ob-field"><span>Invitation code</span><span class="au-input"><input type="text" name="invite" autocomplete="off" required maxlength="120" placeholder="From your invite email"></span></label>`:''}
   <p class="ob-auth-error" role="alert" hidden></p>
-  <button type="submit" class="ob-next au-submit" ${closed?'disabled':''}><span>${reg?'Create free account':'Sign in'}</span>${ico('arrow-up')}</button>
-  ${reg?`<ul class="au-perks" aria-label="Included"><li>${ico('check')}Free plan</li><li>${ico('check')}No card needed</li><li>${ico('check')}Upgrade any time</li></ul>
-  <p class="ob-legal">By continuing you agree to Replotre's terms and privacy policy.</p>`:`<p class="ob-legal">Forgot your password? Email support from the address on your account and we'll reset it.</p>`}
+  <button type="submit" class="ob-next au-submit" ${closed?'disabled':''}><span>${reg?'Create account':'Sign in'}</span>${ico('arrow-up')}</button>
+  ${reg?`<p class="ob-legal">By continuing you agree to Replotre's terms and privacy policy.</p>`:`<p class="ob-legal">Forgot your password? Email support from the address on your account and we'll reset it.</p>`}
  </form>`}
-const calm=()=>document.documentElement.classList.contains('lite')||matchMedia('(prefers-reduced-motion: reduce)').matches;
-function showcase(){const c=SCENES[0],still=calm();
- return `<aside class="au-show"><div class="au-glow" aria-hidden="true"></div>
-  <div class="au-head"><p class="au-kicker">${ico('sparkles')}Replotre Studio</p><h2>Edit like a pro.<br><span>In plain words.</span></h2></div>
-  <div class="au-scene" aria-hidden="true">
-   <figure class="au-phone">${still?`<img class="au-media" src="/assets/templates/${c.id}.jpg" alt="">`:`<video class="au-media" src="/assets/templates/${c.id}.mp4" poster="/assets/templates/${c.id}.jpg" muted loop autoplay playsinline preload="metadata"></video>`}</figure>
-   <div class="au-bubble au-ask"><span class="au-bubble-ico">${ico('wand-sparkles')}</span><span><small>You asked</small><span class="au-ask-text">${still?esc(c.ask):''}</span><i class="au-caret"></i></span></div>
-   <div class="au-bubble au-done${still?' is-done is-in':''}"><span class="au-bubble-ico"><span class="acct-spin"></span>${ico('check')}</span><span><small class="au-done-label">${still?`Applied in ${c.secs}s`:'Applying…'}</small><span class="au-done-text">${esc(c.done)}</span></span></div>
-  </div>
-  <div class="au-feats" role="tablist" aria-label="What Replotre does">${SCENES.map((x,k)=>`<button type="button" role="tab" class="au-feat${k?'':' is-on'}" aria-selected="${!k}" data-au-scene="${k}">${ico(x.icon)}<span><strong>${esc(x.feat)}</strong>${esc(x.sub)}</span><i class="au-bar"><b></b></i></button>`).join('')}</div>
- </aside>`}
-/* Showcase story: type the request, "apply" it, show the result, move to the next feature. */
-const SCENE_MS=7000;
-function playScene(k){const root=document.querySelector('.au-show');if(!root)return stopScenes();stopScenes();
- S.auScene=k;const c=SCENES[k],still=calm();
- root.querySelectorAll('.au-feat').forEach((b,i)=>{b.classList.toggle('is-on',i===k);b.setAttribute('aria-selected',String(i===k));const bar=b.querySelector('.au-bar b');bar.style.animation='none';void bar.offsetWidth;bar.style.animation=i===k&&!still?`auBar ${SCENE_MS}ms linear forwards`:''});
- const m=root.querySelector('.au-media'),ask=root.querySelector('.au-ask-text'),done=root.querySelector('.au-done');
- if(m&&!m.src.endsWith(`/${c.id}.${m.tagName==='VIDEO'?'mp4':'jpg'}`)){m.classList.add('is-out');setTimeout(()=>{if(m.tagName==='VIDEO'){m.poster=`/assets/templates/${c.id}.jpg`;m.src=`/assets/templates/${c.id}.mp4`;m.play?.().catch(()=>{})}else m.src=`/assets/templates/${c.id}.jpg`;m.classList.remove('is-out')},260)}
- done.querySelector('.au-done-text').textContent=c.done;
- if(still){ask.textContent=c.ask;done.classList.add('is-done','is-in');done.querySelector('.au-done-label').textContent=`Applied in ${c.secs}s`;return}
- done.classList.remove('is-done','is-in');root.classList.add('is-typing');ask.textContent='';let n=0;
- S.auType=setInterval(()=>{ask.textContent=c.ask.slice(0,++n);if(n>=c.ask.length){clearInterval(S.auType);root.classList.remove('is-typing');
-  done.querySelector('.au-done-label').textContent='Applying…';done.classList.add('is-in');
-  S.auT1=setTimeout(()=>{done.classList.add('is-done');done.querySelector('.au-done-label').textContent=`Applied in ${c.secs}s`},1300)}},38);
- S.auT2=setTimeout(()=>playScene((k+1)%SCENES.length),SCENE_MS)}
-function stopScenes(){clearTimeout(S.auT1);clearTimeout(S.auT2);clearInterval(S.auType)}
-function renderAuth(el){const reg=S.authMode==='register',wide=matchMedia('(min-width:1001px)').matches;stopScenes();
- el.innerHTML=`<div class="ob-bg" aria-hidden="true"></div>
+function renderAuth(el){const reg=S.authMode==='register';
+ el.innerHTML=`<div class="ob-bg au-bg" aria-hidden="true"></div>
  <main class="au-main" data-step="account" data-mode="${S.authMode}">
-  <section class="au-pane"><a class="au-brand" href="/" aria-label="Replotre home"><span class="ob-brand" aria-hidden="true">${brandMark()}</span><span class="au-word">replotre<b>.</b></span></a>
-   <div class="au-form ob-content">
-   ${reg?`<div class="au-steps" aria-label="Step 1 of 7"><span class="au-dots" aria-hidden="true">${'<i></i>'.repeat(7)}</span><span>Step 1 of 7 · setup takes a minute</span></div>`:''}
-   <h1 id="obTitle" tabindex="-1">${reg?'Create your account':'Welcome back'}</h1>
-   <p class="ob-sub">${reg?'Your projects, media and plan, saved to your Replotre account.':'Sign in to pick up where you left off.'}</p>
-   ${authBody()}</div></section>${wide?showcase():''}</main>`;
- if(wide)playScene(S.auScene||0);
+  <a class="au-brand" href="/" aria-label="Replotre home"><span class="ob-brand" aria-hidden="true">${brandMark()}</span><span class="au-word">replotre<b>.</b></span></a>
+  <div class="au-center">
+   <section class="au-card-wrap ob-content">
+    ${reg?`<div class="au-steps" aria-label="Step 1 of 7"><span class="au-dots" aria-hidden="true">${'<i></i>'.repeat(7)}</span><span>Step 1 of 7</span></div>`:''}
+    <h1 id="obTitle" tabindex="-1">${reg?'Create your account':'Welcome back'}</h1>
+    <p class="ob-sub">${reg?'Start editing in minutes. Free to start, no card needed.':'Sign in to pick up where you left off.'}</p>
+    ${authBody()}
+   </section>
+   <ul class="au-values" aria-label="What you get"><li>${ico('wand-sparkles')}AI Director</li><li>${ico('captions')}Auto captions</li><li>${ico('zap')}Smart templates</li></ul>
+  </div>
+ </main>`;
  requestAnimationFrame(()=>{const em=el.querySelector('input[name=email]');(em&&!em.value?em:el.querySelector('input[name=password]'))?.focus({preventScroll:true});validateEmail(em)})}
 function validateEmail(inp){if(!inp)return;inp.closest('.au-input')?.classList.toggle('is-ok',/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(inp.value.trim()))}
 function stepBody(id){const d=S.ob.data;
@@ -165,7 +139,7 @@ async function go(delta){const o=S.ob;if(!o)return;const next=o.step+delta;if(de
 function applyPrefs(){const d=S.account?.profile||S.ob?.data||{};try{localStorage.setItem('replotre_prefs',JSON.stringify({aspect:d.aspect,captionStyle:d.captionStyle,favoriteTemplates:d.favoriteTemplates||[]}))}catch{}
  const snap=E()?.snapshot?.();if(d.aspect&&snap&&!snap.clips?.length&&snap.aspect!==d.aspect)E().loadSavedEdit({...snap,aspect:d.aspect});window.ReplotreTemplates?.rerender?.()}
 async function onObClick(e){const b=e.target.closest('button');if(!b)return;
- if(b.dataset.auScene!=null){playScene(+b.dataset.auScene);return}const o=S.ob;
+ const o=S.ob;
  if(b.dataset.ob==='next')return go(1);if(b.dataset.ob==='back')return go(-1);
  if(b.dataset.ob==='signout'){b.disabled=true;try{await Cloud()?.saveNow?.()}catch{}try{await api('/api/auth/logout',{method:'POST'})}catch{}sessionStorage.removeItem('replotre_new_account');location.reload();return}
  if(b.dataset.ob==='auth-mode'){const m=b.dataset.mode||(S.authMode==='register'?'login':'register');if(m===S.authMode)return;S.authEmail=document.querySelector('.ob-auth input[name=email]')?.value||S.authEmail;S.authMode=m;renderOb();return}
@@ -177,7 +151,7 @@ async function onObClick(e){const b=e.target.closest('button');if(!b)return;
  if(b.dataset.plan)return choosePlan(b.dataset.plan,'onboarding');
  if(b.dataset.interval){S.interval=b.dataset.interval;const y=document.querySelector('.ob-main')?.scrollTop;renderOb();const m=document.querySelector('.ob-main');if(m&&y)m.scrollTop=y}}
 function strength(pw){let n=0;if(pw.length>=12)n++;if(pw.length>=16)n++;if(/[a-z]/.test(pw)&&/[A-Z]/.test(pw))n++;if(/\d/.test(pw)&&/[^A-Za-z0-9]/.test(pw))n++;return pw.length<12?Math.min(n,1):Math.max(1,n)}
-function onObInput(e){if(e.target.name==='password'&&S.authMode==='register'){const n=strength(e.target.value),m=e.target.closest('.ob-field');m?.querySelectorAll('.ob-strength i').forEach((x,i)=>x.classList.toggle('on',i<n));m?.querySelector('.ob-strength')?.setAttribute('data-n',String(n));const l=m?.querySelector('.ob-strength-label');if(l)l.textContent=e.target.value?(e.target.value.length<12?`${12-e.target.value.length} more character${12-e.target.value.length===1?'':'s'}`:['','Okay','Good','Strong','Excellent'][n]):'Use a phrase you\'ll remember';}
+function onObInput(e){if(e.target.name==='password'&&S.authMode==='register'){const n=strength(e.target.value),m=e.target.closest('.ob-field');m?.querySelectorAll('.ob-strength i').forEach((x,i)=>x.classList.toggle('on',i<n));m?.querySelector('.ob-strength')?.setAttribute('data-n',String(n));const l=m?.querySelector('.ob-strength-label');if(l)l.textContent=e.target.value?(e.target.value.length<12?`${12-e.target.value.length} more character${12-e.target.value.length===1?'':'s'}`:['','Okay','Good','Strong','Excellent'][n]):'';m?.querySelector('.au-meter')?.classList.toggle('is-on',!!e.target.value)}
  if(e.target.name==='email')validateEmail(e.target);
  const err=document.querySelector('.ob-auth-error');if(err&&e.target.closest('.ob-auth'))err.hidden=true;
  const k=e.target.dataset.obText;if(!k)return;S.ob.data[k]=e.target.value;saveProfile({[k]:e.target.value});const n=document.querySelector('.ob-next');if(n)n.disabled=!valid(S.ob.step)}
@@ -185,7 +159,7 @@ function onObKey(e){if(e.target.name==='password'&&e.getModifierState){const c=d
  if(e.key==='Enter'&&!e.isComposing&&e.target.tagName!=='BUTTON'&&S.ob.step>0&&STEPS[S.ob.step].id!=='plan'){e.preventDefault();go(1)}}
 async function onAuthSubmit(e){e.preventDefault();const f=e.target,btn=f.querySelector('[type=submit]'),err=f.querySelector('.ob-auth-error'),fd=new FormData(f),reg=S.authMode==='register';
  const email=String(fd.get('email')||'').trim(),password=String(fd.get('password')||'');S.authEmail=email;
- const fail=m=>{err.textContent=m;err.hidden=false;btn.disabled=false;btn.innerHTML=`<span>${reg?'Create free account':'Sign in'}</span>${ico('arrow-up')}`};
+ const fail=m=>{err.textContent=m;err.hidden=false;btn.disabled=false;btn.innerHTML=`<span>${reg?'Create account':'Sign in'}</span>${ico('arrow-up')}`};
  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return fail('Enter a valid email address.');
  if(reg&&password.length<12)return fail('Use at least 12 characters for your password.');
  if(!password)return fail('Enter your password.');
