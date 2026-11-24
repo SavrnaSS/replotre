@@ -131,7 +131,7 @@ function renderAuth(el){const reg=S.authMode==='register';
  <main class="au-main" data-step="account" data-mode="${S.authMode}">
   <a class="au-brand" href="/" aria-label="Replotre home"><span class="ob-brand" aria-hidden="true">${brandMark()}</span><span class="au-word">replotre<b>.</b></span></a>
   <div class="au-center">
-   <section class="au-card-wrap ob-content">
+   <section class="au-card-wrap ob-content"><i class="fx-vf" aria-hidden="true"><b></b><b></b><b></b><b></b></i>
     <h1 id="obTitle" tabindex="-1">${reg?'Create your account':'Welcome back'}</h1>
     <p class="ob-sub">${reg?'Start editing in minutes':'Sign in to pick up where you left off'}</p>
     ${authBody()}
@@ -172,10 +172,10 @@ async function finishOnboarding(start){saveProfile({},{step:STEPS.length-1,compl
 function stepBody(id){const d=S.ob.data;
  if(id==='account')return authBody();
  if(id==='about'){const frames=Object.entries(LABEL.aspect).map(([v,l])=>{const [w,h]=v.split(':').map(Number),k=26/Math.max(w,h);return `<button type="button" class="ob-aspect${sel('aspect',v)?' is-on':''}" role="radio" aria-checked="${sel('aspect',v)}" data-ob-pick="aspect" data-value="${v}"><i style="width:${(w*k).toFixed(1)}px;height:${(h*k).toFixed(1)}px"></i><strong>${v}</strong><small>${l}</small></button>`}).join('');
-  return `<label class="ob-field ob-name"><span>Your name <small>Optional</small></span><input type="text" maxlength="60" autocomplete="given-name" data-ob-text="name" value="${esc(d.name||'')}" placeholder="First name"></label>
-  <div class="ob-group"><span class="ob-label">Your role</span>${chips('role',{icons:{creator:'clapperboard',social:'sparkles',agency:'grid',freelance:'wand-sparkles',business:'shield-check',hobbyist:'image',student:'captions',other:'sliders-horizontal'}})}</div>
+  return `<label class="ob-field ob-name"><span><i class="fx-idx" aria-hidden="true">01</i>Your name <small>Optional</small></span><input type="text" maxlength="60" autocomplete="given-name" data-ob-text="name" value="${esc(d.name||'')}" placeholder="First name"></label>
+  <div class="ob-group"><span class="ob-label"><i class="fx-idx" aria-hidden="true">02</i>Your role</span>${chips('role',{icons:{creator:'clapperboard',social:'sparkles',agency:'grid',freelance:'wand-sparkles',business:'shield-check',hobbyist:'image',student:'captions',other:'sliders-horizontal'}})}</div>
   ${d.role==='other'?`<label class="ob-field ob-field-inline"><span>Tell us more</span><input type="text" maxlength="60" data-ob-text="roleOther" value="${esc(d.roleOther||'')}" placeholder="e.g. Teacher, musician, nonprofit"></label>`:''}
-  <div class="ob-group"><span class="ob-label">Default frame <small>Change any time</small></span><div class="ob-aspects" role="radiogroup" aria-label="Default frame">${frames}</div></div>`}
+  <div class="ob-group"><span class="ob-label"><i class="fx-idx" aria-hidden="true">03</i>Default frame <small>Change any time</small></span><div class="ob-aspects" role="radiogroup" aria-label="Default frame">${frames}</div></div>`}
  if(id==='work')return `<div class="ob-group">${chips('goals',{multi:true,icons:{shorts:'monitor-play',youtube:'film',ads:'zap',podcast:'volume-2',tutorial:'captions',realestate:'layout',events:'sparkles',brand:'palette'}})}</div>`;
  if(id==='style'){const C=window.ReplotreTemplateCatalog;const favs=d.favoriteTemplates||[];const want=new Set(d.goals||[]);
   const tpls=(C?.TEMPLATES||[]).slice().sort((a,b)=>score(b,want)-score(a,want)).slice(0,8);
@@ -221,8 +221,8 @@ function renderOb(){const el=document.querySelector('.ob');if(!el||!S.ob)return;
   ${last?'<span class="obx-spacer"></span>':`<button type="button" class="ob-skip obx-signout" data-ob="signout">${ico('link')}<span>Sign out</span></button>`}</header>
  <main class="ob-main obx-main${anim?` ob-dir-${S.ob.dir>0?'next':'prev'} is-anim`:''}" data-step="${st.id}">
   <div class="obx-grid${side?' has-side':''}">
-   <section class="ob-content obx-content">${['about','plan'].includes(st.id)?`<div class="obx-dots" aria-label="Step ${i} of ${STEPS.length-1}"><span aria-hidden="true">${STEPS.slice(1).map((x,k)=>`<i class="${k+1<i?'done':k+1===i?'on':''}"></i>`).join('')}</span><span class="tc">0${i} / 0${STEPS.length-1}</span></div>`:''}${last?`<div class="rd-mark${anim?' is-anim':''}" aria-hidden="true">${ico('check')}${'<i></i>'.repeat(10)}</div>`:''}<p class="obx-kicker">${esc(st.label)}</p><h1 id="obTitle" tabindex="-1">${esc(last?((S.ob.data.name||'').trim()?`You’re all set, ${S.ob.data.name.trim()}.`:'You’re all set.'):st.title)}</h1>${last?`<p class="ob-sub">Your studio is tuned to how you work. Change anything here, or later in Settings.</p>`:st.sub?`<p class="ob-sub">${esc(st.sub)}</p>`:''}
-    <div class="ob-body">${stepBody(st.id)}</div>${st.id==='about'?`<div class="obx-inline"><button type="button" class="ob-next" data-ob="next" ${valid(i)?'':'disabled'}><span>Continue</span>${ico('arrow-up')}</button><span class="ob-hint" aria-hidden="true">or press <kbd>Enter ↵</kbd></span></div>`:''}</section>
+   <section class="ob-content obx-content"><i class="fx-vf" aria-hidden="true"><b></b><b></b><b></b><b></b></i>${['about','plan'].includes(st.id)?`<div class="obx-dots" aria-label="Step ${i} of ${STEPS.length-1}"><span aria-hidden="true">${STEPS.slice(1).map((x,k)=>`<i class="${k+1<i?'done':k+1===i?'on':''}"></i>`).join('')}</span><span class="tc"><b class="fx-rec" aria-hidden="true"></b>0${i} / 0${STEPS.length-1}</span></div>`:''}${last?`<div class="rd-mark${anim?' is-anim':''}" aria-hidden="true">${ico('check')}${'<i></i>'.repeat(10)}</div>`:''}<p class="obx-kicker">${esc(st.label)}</p><h1 id="obTitle" tabindex="-1">${esc(last?((S.ob.data.name||'').trim()?`You’re all set, ${S.ob.data.name.trim()}.`:'You’re all set.'):st.title)}</h1>${last?`<p class="ob-sub">Your studio is tuned to how you work. Change anything here, or later in Settings.</p>`:st.sub?`<p class="ob-sub">${esc(st.sub)}</p>`:''}
+    <div class="ob-body">${stepBody(st.id)}</div>${st.id==='about'?`<div class="obx-inline"><button type="button" class="ob-next" data-ob="next" ${valid(i)?'':'disabled'}><span>${valid(i)?'Continue':'Pick your role to continue'}</span>${ico('arrow-up')}</button><span class="ob-hint" aria-hidden="true">or press <kbd>Enter ↵</kbd></span></div>`:''}</section>
    ${side?obPreview():''}
   </div></main>
  ${st.id==='about'?'':`<footer class="obx-bar"><div class="obx-bar-in">
