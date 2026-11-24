@@ -1594,3 +1594,18 @@ html[data-theme="light"] .brand-name .wm-r{color:#b8834f}
 
 /* Wordmark: R in the same colour as the rest of the name; only the full stop is tan */
 .wm-r,.lg-logo .wm-r,.learn-logo .wm-r,.au-word .wm-r,.ck-brand .wm-r,.brand-name .wm-r,html[data-theme="light"] .brand-name .wm-r,[data-theme="dark"] .lg-logo .wm-r{color:inherit!important}
+/* One logo everywhere: the "Replotre." wordmark, never the lone R mark */
+#brandHome .brand-mark{display:none!important}
+@media (max-width:700px){#brandHome .brand-name{display:inline!important;font-size:17px}}
+.ck .ck-sum .ck-brand svg,.ck-brand svg{display:none!important}
+@media (max-width:760px){
+ .ck .ck-sum .ck-brand{width:auto;height:auto;flex:0 0 auto;display:inline-flex;background:none;border:0;border-radius:0;padding:0 4px 0 2px;border-right:1px solid var(--hair);padding-right:12px}
+ .ck .ck-sum .ck-brand b{display:inline!important;font-size:16px}
+}
+@media (max-width:360px){.ck .ck-sum .ck-brand b{font-size:15px}.ck .ck-sum{gap:10px}}
+/* Phones: room for the wordmark, project name and Export */
+@media (max-width:700px){
+ #brandHome .brand-name{font-size:15px!important;letter-spacing:-.03em}
+ #planChip.acct-chip{padding:0;width:34px;min-width:34px;justify-content:center;gap:0}
+ #planChip.acct-chip>span:not(.acct-ring),#planChip.acct-chip>b,#planChip.acct-chip>small{display:none}
+}
