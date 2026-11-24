@@ -343,7 +343,7 @@ async function openEmbeddedCheckout(planId,r,context){
  el.innerHTML=`<div class="ck-scrim" data-ck="close"></div><div class="ck-sheet">
   <aside class="ck-sum"><button type="button" class="ck-x" data-ck="close" aria-label="Close checkout">${ico('x')}</button>
    <span class="ck-brand">${brandMark()}<b>replotre<i>.</i></b></span>
-   <div class="ck-bar"><span class="ck-bar-name">${esc(p.name)} · ${yearly?'Yearly':'Monthly'}</span><span class="ck-bar-price">${yearly?money(p.price.year)+'/yr':money(p.price.month)+'/mo'}</span></div>
+   <div class="ck-bar"><span class="ck-bar-txt"><b>${esc(p.name)} plan</b><small>Billed ${yearly?'yearly':'monthly'} · cancel any time</small></span><span class="ck-bar-price"><b>${yearly?money(p.price.year):money(p.price.month)}</b><small>/${yearly?'yr':'mo'}</small></span></div>
    <div class="ck-plan"><span class="ck-plan-tag">${esc(p.name)} plan · ${yearly?'Yearly':'Monthly'}</span><div class="ck-price"><b>${pr.main}</b><span>/mo</span></div><p class="ck-note">${esc(pr.note)}${yearly?` · <em>${esc(String(Math.round((1-p.price.year/(p.price.month*12))*100)))}% off monthly</em>`:''}</p></div>
    <p class="ck-label">Included</p>
    <ul class="ck-feat">${p.features.slice(0,5).map(f=>`<li>${ico('check')}<span>${esc(f)}</span></li>`).join('')}</ul>

@@ -1545,3 +1545,18 @@ html.rp-bare body>*:not(.ob):not(.ck){display:none!important}
 .ck-pay{padding:20px 24px}
 @media (max-height:720px) and (min-width:761px){.ck-trust li:last-child,.ck-fine{display:none}.ck-label{margin-top:14px}}
 @media (max-width:760px){.ck-sheet{height:100dvh}.ck-sum>.ck-plan,.ck-sum>.ck-label,.ck-sum>.ck-foot{display:none}.ck-pay{padding:4px 8px 24px}}
+/* Phone checkout header v2: logo well · plan + billing · price · close, each in its own space */
+@media (max-width:760px){
+ .ck .ck-sum{display:flex;flex-direction:row;align-items:center;gap:12px;padding:10px 12px 10px 14px;padding-top:max(10px,env(safe-area-inset-top));min-height:60px}
+ .ck .ck-sum .ck-brand{order:0;margin:0;width:36px;height:36px;flex:0 0 36px;display:grid;place-items:center;border-radius:10px;background:var(--n1);border:1px solid var(--hair)}
+ .ck .ck-sum .ck-brand svg{width:18px}
+ .ck .ck-bar{order:1;display:flex;flex:1;min-width:0;align-items:center;justify-content:space-between;gap:12px}
+ .ck-bar-txt{display:flex;flex-direction:column;min-width:0;gap:2px}
+ .ck-bar-txt b{font-size:15px;font-weight:600;color:var(--t1);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .ck-bar-txt small{font-size:12px;color:var(--t3);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .ck .ck-bar-price{flex-shrink:0;display:flex;align-items:baseline;gap:1px;font-variant-numeric:tabular-nums}
+ .ck .ck-bar-price b{font-size:16px;font-weight:600;color:var(--t1)}
+ .ck .ck-bar-price small{font-size:12px;color:var(--t3)}
+ .ck .ck-sum button.ck-x{order:2;position:static;transform:none;flex:0 0 36px;width:36px;height:36px;margin-left:4px}
+}
+@media (max-width:360px){.ck-bar-txt small{display:none}}
