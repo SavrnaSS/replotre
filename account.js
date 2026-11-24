@@ -343,6 +343,7 @@ async function openEmbeddedCheckout(planId,r,context){
  el.innerHTML=`<div class="ck-scrim" data-ck="close"></div><div class="ck-sheet">
   <aside class="ck-sum"><button type="button" class="ck-x" data-ck="close" aria-label="Close checkout">${ico('x')}</button>
    <span class="ck-brand">${brandMark()}<b>replotre<i>.</i></b></span>
+   <div class="ck-bar"><span class="ck-bar-name">${esc(p.name)} · ${yearly?'Yearly':'Monthly'}</span><span class="ck-bar-price">${yearly?money(p.price.year)+'/yr':money(p.price.month)+'/mo'}</span></div>
    <p class="ck-kicker">Subscribe to</p><h2>Replotre ${esc(p.name)}</h2>
    <div class="ck-price"><b>${pr.main}</b><span>/mo</span></div><p class="ck-note">${esc(pr.note)}</p>
    <ul class="ck-feat">${p.features.map(f=>`<li>${ico('check')}<span>${esc(f)}</span></li>`).join('')}</ul>
