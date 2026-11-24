@@ -117,8 +117,13 @@ const WALL=['crimson','editorial','neon-pulse','candlelit','pop-captions','docum
 function wall(){if(document.documentElement.classList.contains('lite'))return '';const phone=!matchMedia('(min-width:721px)').matches;
  const cols=(phone?[0,1,2]:[0,1,2,3,4,5]).map(c=>[0,1,2,3].map(r=>(phone?WALL.slice(0,6):WALL)[(c*5+r*3)%(phone?6:WALL.length)]));
  return `<div class="au-wall${phone?' is-phone':''}" aria-hidden="true"><div class="au-wall-grid">${cols.map((col,c)=>`<div class="au-col" style="--d:${55+c%3*12}s;--o:${-(c*7)}s">${[...col,...col].map(id=>`<img src="/assets/templates/${id}.jpg" alt="" loading="lazy" decoding="async" width="360" height="640">`).join('')}</div>`).join('')}</div></div>`}
+/* The backdrop (glow + drifting template wall) is drawn once and kept: taps and tab switches only redraw the card,
+   so the wall never restarts or reloads its images. */
+function stageOf(el){let st=el.querySelector(':scope>.ob-stage');if(st)return st;
+ el.innerHTML=`<div class="ob-backdrop" aria-hidden="true"><div class="ob-bg au-bg"><i class="au-orb a"></i><i class="au-orb b"></i><i class="au-dots-bg"></i></div>${wall()}</div><div class="ob-stage"></div>`;
+ return el.querySelector(':scope>.ob-stage')}
 function renderAuth(el){const reg=S.authMode==='register';
- el.innerHTML=`<div class="ob-bg au-bg" aria-hidden="true"><i class="au-orb a"></i><i class="au-orb b"></i><i class="au-dots-bg"></i></div>${wall()}
+ stageOf(el).innerHTML=`
  <main class="au-main" data-step="account" data-mode="${S.authMode}">
   <a class="au-brand" href="/" aria-label="Replotre home"><span class="ob-brand" aria-hidden="true">${brandMark()}</span><span class="au-word">replotre<b>.</b></span></a>
   <div class="au-center">
@@ -205,7 +210,7 @@ function obPreview(){const d=S.ob.data,i=S.ob.step,id=STEPS[i].id;
 function renderOb(){const el=document.querySelector('.ob');if(!el||!S.ob)return;const i=S.ob.step,st=STEPS[i],total=STEPS.length-1;const last=st.id==='ready';// the old celebration screen; setup now ends on the plan step
  if(i===0)return renderAuth(el);
  const anim=S.ob.anim!==false;S.ob.anim=false;const side=false;// the live-preview card is gone: setup is one short screen now
- el.innerHTML=`<div class="ob-bg obx-bg au-bg" aria-hidden="true"><i class="au-orb a"></i><i class="au-orb b"></i></div>${wall()}
+ stageOf(el).innerHTML=`
  <header class="ob-top obx-top"><span class="ob-brand" aria-hidden="true">${brandMark()}</span>
   <div class="obx-progress" role="progressbar" aria-valuemin="1" aria-valuemax="${total}" aria-valuenow="${i}" aria-label="Setup progress">
    <div class="obx-label"><span>Step ${i} of ${total}</span><b>${esc(st.label)}</b></div>

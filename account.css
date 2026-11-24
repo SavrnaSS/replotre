@@ -652,7 +652,7 @@ html.rp-bare body>*:not(.ob){display:none!important}
 .rd-mark svg{width:26px;height:26px}
 @media (max-width:760px){.rd-card{grid-template-columns:1fr}.rd-stage{display:none}}
 /* Template wall restored behind the compact card */
-.au-wall~.au-main .au-feats-row li{background:#121315cc;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.ob:has(.au-wall) .au-main .au-feats-row li{background:#121315cc;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 .ob:has(.au-wall) .au-dots-bg{display:none}
 /* Continue with Google */
 .ob button.au-google{position:relative;width:100%;height:50px;display:flex;align-items:center;justify-content:center;gap:12px;border-radius:12px;background:#fff;color:#1f1f1f;font-size:15px;font-weight:600;border:1px solid #ffffff;box-shadow:0 1px 0 #ffffff33 inset,0 8px 24px #0005;transition:background .15s,transform .15s,box-shadow .15s}
@@ -977,3 +977,6 @@ html.rp-bare body>*:not(.ob){display:none!important}
 .ob:has(.obx-main[data-step=plan]) .au-wall:after{background:#0c0d0fe0}
 .obx-main[data-step=plan] .pl-why{background:linear-gradient(90deg,#2a2018f2,#18171af2)}
 .obx-main[data-step=plan] .pl-toggle,.obx-main[data-step=plan] .pl-test{background-color:#121315e6}
+/* Persistent backdrop + card stage (the stage's children lay out exactly as before) */
+.ob-backdrop{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.ob-stage{display:contents}
