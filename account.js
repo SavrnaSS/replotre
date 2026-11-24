@@ -366,12 +366,7 @@ async function openEmbeddedCheckout(planId,r,context){
     if(S.account?.subscribed){E()?.notify?.(`Welcome to ${S.account.plan.name}`);if(context==='onboarding'||document.querySelector('.ob'))await enterStudio();else renderCenter()}
     else showPaywall('Your payment is processing. The studio opens as soon as Whop confirms it')}});
   const node=group.create('checkout');node.mount('#ckMount');el._checkout=node;
-  // Wallets (Apple Pay / Google Pay / PayPal) are a separate express element; it only shows buttons the device and domain support.
-  try{const wg=whop.checkout.create({checkoutConfiguration:r.checkoutConfiguration,...(returnUrl?{returnUrl}:{}),onComplete:(...a)=>el._onDone?.(...a)});
-   const ex=wg.create('expressCheckout',{wallets:{applePay:'auto',googlePay:'auto',payPal:'auto'},layout:'horizontal',
-    onReady:()=>{el.querySelector('#ckWallets').hidden=false;el.querySelector('.ck-or').hidden=false},
-    onError:e=>{console.info('[checkout] wallets unavailable',e?.code||e);el.querySelector('#ckWallets').hidden=true;el.querySelector('.ck-or').hidden=true}});
-   ex.mount('#ckWallets');el._wallets=ex}catch(e){console.info('[checkout] express checkout not available',e)}
+  // Wallet buttons (Google Pay, Apple Pay) come from the checkout element itself now that replotre.com is a verified Whop payment domain.
   setTimeout(()=>el.querySelector('.ck-loading')?.setAttribute('hidden',''),9000);
   return true}
  catch(err){console.warn('[checkout] embed failed, using hosted checkout',err);el.remove();document.removeEventListener('keydown',el._esc);return false}}
