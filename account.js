@@ -132,7 +132,6 @@ function renderAuth(el){const reg=S.authMode==='register';
   <a class="au-brand" href="/" aria-label="Replotre home"><span class="ob-brand" aria-hidden="true">${brandMark()}</span><span class="au-word">replotre<b>.</b></span></a>
   <div class="au-center">
    <section class="au-card-wrap ob-content">
-    ${reg?`<div class="au-steps" aria-label="Step 1 of ${STEPS.length}"><span class="au-dots" aria-hidden="true">${'<i></i>'.repeat(STEPS.length)}</span><span class="tc">01 / 0${STEPS.length}</span></div>`:''}
     <h1 id="obTitle" tabindex="-1">${reg?'Create your account':'Welcome back'}</h1>
     <p class="ob-sub">${reg?'Start editing in minutes':'Sign in to pick up where you left off'}</p>
     ${authBody()}
@@ -222,7 +221,7 @@ function renderOb(){const el=document.querySelector('.ob');if(!el||!S.ob)return;
   ${last?'<span class="obx-spacer"></span>':`<button type="button" class="ob-skip obx-signout" data-ob="signout">${ico('link')}<span>Sign out</span></button>`}</header>
  <main class="ob-main obx-main${anim?` ob-dir-${S.ob.dir>0?'next':'prev'} is-anim`:''}" data-step="${st.id}">
   <div class="obx-grid${side?' has-side':''}">
-   <section class="ob-content obx-content">${['about','plan'].includes(st.id)?`<div class="obx-dots" aria-label="Step ${i+1} of ${STEPS.length}"><span aria-hidden="true">${STEPS.map((x,k)=>`<i class="${k<i?'done':k===i?'on':''}"></i>`).join('')}</span><span class="tc">0${i+1} / 0${STEPS.length}</span></div>`:''}${last?`<div class="rd-mark${anim?' is-anim':''}" aria-hidden="true">${ico('check')}${'<i></i>'.repeat(10)}</div>`:''}<p class="obx-kicker">${esc(st.label)}</p><h1 id="obTitle" tabindex="-1">${esc(last?((S.ob.data.name||'').trim()?`You’re all set, ${S.ob.data.name.trim()}.`:'You’re all set.'):st.title)}</h1>${last?`<p class="ob-sub">Your studio is tuned to how you work. Change anything here, or later in Settings.</p>`:st.sub?`<p class="ob-sub">${esc(st.sub)}</p>`:''}
+   <section class="ob-content obx-content">${['about','plan'].includes(st.id)?`<div class="obx-dots" aria-label="Step ${i} of ${STEPS.length-1}"><span aria-hidden="true">${STEPS.slice(1).map((x,k)=>`<i class="${k+1<i?'done':k+1===i?'on':''}"></i>`).join('')}</span><span class="tc">0${i} / 0${STEPS.length-1}</span></div>`:''}${last?`<div class="rd-mark${anim?' is-anim':''}" aria-hidden="true">${ico('check')}${'<i></i>'.repeat(10)}</div>`:''}<p class="obx-kicker">${esc(st.label)}</p><h1 id="obTitle" tabindex="-1">${esc(last?((S.ob.data.name||'').trim()?`You’re all set, ${S.ob.data.name.trim()}.`:'You’re all set.'):st.title)}</h1>${last?`<p class="ob-sub">Your studio is tuned to how you work. Change anything here, or later in Settings.</p>`:st.sub?`<p class="ob-sub">${esc(st.sub)}</p>`:''}
     <div class="ob-body">${stepBody(st.id)}</div>${st.id==='about'?`<div class="obx-inline"><button type="button" class="ob-next" data-ob="next" ${valid(i)?'':'disabled'}><span>Continue</span>${ico('arrow-up')}</button><span class="ob-hint" aria-hidden="true">or press <kbd>Enter ↵</kbd></span></div>`:''}</section>
    ${side?obPreview():''}
   </div></main>
