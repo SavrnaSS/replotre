@@ -1451,3 +1451,8 @@ html.rp-bare body>*:not(.ob){display:none!important}
 .ob.kb button.q-opt:focus-visible{box-shadow:0 0 0 2px var(--n0,#0c0d0f),0 0 0 4px rgba(226,171,119,.55)}
 .ob button.ob-chip:focus:not(:focus-visible),.ob button.ob-aspect:focus:not(:focus-visible){outline:none}
 .ob:not(.kb) button.ob-chip:focus-visible,.ob:not(.kb) button.ob-aspect:focus-visible,.ob:not(.kb) .pl-card button:focus-visible{outline:none}
+/* Sign-up / sign-in: back to the clean flat card (no viewfinder corners, grid, gradient or sweeping edge) */
+.ob .au-card-wrap{background:var(--n1,#131416);border:1px solid var(--hair,rgba(242,238,231,.08));box-shadow:0 16px 40px rgba(0,0,0,.45)}
+.ob .au-card-wrap:before,.ob .au-card-wrap:after,.ob .au-card-wrap>.fx-vf{display:none!important}
+.ob .au-input input:focus{box-shadow:0 0 0 3px rgba(226,171,119,.22)}
+@media (max-width:640px){.ob .au-card-wrap,.ob:has(.au-wall) .au-card-wrap{background:var(--n1,#131416);border:1px solid var(--hair,rgba(242,238,231,.08));box-shadow:0 12px 32px rgba(0,0,0,.5)}}
