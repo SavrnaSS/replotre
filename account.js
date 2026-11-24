@@ -214,15 +214,15 @@ function renderOb(){const el=document.querySelector('.ob');if(!el||!S.ob)return;
  <main class="ob-main obx-main${anim?` ob-dir-${S.ob.dir>0?'next':'prev'} is-anim`:''}" data-step="${st.id}">
   <div class="obx-grid${side?' has-side':''}">
    <section class="ob-content obx-content">${last?`<div class="rd-mark${anim?' is-anim':''}" aria-hidden="true">${ico('check')}${'<i></i>'.repeat(10)}</div>`:''}<p class="obx-kicker">${esc(st.label)}</p><h1 id="obTitle" tabindex="-1">${esc(last?((S.ob.data.name||'').trim()?`You’re all set, ${S.ob.data.name.trim()}.`:'You’re all set.'):st.title)}</h1>${last?`<p class="ob-sub">Your studio is tuned to how you work. Change anything here, or later in Settings.</p>`:st.sub?`<p class="ob-sub">${esc(st.sub)}</p>`:''}
-    <div class="ob-body">${stepBody(st.id)}</div></section>
+    <div class="ob-body">${stepBody(st.id)}</div>${st.id==='about'?`<div class="obx-inline"><button type="button" class="ob-next" data-ob="next" ${valid(i)?'':'disabled'}><span>Continue</span>${ico('arrow-up')}</button><span class="ob-hint" aria-hidden="true">or press <kbd>Enter ↵</kbd></span></div>`:''}</section>
    ${side?obPreview():''}
   </div></main>
- <footer class="obx-bar"><div class="obx-bar-in">
+ ${st.id==='about'?'':`<footer class="obx-bar"><div class="obx-bar-in">
   ${i>1&&!last?`<button type="button" class="ob-back" data-ob="back">${ico('chevron-down')}<span>Back</span></button>`:'<span></span>'}
   <div class="obx-bar-end">
    ${!last&&st.id!=='plan'?`<span class="ob-hint" aria-hidden="true">${valid(i)?'Press':'Choose an option, then press'} <kbd>Enter ↵</kbd></span>`:''}
    ${st.id==='plan'?`<button type="button" class="ob-next${(S.account?.plan?.id||'free')==='free'?' is-ghost':''}" data-ob="next"><span>Continue with ${esc(S.account?.plan?.id&&S.account.plan.id!=='free'?S.account.plan.name:'Free')}</span>${ico('arrow-up')}</button>`:`<button type="button" class="ob-next" data-ob="next" ${valid(i)?'':'disabled'}><span>${last?'Open the studio':'Continue'}</span>${ico('arrow-up')}</button>`}
-  </div></div></footer>`;
+  </div></div></footer>`}`;
  if(anim)requestAnimationFrame(()=>{el.querySelector('#obTitle')?.focus({preventScroll:true});el.querySelector('.ob-main')?.scrollTo?.(0,0)});
  if(st.id==='plan')planCarousel(el,anim)}
 /* Phones: plans become a swipeable row that opens on the recommended plan. */

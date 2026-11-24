@@ -912,3 +912,34 @@ html.rp-bare body>*:not(.ob){display:none!important}
 .obx-main[data-step=about] .ob-name{max-width:none}
 .obx-main[data-step=about] .ob-aspects{max-width:none}
 .obx-main[data-step=about]~.obx-bar .obx-bar-in{max-width:720px}
+
+/* ===== "Make it yours": one centred card, matching the sign-up screen ===== */
+.obx-main[data-step=about]{display:flex;flex-direction:column;padding:clamp(16px,4vh,48px) 16px 32px}
+.obx-main[data-step=about] .obx-grid{flex:1;display:flex;align-items:safe center;justify-content:center;max-width:none;width:100%}
+.obx-main[data-step=about] .obx-content{width:100%;max-width:600px;padding:32px 32px 26px;border-radius:24px;background:linear-gradient(180deg,#17181bf2,#121315f2);border:1px solid var(--a-line2);box-shadow:0 30px 80px #0007,0 1px 0 #ffffff0d inset;position:relative}
+.obx-main[data-step=about] .obx-content:after{content:'';position:absolute;left:15%;right:15%;top:-1px;height:1px;background:linear-gradient(90deg,transparent,#efbd8e,transparent);opacity:.7}
+.obx-main[data-step=about] .obx-kicker{display:none}
+.obx-main[data-step=about] h1{font-size:clamp(26px,1.4vw + 12px,32px);text-align:center}
+.obx-main[data-step=about] .ob-sub{text-align:center;margin:8px auto 0;font-size:14.5px}
+.obx-main[data-step=about] .ob-body{margin-top:24px;gap:20px}
+.obx-main[data-step=about] .ob-field input{height:46px}
+.obx-main[data-step=about] .ob-chips[data-set=role]{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.obx-main[data-step=about] button.ob-chip{min-height:42px;font-size:13px;padding:0 8px}
+.obx-main[data-step=about] .ob-aspects{gap:8px}
+.obx-main[data-step=about] .ob-aspects button.ob-aspect{padding:10px 4px 8px;border-radius:12px}
+.obx-inline{display:flex;flex-direction:column;align-items:center;gap:10px;margin-top:24px}
+.ob .obx-inline button.ob-next{width:100%;height:50px;justify-content:center;box-shadow:0 10px 30px #e2ab7733}
+.ob .obx-inline button.ob-next:disabled{box-shadow:none}
+.obx-inline .ob-hint{font-size:11.5px}
+.obx-main[data-step=about]~.obx-bar{display:none}
+@media (max-width:640px){
+ .obx-main[data-step=about]{padding:12px 0 calc(16px + env(safe-area-inset-bottom))}
+ .obx-main[data-step=about] .obx-grid{align-items:flex-start}
+ .obx-main[data-step=about] .obx-content{padding:12px 16px 8px;background:none;border:0;box-shadow:none;border-radius:0}
+ .obx-main[data-step=about] .obx-content:after{display:none}
+ .obx-main[data-step=about] h1{font-size:26px}
+ .obx-main[data-step=about] .ob-chips[data-set=role]{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .obx-inline .ob-hint{display:none}
+}
+@media (max-height:760px) and (min-width:641px){.obx-main[data-step=about] .obx-content{padding:22px 28px 18px}.obx-main[data-step=about] .ob-body{margin-top:16px;gap:14px}.obx-inline{margin-top:16px}}
+.ob .obx-inline button.ob-next{flex:none;min-height:50px}
