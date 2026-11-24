@@ -907,3 +907,8 @@ html.rp-bare body>*:not(.ob){display:none!important}
 .obx-main[data-step=about] .ob-aspects button.ob-aspect small{font-size:11px}
 @media (max-width:640px){.obx-main[data-step=about] .ob-body{gap:16px}.obx-main[data-step=about] .ob-name input{height:46px}}
 .obp-prog{display:none!important}
+/* Setup without the preview card: a single centred column */
+.obx-main[data-step=about] .obx-grid{max-width:720px}
+.obx-main[data-step=about] .ob-name{max-width:none}
+.obx-main[data-step=about] .ob-aspects{max-width:none}
+.obx-main[data-step=about]~.obx-bar .obx-bar-in{max-width:720px}

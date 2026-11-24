@@ -204,7 +204,7 @@ function obPreview(){const d=S.ob.data,i=S.ob.step,id=STEPS[i].id;
   <p class="obp-note">${ico('sparkles')}Everything here becomes your studio’s defaults. Change it any time.</p></aside>`}
 function renderOb(){const el=document.querySelector('.ob');if(!el||!S.ob)return;const i=S.ob.step,st=STEPS[i],total=STEPS.length-1;const last=i===total;
  if(i===0)return renderAuth(el);
- const anim=S.ob.anim!==false;S.ob.anim=false;const side=!['plan','ready'].includes(st.id);
+ const anim=S.ob.anim!==false;S.ob.anim=false;const side=false;// the live-preview card is gone: setup is one short screen now
  el.innerHTML=`<div class="ob-bg obx-bg" aria-hidden="true"></div>
  <header class="ob-top obx-top"><span class="ob-brand" aria-hidden="true">${brandMark()}</span>
   <div class="obx-progress" role="progressbar" aria-valuemin="1" aria-valuemax="${total}" aria-valuenow="${i}" aria-label="Setup progress">
