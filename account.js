@@ -63,10 +63,11 @@ let editorP=null;
 function ensureEditor(){if(editorP)return editorP;
  editorP=new Promise(res=>requestAnimationFrame(()=>setTimeout(res,0))).then(()=>{// let the current screen paint first
   const css=[...document.querySelectorAll('link[rel="stylesheet"][data-editor]')].map(l=>{l.media='all';return l.sheet?null:new Promise(r=>{l.addEventListener('load',r,{once:true});l.addEventListener('error',r,{once:true})})});
+  return Promise.all(css)}).then(()=>{document.documentElement.classList.remove('rp-bare');// styled now: give the editor its layout back before it runs
   const srcs=[...document.querySelectorAll('link[rel="preload"][as="script"][data-editor]')].map(l=>l.getAttribute('href'));
   const js=new Promise(r=>{if(!srcs.length)return r();let last;for(const src of srcs){const el=document.createElement('script');el.src=src;el.async=false;document.body.appendChild(el);last=el}
    last.addEventListener('load',r,{once:true});last.addEventListener('error',r,{once:true})});
-  return Promise.all([...css,js])});
+  return js});
  return editorP}
 const editorReady=()=>ensureEditor().then(()=>E()?.ready?null:new Promise(r=>addEventListener('replotre:ready',r,{once:true})));
 function ungate(){ensureEditor().then(()=>document.documentElement.classList.remove('rp-gate'))}
@@ -108,7 +109,7 @@ function authBody(){const reg=S.authMode==='register',st=S.status||{},closed=reg
   ${reg&&st.inviteRequired?`<label class="ob-field"><span>Invitation code</span><span class="au-input"><input type="text" name="invite" autocomplete="off" required maxlength="120" placeholder="From your invite email"></span></label>`:''}
   <p class="ob-auth-error" role="alert" hidden></p>
   <button type="submit" class="ob-next au-submit" ${closed?'disabled':''}><span>${reg?'Create account':'Sign in'}</span>${ico('arrow-up')}</button>
-  ${reg?`<p class="ob-legal au-legal">${AU_I.lock}<span>Encrypted. By continuing you agree to our <a href="/terms" target="_blank" rel="noopener">Terms</a> and <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>.</span></p>`:`<p class="ob-legal">Forgot your password? Email support from the address on your account and we'll reset it.</p>`}
+  ${reg?`<p class="ob-legal au-legal">${AU_I.lock}<span>Encrypted. By continuing you agree to our <a href="/terms" target="_blank" rel="noopener">Terms</a> and <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>.</span></p>`:`<p class="ob-legal au-legal">Forgot your password? <a href="mailto:hello@replotre.com?subject=Password%20reset">Email us</a> and we'll reset it.</p>`}
  </form>`}
 const WALL=['crimson','editorial','neon-pulse','candlelit','pop-captions','documentary','hero-float','field-journal','beat-keyword','cinematic-wide','motion-deck','quote-card'];
 function wall(){if(document.documentElement.classList.contains('lite'))return '';const phone=!matchMedia('(min-width:721px)').matches;

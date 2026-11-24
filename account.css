@@ -293,6 +293,8 @@ button.acct-chip.is-paid{border-color:#e2ab7755;background:linear-gradient(120de
 }
 /* Account gate: hide the studio until the account check decides */
 html.rp-gate body>*:not(.ob){visibility:hidden}
+/* Until the editor's styles load, its (unstyled) markup takes no space, so phones never zoom out to fit it */
+html.rp-bare body>*:not(.ob){display:none!important}
 .ob-auth{display:flex;flex-direction:column;gap:18px;max-width:420px}
 .ob-pw{position:relative;display:flex}
 .ob-pw input{flex:1;padding-right:48px}
@@ -887,4 +889,12 @@ html.rp-gate body>*:not(.ob){visibility:hidden}
  .obx-main .ob-captions button.ob-cap{padding:8px;gap:6px;border-radius:12px}
  .obx-main .ob-captions .ob-cap-demo{min-height:0;padding:8px 6px;font-size:13px}
  .obx-main .ob-captions .ob-cap small{font-size:11.5px}
+}
+/* Phones: card centred in the screen, feature tiles exactly as wide as the card, darker lower background */
+@media (max-width:640px){
+ .au-main{justify-content:flex-start}
+ .au-center{flex:1;justify-content:safe center;padding:8px 0 calc(20px + env(safe-area-inset-bottom));gap:10px}
+ .ob:has(.au-wall) .au-card-wrap,.ob:has(.au-wall) .au-feats-row{width:calc(100% - 24px);max-width:440px;margin:0 auto}
+ .ob:has(.au-wall) .au-feats-row{padding:0}
+ .au-wall.is-phone:after{background:linear-gradient(180deg,#0c0d0f99 0%,#0c0d0f66 30%,#0c0d0f99 70%,#0c0d0fe6 100%)}
 }
