@@ -724,6 +724,18 @@ h1 em{font-size:clamp(32px,min(5.9vw,8.4svh),88px)}
 /* Content never depends on JavaScript: reveal effects only hide things once the script is running */
 html:not(.js) .reveal,html:not(.js) .split-words .w{opacity:1;transform:none;filter:none}
 
+/* Crawlable feature discovery, readable with or without the interactive demo. */
+.seo-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.seo-card{display:flex;flex-direction:column;align-items:flex-start;gap:14px;padding:26px 22px;border:1px solid var(--line2);border-radius:18px;background:var(--panel);transition:border-color .2s}
+.seo-card:hover{border-color:var(--accent)}
+.seo-card h3{font-size:20px;line-height:1.25;letter-spacing:-.025em}
+.seo-card p{font-size:16px;line-height:1.65;color:var(--muted)}
+.seo-card span{margin-top:auto;color:var(--accent);font-size:14px;font-weight:600;text-decoration:underline;text-underline-offset:4px}
+.seo-guide-link{margin-top:24px;color:var(--muted);font-size:16px}
+.seo-guide-link a{color:var(--accent);text-decoration:underline;text-underline-offset:4px}
+@media(max-width:1000px){.seo-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.seo-grid{grid-template-columns:minmax(0,1fr)}}
+
 /* --- Nav: logo · centred pill of links · actions --- */
 .nav{background:transparent}
 .nav-in{display:grid;grid-template-columns:1fr auto 1fr;gap:16px}

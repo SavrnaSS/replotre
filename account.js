@@ -28,7 +28,7 @@ const LABEL={
 const STEPS=[
  {id:'account',label:'Sign up',title:'Create your account.',sub:''},
  {id:'about',label:'You',title:'Set up your studio',sub:'Pick a role and a default frame'},
- {id:'plan',label:'Plan',title:'Choose your plan',sub:'Start free. Upgrade any time.'}
+ {id:'plan',label:'Plan',title:'Choose your plan',sub:'Pick a plan to open your studio. Cancel any time'}
 ];
 
 /* ---------- Data ---------- */
@@ -47,7 +47,7 @@ function renderChip(){let chip=document.getElementById('planChip');const a=S.acc
  if(!chip){chip=document.createElement('button');chip.id='planChip';chip.type='button';chip.className='acct-chip';chip.addEventListener('click',()=>a&&!S.account.profile.onboardedAt?startOnboarding():openCenter('overview'));document.getElementById('cloudAccount')?.before(chip)}
  const done=!!a.profile.onboardedAt,step=Math.min(STEPS.length-1,Math.max(1,a.profile.step||1));
  if(!done){chip.className='acct-chip is-setup';chip.innerHTML=`<span class="acct-ring" style="--p:${Math.round(step/(STEPS.length-1)*100)}"></span><span>Finish setup</span>`;chip.title='Continue setting up your workspace';return}
- const paid=a.plan.id!=='free';chip.className=`acct-chip${paid?' is-paid':''}`;chip.innerHTML=paid?`${ico('sparkles')}<span>${esc(a.plan.name)}</span>`:`<span>Free</span><b>Upgrade</b>`;chip.title=paid?'Plan & billing':'See plans'}
+ const paid=a.plan.id!=='free';chip.className=`acct-chip${paid?' is-paid':''}`;chip.innerHTML=paid?`${ico('sparkles')}<span>${esc(a.plan.name)}</span>`:`<span>No plan</span><b>Subscribe</b>`;chip.title=paid?'Plan & billing':'See plans'}
 
 /* ---------- Onboarding ---------- */
 function ensureOb(){let el=document.querySelector('.ob');if(!el){el=document.createElement('div');el.className='ob';el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.setAttribute('aria-labelledby','obTitle');document.body.appendChild(el);el.addEventListener('click',onObClick);el.addEventListener('input',onObInput);el.addEventListener('keydown',onObKey);el.addEventListener('submit',onAuthSubmit);el.addEventListener('focusout',e=>{if(e.target.id==='auEmail'&&!e.relatedTarget?.matches?.('[data-ob=fix-email]'))checkEmailField(e.target,true)});
@@ -55,8 +55,12 @@ function ensureOb(){let el=document.querySelector('.ob');if(!el){el=document.cre
 async function startOnboarding(fromStep){await Promise.all([S.account?null:loadAccount(),loadPlans()]);if(!S.account)return;
  const p=S.account.profile||{};const miss=p.setupMissing||[],gap=miss.length?'about':null;
  // resume at the first unanswered step (an older account marked done but missing answers starts there, not at step 1)
- const first=fromStep??(gap&&p.step>=STEPS.findIndex(x=>x.id===gap)?STEPS.findIndex(x=>x.id===gap):Math.min(STEPS.length-1,Math.max(1,p.onboardedAt?1:(p.step||1))));
- S.ob={step:first,data:{aspect:'9:16',...p},dir:1,anim:true};ensureOb();renderOb();ungate()}
+ const first=fromStep??(gap?STEPS.findIndex(x=>x.id===gap):p.onboardedAt?STEPS.findIndex(x=>x.id==='plan'):Math.min(STEPS.length-1,Math.max(1,p.step||1)));
+ S.ob={step:first,data:{aspect:'9:16',...p},dir:1,anim:true};ensureOb();renderOb();document.documentElement.classList.remove('rp-gate');if(S.account.subscribed)ensureEditor()}
+/* Decide where a signed-in user goes: setup answers first, then a subscription, then the studio. */
+function route(){const a=S.account;if(!a)return ensureEditor();if(!a.profile?.onboardedAt){if(!(S.ob&&document.querySelector('.ob')))startOnboarding();return}
+ if(!a.subscribed){showPaywall();return}ungate()}
+function showPaywall(note){if(note)E()?.notify?E().notify(note):null;if(S.ob&&document.querySelector('.ob')){S.ob.step=STEPS.findIndex(x=>x.id==='plan');S.ob.anim=true;renderOb()}else startOnboarding(STEPS.findIndex(x=>x.id==='plan'))}
 /* Account gate: the studio is for signed-in creators. Step 0 of the same flow is sign up / sign in. */
 function startGate(){try{const e=localStorage.getItem('replotre_last_email'),m=localStorage.getItem('replotre_last_method');if(m==='google')S.authMode='login';else if(e&&!S.authEmail){S.authEmail=e;S.authMode='login'}}catch{}S.ob={step:0,data:{},dir:1,gate:true};ensureOb();renderOb();document.documentElement.classList.remove('rp-gate')}// the full-screen sign-up covers the page; no editor needed
 /* The editor (7 stylesheets, 8 scripts) is preloaded by the page but only applied/executed here, when it's needed:
@@ -80,7 +84,7 @@ function recommendWhy(){const d=S.ob?.data||S.account?.profile||{},p=recommend()
  if(p==='pro')return d.team==='mid'||d.team==='large'?'you edit with a team':d.role==='agency'?'you work for clients as an agency':'you publish daily at a professional level';
  if(p==='creator')return cad?`you publish ${cad}`:`you're a ${({social:'social media manager',agency:'marketing team',freelance:'freelance editor',business:'business owner'})[d.role]||(LABEL.role[d.role]||'creator').toLowerCase()}`;
  return ''}
-function recommend(){const d=S.ob?.data||S.account?.profile||{};if(d.role==='agency'||d.team==='mid'||d.team==='large')return 'pro';if(['creator','social','freelance'].includes(d.role)||['daily','weekly'].includes(d.cadence))return 'creator';return 'free'}
+function recommend(){const d=S.ob?.data||S.account?.profile||{};if(d.role==='agency'||d.team==='mid'||d.team==='large')return 'pro';if(['creator','social','freelance'].includes(d.role)||['daily','weekly'].includes(d.cadence))return 'creator';return 'creator'}
 function chips(k,{multi=false,icons}={}){return `<div class="ob-chips" data-set="${k}" role="${multi?'group':'radiogroup'}" aria-label="${esc(k)}">${Object.entries(LABEL[k]).map(([v,l],i)=>`<button type="button" class="ob-chip${sel(k,v)?' is-on':''}" role="${multi?'checkbox':'radio'}" aria-checked="${sel(k,v)}" data-ob-pick="${k}" data-value="${v}" data-multi="${multi}">${icons?`<span class="ob-chip-ico">${ico(icons[v]||'check')}</span>`:''}<span>${esc(l)}</span>${multi?`<i class="ob-tick">${ico('check')}</i>`:''}</button>`).join('')}</div>`}
 const AU_I={mail:'<svg class="au-fi" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 7 8 6 8-6"/></svg>',lock:'<svg class="au-fi" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>',wand:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 4 1 2 2 1-2 1-1 2-1-2-2-1 2-1zM4 20 14 10"/></svg>'};
 const MAIL_DOMAINS=['gmail.com','yahoo.com','hotmail.com','outlook.com','icloud.com','live.com','proton.me','protonmail.com','aol.com','yahoo.in','rediffmail.com','me.com','msn.com'];
@@ -130,7 +134,7 @@ function renderAuth(el){const reg=S.authMode==='register';
    <section class="au-card-wrap ob-content">
     ${reg?`<div class="au-steps" aria-label="Step 1 of ${STEPS.length}"><span class="au-dots" aria-hidden="true">${'<i></i>'.repeat(STEPS.length)}</span><span class="tc">01 / 0${STEPS.length}</span></div>`:''}
     <h1 id="obTitle" tabindex="-1">${reg?'Create your account':'Welcome back'}</h1>
-    <p class="ob-sub">${reg?'Start editing in minutes. Free, no card needed':'Sign in to pick up where you left off'}</p>
+    <p class="ob-sub">${reg?'Start editing in minutes':'Sign in to pick up where you left off'}</p>
     ${authBody()}
    </section>
 
@@ -226,7 +230,7 @@ function renderOb(){const el=document.querySelector('.ob');if(!el||!S.ob)return;
   ${i>1&&!last?`<button type="button" class="ob-back" data-ob="back">${ico('chevron-down')}<span>Back</span></button>`:'<span></span>'}
   <div class="obx-bar-end">
    ${!last&&st.id!=='plan'?`<span class="ob-hint" aria-hidden="true">${valid(i)?'Press':'Choose an option, then press'} <kbd>Enter ↵</kbd></span>`:''}
-   ${st.id==='plan'?`<button type="button" class="ob-next${(S.account?.plan?.id||'free')==='free'?' is-ghost':''}" data-ob="next"><span>Continue with ${esc(S.account?.plan?.id&&S.account.plan.id!=='free'?S.account.plan.name:'Free')}</span>${ico('arrow-up')}</button>`:`<button type="button" class="ob-next" data-ob="next" ${valid(i)?'':'disabled'}><span>${last?'Open the studio':'Continue'}</span>${ico('arrow-up')}</button>`}
+   ${st.id==='plan'?`<button type="button" class="ob-link ob-recheck" data-ob="recheck">Already subscribed? Check again</button>`:`<button type="button" class="ob-next" data-ob="next" ${valid(i)?'':'disabled'}><span>${last?'Open the studio':'Continue'}</span>${ico('arrow-up')}</button>`}
   </div></div></footer>`}`;
  if(anim)requestAnimationFrame(()=>{el.querySelector('#obTitle')?.focus({preventScroll:true});el.querySelector('.ob-main')?.scrollTo?.(0,0)});
  if(st.id==='plan')planCarousel(el,anim)}
@@ -237,12 +241,16 @@ function planCarousel(el,first){const g=el.querySelector('.pl[data-context=onboa
  dots.forEach((d,k)=>d.addEventListener('click',()=>go(k)));g.addEventListener('scroll',()=>requestAnimationFrame(mark),{passive:true});
  requestAnimationFrame(()=>{if(g.scrollWidth<=g.clientWidth+4)return;if(first||S.plScroll==null){const k=Math.max(0,cards.findIndex(c=>c.classList.contains('is-featured')));const c=cards[k];g.scrollLeft=c.offsetLeft-(g.clientWidth-c.offsetWidth)/2}else g.scrollLeft=S.plScroll;mark()});
  g.addEventListener('scroll',()=>{S.plScroll=g.scrollLeft},{passive:true})}
-async function finishSetup(){await saveProfile({},{step:STEPS.length-1,complete:true});const miss=S.account?.profile?.setupMissing||[];
- if(miss.length&&S.ob){S.ob.dir=-1;S.ob.anim=true;S.ob.step=STEPS.findIndex(x=>x.id==='about');renderOb();E()?.notify('One more pick needed to finish setup');return false}
+async function enterStudio(){const a=S.account;
+ if(a?.profile?.setupMissing?.length&&S.ob){S.ob.dir=-1;S.ob.anim=true;S.ob.step=STEPS.findIndex(x=>x.id==='about');renderOb();return false}
+ if(!a?.subscribed){showPaywall();return false}
  applyPrefs();closeOnboarding();editorReady().then(()=>E()?.notify(S.ob?.data?.name?`Welcome to Replotre, ${S.ob.data.name}`:'Welcome to Replotre'));return true}
+const finishSetup=enterStudio;
 async function go(delta){const o=S.ob;if(!o)return;const next=o.step+delta;if(delta>0&&!valid(o.step))return;
- if(delta>0)await saveProfile({},{step:next});
- if(next>=STEPS.length){await finishSetup();return}
+ if(delta>0&&STEPS[o.step].id==='about'){await saveProfile({},{step:next,complete:true});if(S.account?.profile?.setupMissing?.length){renderOb();return}
+  if(S.account?.subscribed){await enterStudio();return}}// already subscribed (e.g. re-answering): straight in
+ else if(delta>0)await saveProfile({},{step:next});
+ if(next>=STEPS.length){await enterStudio();return}
  if(STEPS[next].id==='ready'){await saveProfile({},{step:next,complete:true});const miss=S.account?.profile?.setupMissing||[];
   if(miss.length){const id=miss.includes('role')?'about':miss.includes('goals')?'work':'style';o.dir=-1;o.anim=true;o.step=STEPS.findIndex(x=>x.id===id);renderOb();E()?.notify('One more answer needed to finish setup');return}}
  o.dir=delta;o.anim=true;o.step=Math.max(1,next);renderOb()}
@@ -254,6 +262,7 @@ async function onObClick(e){const b=e.target.closest('button');if(!b)return;
  if(b.dataset.ob==='google'){b.disabled=true;b.classList.add('is-busy');b.querySelector('.au-g-label').textContent='Redirecting to Google…';try{localStorage.setItem('replotre_last_method','google')}catch{}location.href='/api/auth/google/start?mode='+(S.authMode==='login'?'login':'register');return}
  if(b.dataset.ob==='suggest'){const i=document.getElementById('auPw');i.value=strongPassword();i.type='text';const t=document.querySelector('[data-ob=pw]');t?.setAttribute('aria-pressed','true');t?.classList.add('is-on');i.dispatchEvent(new Event('input',{bubbles:true}));fieldMsg('password','Strong password added. Save it in your password manager before you continue.','tip');i.focus();i.select();return}
  if(b.dataset.ob==='fix-email'){const i=document.getElementById('auEmail');i.value=b.dataset.v;i.dispatchEvent(new Event('input',{bubbles:true}));clearTimeout(S.emT);fieldMsg('email','');document.getElementById('auPw')?.focus();return}
+ if(b.dataset.ob==='recheck'){b.disabled=true;b.textContent='Checking…';try{S.account=(await api('/api/billing/refresh',{method:'POST'})).account;renderChip()}catch{}if(S.account?.subscribed){await enterStudio();return}b.disabled=false;b.textContent='No active plan found yet. Check again';return}
  if(b.dataset.ob==='finish')return finishOnboarding(b.dataset.start);
  if(b.dataset.ob==='edit'){o.dir=-1;o.anim=true;o.step=Math.max(1,+b.dataset.step);renderOb();return}if(b.dataset.ob==='back')return go(-1);
  if(b.dataset.ob==='signout'){b.disabled=true;try{await Cloud()?.saveNow?.()}catch{}try{await api('/api/auth/logout',{method:'POST'})}catch{}sessionStorage.removeItem('replotre_new_account');location.reload();return}
@@ -310,8 +319,8 @@ async function choosePlan(planId,context){const btns=document.querySelectorAll(`
    if(r.redirects!==false){location.assign(r.url);return}
    // Local/http: Whop can't send the buyer back, so checkout opens in a new tab and we watch for the membership.
    window.open(r.url,'_blank','noopener');btns.forEach(b=>{b.innerHTML='<span class="acct-spin"></span>Waiting for payment…'});awaitCheckout(context);return}
-  if(r.account){S.account=r.account;renderChip();E()?.notify(planId==='free'?'You are on the Free plan':`${S.account.plan.name} is active${r.test?' (test mode)':''}`);
-   if(context==='onboarding')await finishSetup();else renderCenter()}}
+  if(r.account){S.account=r.account;renderChip();E()?.notify(`${S.account.plan.name} is active${r.test?' (test mode)':''}`);
+   if(context==='onboarding'||document.querySelector('.ob'))await enterStudio();else renderCenter()}}
  catch(e){E()?.notify(e.message);btns.forEach(b=>{b.disabled=false;b.innerHTML=b.dataset.label||'Choose'})}}
 
 /* ---------- Account centre ---------- */
@@ -326,7 +335,7 @@ function meter(label,used,limit,fmt=x=>x){const pct=Math.min(100,limit?used/limi
 function centerBody(){const a=S.account,ent=a.entitlements,u=a.usage,sub=a.subscription,plan=(S.plans||[]).find(p=>p.id===a.plan.id);
  if(S.tab==='overview'){const prof=a.profile,steps=STEPS.length-1,step=prof.onboardedAt?steps:Math.max(0,(prof.step||1)-1);
   return `<div class="ac-plan-hero"><div><span class="ac-kicker">Current plan</span><h3>${esc(a.plan.name)}${sub?.provider==='test'?' <em>Test</em>':''}</h3><p>${sub&&a.plan.id!=='free'?(sub.cancelAtPeriodEnd?`Ends ${fmtDate(sub.currentPeriodEnd)}`:`Renews ${fmtDate(sub.currentPeriodEnd)} · ${sub.interval==='year'?'Yearly':'Monthly'}`):esc(plan?.tagline||'')}${sub?.status==='past_due'?' · <b class="ac-warn">Payment failed</b>':''}</p></div>
-   <button type="button" class="ac-btn ${a.plan.id==='free'?'is-primary':''}" data-ac-tab="plans">${a.plan.id==='free'?'Upgrade':'Change plan'}</button></div>
+   <button type="button" class="ac-btn ${a.plan.id==='free'?'is-primary':''}" data-ac-tab="plans">${a.plan.id==='free'?'Choose a plan':'Change plan'}</button></div>
    <h4 class="ac-h">Usage</h4><div class="ac-meters">${meter('AI requests today',u.aiToday,ent.aiDaily)}${meter('Cloud storage',u.storageBytes,ent.maxStorageBytes,fmtBytes)}${meter('Projects',u.projects,ent.projects)}</div>
    <div class="ac-limits"><div><span>Export</span><b>${ent.maxExport}p</b></div><div><span>Max upload</span><b>${fmtBytes(ent.maxFileBytes)}</b></div><div><span>Video length</span><b>${ent.renderMinutes} min</b></div><div><span>Exports, 30 days</span><b>${u.rendersMonth}</b></div></div>
    ${prof.onboardedAt?'':`<button type="button" class="ac-setup" data-ac="setup"><span class="acct-ring" style="--p:${Math.round(step/steps*100)}"></span><span><strong>Finish setting up</strong><small>${step} of ${steps} steps done</small></span>${ico('chevron-down')}</button>`}`}
@@ -368,25 +377,25 @@ async function onCenterSubmit(e){e.preventDefault();const f=e.target,btn=f.query
 
 async function awaitCheckout(context){E()?.notify('Finish payment in the Whop tab. Your plan unlocks here automatically.');const t0=Date.now(),before=S.account?.plan?.id||'free';
  while(Date.now()-t0<10*60000){await new Promise(r=>setTimeout(r,document.visibilityState==='visible'?3000:6000));let a;try{a=(await api('/api/billing/refresh',{method:'POST'})).account}catch{continue}
-  if(a?.plan?.id&&a.plan.id!=='free'&&a.plan.id!==before){S.account=a;renderChip();E()?.notify(`Welcome to ${a.plan.name}`);if(context==='onboarding'&&S.ob)await finishSetup();else renderCenter();return}}
+  if(a?.plan?.id&&a.plan.id!=='free'&&a.plan.id!==before){S.account=a;renderChip();E()?.notify(`Welcome to ${a.plan.name}`);if(context==='onboarding'||document.querySelector('.ob'))await enterStudio();else renderCenter();return}}
  E()?.notify('Still waiting on Whop. Your plan unlocks as soon as the payment is confirmed.');document.querySelectorAll('[data-plan]').forEach(b=>{b.disabled=false});renderCenter()}
 /* ---------- Upgrade prompt, billing return, lifecycle ---------- */
-function upgrade({message}={}){if(!Cloud()?.isConnected?.())return;openCenter('plans',message||'Upgrade to unlock this')}
+function upgrade({message,feature}={}){if(feature==='subscription'){loadAccount().then(()=>{if(!S.account?.subscribed)showPaywall('Your plan has ended. Choose a plan to keep editing')});return}if(!Cloud()?.isConnected?.())return;openCenter('plans',message||'Upgrade to unlock this')}
 async function billingReturn(){const u=new URL(location.href),state=u.searchParams.get('billing');if(!state)return;
  u.searchParams.delete('billing');u.searchParams.delete('session_id');history.replaceState(history.state,'',u.pathname+u.search+u.hash);const ctx=sessionStorage.getItem('replotre_billing_ctx');sessionStorage.removeItem('replotre_billing_ctx');
- if(state==='success'){const before=S.account?.plan?.id||'free';E()?.notify('Payment received. Activating your plan…');
+ if(state==='success'){E()?.notify?.('Payment received. Activating your plan…');
   // Whop confirms the membership by webhook; wait for it (up to ~40s), refreshing from Whop as we go.
-  for(let i=0;i<20;i++){try{S.account=(await api('/api/billing/refresh',{method:'POST'})).account}catch{}if(S.account?.plan?.id&&S.account.plan.id!=='free'&&S.account.plan.id!==before||S.account?.subscription?.provider==='whop'&&S.account.plan.id!=='free')break;await new Promise(r=>setTimeout(r,2000))}
-  renderChip();const ok=S.account?.plan?.id&&S.account.plan.id!=='free';E()?.notify(ok?`Welcome to ${S.account.plan.name}`:'Your payment is processing. Your plan unlocks as soon as Whop confirms it.');
-  if(ctx==='onboarding'&&!S.account?.profile?.onboardedAt){if(!S.ob)S.ob={step:STEPS.length-1,data:{...(S.account?.profile||{})},dir:1};await finishSetup()}else openCenter(ok?'overview':'billing')}
- else if(state==='cancel'){E()?.notify('Checkout cancelled. Nothing was charged.');if(ctx==='onboarding')startOnboarding(STEPS.findIndex(s=>s.id==='plan'))}
+  for(let i=0;i<20&&!S.account?.subscribed;i++){try{S.account=(await api('/api/billing/refresh',{method:'POST'})).account}catch{}if(!S.account?.subscribed)await new Promise(r=>setTimeout(r,2000))}
+  renderChip();
+  if(S.account?.subscribed){if(document.querySelector('.ob')||!S.account.profile?.onboardedAt||ctx==='onboarding'){if(!S.ob)S.ob={step:STEPS.length-1,data:{...(S.account?.profile||{})},dir:1};if(await enterStudio())return}else{ungate();openCenter('overview')}return}
+  showPaywall('Your payment is processing. The studio opens as soon as Whop confirms it');awaitCheckout('onboarding')}
+ else if(state==='cancel'){if(S.account?.subscribed)ungate();else showPaywall('Checkout cancelled. Nothing was charged')}
  else if(state==='return'){try{S.account=(await api('/api/billing/refresh',{method:'POST'})).account}catch{await loadAccount()}renderChip();openCenter('billing')}}
 let wasConnected=false;
 async function onConnection(){const c=!!Cloud()?.isConnected?.();if(c===wasConnected)return;wasConnected=c;if(!c){S.account=null;renderChip();return}
  await loadAccount();if(!S.account)return;
  if(new URL(location.href).searchParams.get('billing'))return billingReturn();
- sessionStorage.removeItem('replotre_new_account');
- if(!S.account.profile.onboardedAt){if(!(S.ob&&document.querySelector('.ob')))startOnboarding()}else ungate()}
+ sessionStorage.removeItem('replotre_new_account');route()}
 /* Studio entry: decide between the account gate, setup and the studio before the studio is shown. */
 const GOOGLE_ERR={google_cancelled:'Google sign-in was cancelled. Try again, or use your email.',google_expired:'That sign-in took too long. Try Google again.',google_unverified:'Your Google account email isn’t verified yet.',signup_closed:'New sign-ups are closed right now. Sign in if you already have an account.',invite_required:'Sign-ups need an invitation code. Create your account with email and the code.',capacity:'We’re at capacity for new accounts right now. Please try again later.',google_unavailable:'Google sign-in isn’t available right now. Use your email instead.'};
 function readAuthReturn(){const u=new URL(location.href),e=u.searchParams.get('auth_error'),g=u.searchParams.get('auth');if(!e&&!g)return;
@@ -403,8 +412,9 @@ async function bootInner(){readAuthReturn();let status=null,me=null,acct=null;co
  S.status=status;
  if(!status?.cloud){ungate();return} // no account server (static preview): open the local studio
  if(!me?.user){startGate();return}
- if(acct&&acct.profile&&!new URL(location.href).searchParams.get('billing')){S.account=acct;renderChip();if(acct.profile.onboardedAt)ungate();else startOnboarding()}
- else ensureEditor(); // billing return or account not known yet: the editor's cloud sync takes it from here
+ if(!acct?.profile)acct=await api('/api/account').catch(()=>null);
+ if(acct?.profile){S.account=acct;renderChip();if(new URL(location.href).searchParams.get('billing'))return billingReturn();route()}
+ else ensureEditor(); // account unknown (network): the editor's cloud sync takes it from here
  setTimeout(()=>{if(document.documentElement.classList.contains('rp-gate'))onConnection()},4000)}
 window.addEventListener('replotre:cloud',onConnection);
 document.addEventListener('visibilitychange',async()=>{if(document.visibilityState!=='visible'||!sessionStorage.getItem('replotre_portal_open'))return;sessionStorage.removeItem('replotre_portal_open');try{S.account=(await api('/api/billing/refresh',{method:'POST'})).account;renderChip();renderCenter()}catch{}});

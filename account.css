@@ -1087,3 +1087,4 @@ html.rp-bare body>*:not(.ob){display:none!important}
 }
 @media (max-width:520px){.ob:not(:has(.au-wall)) .au-card-wrap{background:none;border:0;box-shadow:none}}
 @media (prefers-reduced-motion:reduce){.ob .au-card-wrap,.ob .obx-main.is-anim .obx-content{animation:none}}
+.obx-main[data-step=plan]{padding-bottom:150px}

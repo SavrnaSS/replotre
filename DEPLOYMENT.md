@@ -92,3 +92,29 @@ Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` on Railway (service `studio`).
 - Authorized redirect URI: `https://replotre.com/api/auth/google/callback`
 
 The OAuth consent screen needs the app name, support email and the `openid`, `email` and `profile` scopes (no Google verification is needed for these). Until both variables are set the button stays hidden. Sign-in uses the authorization code flow with PKCE and a signed state cookie; accounts are matched by Google ID, then by verified email (which links Google to an existing account).
+
+## Search engine indexing and SEO
+
+The public homepage, four feature pages, guides index, two editing guides, privacy policy and terms are rendered as HTML on the server. Their titles, descriptions, canonicals, Open Graph/Twitter previews, JSON-LD and sitemap entries come from `src/public-pages.mjs` and `src/seo.mjs`. Keep feature claims and guide instructions consistent with the actual application when changing these files. New public pages should be registered there and linked from a relevant page; do not create pages for unsupported features or duplicate keyword variations.
+
+### Production configuration
+
+- Set `NODE_ENV=production` and `APP_ORIGIN=https://replotre.com` on Railway, or set the public `DOMAIN` for Docker Compose. All absolute metadata and sitemap URLs use this origin, never the incoming Host header. Host aliases and old HTML paths redirect permanently to the canonical location.
+- Public production pages are indexable by default. Set `SEO_INDEXABLE=false` on staging or preview deployments. Development is `noindex` by default; set `SEO_INDEXABLE=true` only to exercise the indexable behavior on a local audit server. A nonindexable deployment emits noindex page headers/meta and an empty sitemap, but allows crawlers to see those directives.
+- Studio is always `noindex, follow`, and API responses are `noindex`. The robots file blocks API crawling while leaving Studio crawlable so search engines can read its noindex directive. Account authentication still controls access to private media and projects.
+- Optional `GOOGLE_SITE_VERIFICATION` and `BING_SITE_VERIFICATION` values add the ownership meta tags supplied by the respective webmaster tools. These are verification values, not API keys or Google OAuth client credentials. Docker Compose forwards both values. Use DNS verification instead if you prefer a domain-wide property.
+- The generated structured data describes the actual organization, website, software, breadcrumbs and guides. It includes no invented reviews, ratings, prices, publication dates or search action. It does not promise a rich result.
+
+### Launch checks and submission
+
+1. Deploy the source changes using the existing Railway/GitHub workflow. Keep `APP_ORIGIN` set to the public origin and confirm `SEO_INDEXABLE` is not false.
+2. Run `npm run test:seo` locally for isolated HTTP tests, or run `npm run seo:audit -- https://replotre.com` from this source checkout after deployment. The latter is read-only: it checks every public page, canonical metadata, structured data, linked pages/assets, sitemap, robots, studio exclusion and true 404 responses. Local audit targets must be started with `SEO_INDEXABLE=true`; ordinary development correctly fails an indexability audit.
+3. Verify the property in [Google Search Console](https://search.google.com/search-console) and [Bing Webmaster Tools](https://www.bing.com/webmasters/). Use the owner's account to complete verification. No submissions or ownership changes happen automatically in this application.
+4. Submit `https://replotre.com/sitemap.xml` in both tools. Inspect the homepage and representative feature/guide URLs in Search Console, check the canonical and indexing result, and request indexing for the main pages where appropriate. A sitemap helps discovery; submission does not guarantee crawling, indexing or ranking.
+5. Check the rendered pages on a phone and desktop. Run PageSpeed Insights on representative public pages after deployment and use Search Console's Core Web Vitals report once enough real usage data is available. The new content pages use local fonts and need no client-side application bundle; the homepage demo loads its primary videos as metadata until playback needs them.
+
+### Ongoing search work
+
+Review Google Search Console and Bing reports for indexing failures, queries, impressions, clicks and page performance. Improve existing guides around questions users actually ask, add original examples or product demonstrations, and earn relevant links through useful public material. Keep the product, pricing and privacy claims accurate. Compare changes over several weeks using the search reports; do not treat a successful technical audit as proof of rankings or traffic.
+
+References: [Google SEO Starter Guide](https://developers.google.com/search/docs/fundamentals/seo-starter-guide), [sitemap guidance](https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap), [noindex guidance](https://developers.google.com/search/docs/crawling-indexing/block-indexing) and [structured data policies](https://developers.google.com/search/docs/appearance/structured-data/sd-policies).

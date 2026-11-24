@@ -27,6 +27,8 @@ npm start
 
 Open **http://localhost:4173** for the landing page, or go straight to the editor at **http://localhost:4173/studio**. `npm run dev` watches server changes. Both commands read `.env` when it exists. Existing databases are upgraded additively; projects and uploaded files are preserved.
 
+Public feature pages and editing guides are rendered on the server and listed in `/sitemap.xml`. Canonicals, social previews and structured data use `APP_ORIGIN`. Public pages are indexable in production; development and `SEO_INDEXABLE=false` deployments emit `noindex`. The signed-in studio is always `noindex`. See the [SEO launch and monitoring instructions](DEPLOYMENT.md#search-engine-indexing-and-seo) for verification, sitemap submission and the read-only audit command.
+
 1. Sign in or create an account using **Sign in · Cloud**.
 2. Import your actual footage and an optional soundtrack. Local analysis starts automatically.
 3. Open **Insights** in the tool rail. **Edit** contains working editing actions; **Footage** contains scenes, thumbnails, audio, and transcripts.

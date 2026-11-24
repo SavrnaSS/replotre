@@ -23,7 +23,7 @@ test('Whop webhook signatures: valid accepted; tampered, stale, foreign and malf
  assert.equal(verifyWhopSignature(raw,whopHeaders(raw,secret,{t:Math.floor(Date.now()/1000)-3600}),secret),false);
  assert.equal(verifyWhopSignature(raw,{'webhook-id':'msg_1','webhook-timestamp':String(Math.floor(Date.now()/1000)),'webhook-signature':'v2,abc'},secret),false);
  assert.equal(verifyWhopSignature(raw,{},secret),false);
- assert.ok(PLANS.every(p=>p.limits.aiDaily>0&&p.features.length),'every plan has limits and features');
+ assert.ok(PLANS.filter(p=>!p.internal).every(p=>p.limits.aiDaily>0&&p.features.length),'every sold plan has limits and features');assert.equal(PLANS.find(p=>p.id==='free').limits.projects,0,'no-plan state gives no studio access');
 });
 
 test('onboarding profile, plan limits, test-mode subscriptions and Whop webhooks',{timeout:60000},async t=>{
@@ -36,9 +36,9 @@ test('onboarding profile, plan limits, test-mode subscriptions and Whop webhooks
  const reg=await call('/api/auth/register',{method:'POST',body:{email:`ob-${randomUUID().slice(0,8)}@example.org`,password:'A-long-enough-password-1'}});assert.equal(reg.status,200);cookie=reg.headers.get('set-cookie').split(';')[0];
  const userId=reg.json.user.id;
 
- // Fresh account: free plan, not onboarded
- let acct=await call('/api/account');assert.equal(acct.status,200);assert.equal(acct.json.plan.id,'free');assert.equal(acct.json.profile.onboardedAt,null);assert.equal(acct.json.billing.mode,'test');
- const plans=await call('/api/billing/plans');assert.deepEqual(plans.json.plans.map(p=>p.id),['free','creator','pro']);
+ // Fresh account: no subscription, not onboarded
+ let acct=await call('/api/account');assert.equal(acct.status,200);assert.equal(acct.json.plan.id,'free');assert.equal(acct.json.subscribed,false);assert.equal(acct.json.profile.onboardedAt,null);assert.equal(acct.json.billing.mode,'test');
+ const plans=await call('/api/billing/plans');assert.deepEqual(plans.json.plans.map(p=>p.id),['creator','pro'],'no free plan for sale');
 
  // Setup can't be finished while required answers are missing
  let early=await call('/api/account/profile',{method:'PUT',body:{profile:{},step:6,complete:true}});assert.equal(early.status,400);assert.match(early.json.error,/role, aspect/);
@@ -52,17 +52,19 @@ test('onboarding profile, plan limits, test-mode subscriptions and Whop webhooks
  acct=await call('/api/account/profile',{method:'PUT',body:{profile:{aspect:'9:16'},step:1}});assert.equal(acct.json.profile.step,2,'step never moves backwards');assert.equal(acct.json.profile.role,'freelance','earlier answers kept');
  acct=await call('/api/account/profile',{method:'PUT',body:{profile:{},step:6,complete:true}});assert.ok(acct.json.profile.onboardedAt);
 
- // Free plan limits are enforced with 402 + feature
- const proj=await call('/api/projects',{method:'POST',body:{data:{projectName:'Limits',aspect:'9:16',clips:[],texts:[],music:null,brandColor:'#e2ab77',brandFont:'Georgia',script:''}}});assert.equal(proj.status,201);
- const exp=await call(`/api/projects/${proj.json.project.id}/renders`,{method:'POST',body:{resolution:1080}});assert.equal(exp.status,402);assert.equal(exp.json.feature,'export');
- const usage=await call('/api/usage');assert.equal(usage.json.aiDailyLimit,10);assert.equal(usage.json.maxExport,720);
+ // Without a subscription every studio API answers 402 'subscription' (account and billing stay open)
+ const pdata={projectName:'Limits',aspect:'9:16',clips:[],texts:[],music:null,brandColor:'#e2ab77',brandFont:'Georgia',script:''};
+ for(const [m,r] of [['POST','/api/projects'],['GET','/api/projects'],['GET','/api/usage'],['GET','/api/workspace']]){const g=await call(r,{method:m,body:m==='POST'?{data:pdata}:undefined});assert.equal(g.status,402,r);assert.equal(g.json.feature,'subscription',r)}
+ assert.equal((await call('/api/account')).status,200);assert.equal((await call('/api/billing/plans')).status,200);
 
- // Test-mode checkout upgrades instantly; cancel/resume; downgrade
- const up=await call('/api/billing/checkout',{method:'POST',body:{plan:'creator',interval:'year'}});assert.equal(up.status,200);assert.equal(up.json.test,true);assert.equal(up.json.account.plan.id,'creator');assert.equal(up.json.account.entitlements.maxExport,1080);assert.equal(up.json.account.subscription.interval,'year');
+ // Test-mode checkout subscribes instantly and opens the studio APIs; cancel/resume
+ const up=await call('/api/billing/checkout',{method:'POST',body:{plan:'creator',interval:'year'}});assert.equal(up.status,200);assert.equal(up.json.test,true);assert.equal(up.json.account.plan.id,'creator');assert.equal(up.json.account.entitlements.maxExport,1080);assert.equal(up.json.account.subscription.interval,'year');assert.equal(up.json.account.subscribed,true);
+ const proj=await call('/api/projects',{method:'POST',body:{data:pdata}});assert.equal(proj.status,201,'studio open after subscribing');
+ const usage=await call('/api/usage');assert.equal(usage.json.aiDailyLimit,100);assert.equal(usage.json.maxExport,1080);
  assert.equal((await call(`/api/projects/${proj.json.project.id}/renders`,{method:'POST',body:{resolution:1080}})).status!==402,true,'1080p allowed on Creator');
  let c=await call('/api/billing/cancel',{method:'POST',body:{}});assert.equal(c.json.account.subscription.cancelAtPeriodEnd,true);assert.equal(c.json.account.plan.id,'creator','stays active until period end');
  c=await call('/api/billing/cancel',{method:'POST',body:{resume:true}});assert.equal(c.json.account.subscription.cancelAtPeriodEnd,false);
- const down=await call('/api/billing/checkout',{method:'POST',body:{plan:'free'}});assert.equal(down.json.account.plan.id,'free');
+ assert.equal((await call('/api/billing/checkout',{method:'POST',body:{plan:'free'}})).status,400,'the free plan no longer exists');
  assert.equal((await call('/api/billing/checkout',{method:'POST',body:{plan:'gold'}})).status,400);
 
  // Whop webhook: signature required, membership synced by plan id, deduplicated by webhook-id
@@ -79,7 +81,7 @@ test('onboarding profile, plan limits, test-mode subscriptions and Whop webhooks
  const flip=JSON.stringify({type:'membership.updated',data:{...membership,metadata:{},cancel_at_period_end:true}});
  assert.equal((await hook(whopHeaders(flip,secret),flip)).status,200);acct=await call('/api/account');assert.equal(acct.json.subscription.cancelAtPeriodEnd,true);assert.equal(acct.json.plan.id,'pro');
  const gone=JSON.stringify({type:'membership.deactivated',data:{...membership,metadata:{},status:'expired'}});
- assert.equal((await hook(whopHeaders(gone,secret),gone)).status,200);acct=await call('/api/account');assert.equal(acct.json.plan.id,'free','expired memberships fall back to Free');
+ assert.equal((await hook(whopHeaders(gone,secret),gone)).status,200);acct=await call('/api/account');assert.equal(acct.json.plan.id,'free','expired memberships lose the plan');assert.equal(acct.json.subscribed,false);assert.equal((await call('/api/projects')).status,402,'studio closes when the membership expires');
  const stranger=JSON.stringify({type:'membership.updated',data:{...membership,id:'mem_other',user_id:'user_other',metadata:{user_id:'not-a-user'}}});
  assert.equal((await hook(whopHeaders(stranger,secret),stranger)).status,200,'unknown users are acknowledged without changes');
 

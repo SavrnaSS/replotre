@@ -14,10 +14,12 @@ import {EventHub} from './src/realtime.mjs';
 import {AnalysisQueue,readAnalysis} from './src/analysis.mjs';
 import {commitProject,assertAssets} from './src/projects.mjs';
 import {applyOperations,planDirector,subtitleFile} from './src/director.mjs';
-import {initAccountSchema,accountRoutes,entitlements,planById} from './src/account.mjs';
+import {initAccountSchema,accountRoutes,entitlements,planById,subscribed} from './src/account.mjs';
 import {initGoogleSchema,googleRoutes,googleConfigured} from './src/google-auth.mjs';
 import {claudeConfigured,claudeTemplate,localTemplate,timelineContext,CLAUDE_MODEL} from './src/template-ai.mjs';
 import {readActiveWorkspace,readProjectWorkspace,saveWorkspace} from './src/workspace.mjs';
+import {getPublicPage,renderPublicPage,renderNotFound} from './src/public-pages.mjs';
+import {applySeo,canonicalRedirect,robotsText,sitemapXml,INDEX_ROBOTS,NOINDEX_ROBOTS} from './src/seo.mjs';
 const root=path.dirname(fileURLToPath(import.meta.url));
 const port=Number(process.env.PORT||4173);
 const dataDir=path.resolve(process.env.DATA_DIR||path.join(root,'data'));
@@ -25,6 +27,8 @@ const production=process.env.NODE_ENV==='production';
 const origin=process.env.APP_ORIGIN||(production?'':`http://localhost:${port}`);
 if(!origin||!/^https?:\/\/[^/]+$/.test(origin)||production&&!origin.startsWith('https://'))throw Error('Set APP_ORIGIN to the public HTTPS origin in production');
 const canonicalHost=(()=>{try{return new URL(origin).host.toLowerCase()}catch{return ''}})();
+const seoIndexable=process.env.SEO_INDEXABLE==='true'||production&&process.env.SEO_INDEXABLE!=='false';
+const seoOptions={indexable:seoIndexable,googleVerification:process.env.GOOGLE_SITE_VERIFICATION||'',bingVerification:process.env.BING_SITE_VERIFICATION||''};
 fs.mkdirSync(dataDir,{recursive:true,mode:0o700});
 // Keep a copy of bundled template previews on the volume, so builds that omit some (git deploys exclude third-party media) still serve them.
 try{const src=path.join(root,'assets','templates'),dst=path.join(dataDir,'templates');fs.mkdirSync(dst,{recursive:true});for(const f of fs.readdirSync(src))if(/^[a-z0-9-]{1,40}\.(mp4|jpg)$/.test(f)&&!fs.existsSync(path.join(dst,f)))fs.copyFileSync(path.join(src,f),path.join(dst,f))}catch(e){console.warn('[templates] preview mirror skipped:',e.message)}
@@ -42,7 +46,8 @@ const staticFiles=new Set(['/','/typography.css','/legal.css','/privacy','/terms
 const vendorFiles=new Set(['/vendor/mediapipe/vision_bundle.mjs','/vendor/mediapipe/selfie_segmenter.tflite','/vendor/mediapipe/wasm/vision_wasm_internal.js','/vendor/mediapipe/wasm/vision_wasm_internal.wasm']);
 const mime={'.woff2':'font/woff2','.mjs':'text/javascript; charset=utf-8','.wasm':'application/wasm','.tflite':'application/octet-stream','.mp4':'video/mp4','.webp':'image/webp','.png':'image/png','.jpg':'image/jpeg','.txt':'text/plain; charset=utf-8','.xml':'application/xml; charset=utf-8','.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml'};
 const idRegex='[a-f0-9-]{36}';
-function security(res){res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','same-origin');res.setHeader('X-Frame-Options','DENY');res.setHeader('Cross-Origin-Opener-Policy','same-origin');res.setHeader('Cross-Origin-Resource-Policy','same-origin');res.setHeader('Permissions-Policy','camera=(), microphone=(), geolocation=()');res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; font-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'");if(production)res.setHeader('Strict-Transport-Security','max-age=31536000; includeSubDomains')}
+function security(res,html=''){const hashes=[...html.matchAll(/<script\b[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/g)].map(m=>`'sha256-${createHash('sha256').update(m[1]).digest('base64')}'`);res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','same-origin');res.setHeader('X-Frame-Options','DENY');res.setHeader('Cross-Origin-Opener-Policy','same-origin');res.setHeader('Cross-Origin-Resource-Policy','same-origin');res.setHeader('Permissions-Policy','camera=(), microphone=(), geolocation=()');res.setHeader('Content-Security-Policy',`default-src 'self'; script-src 'self' 'wasm-unsafe-eval'${hashes.length?' '+hashes.join(' '):''}; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; font-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'`);if(production)res.setHeader('Strict-Transport-Security','max-age=31536000; includeSubDomains')}
+function publicResponse(req,res,body,type,status=200){const b=Buffer.from(body),etag=`"${createHash('sha1').update(b).digest('base64url').slice(0,22)}"`,headers={'Content-Type':type,'Cache-Control':'no-cache','ETag':etag};if(status===200&&req.headers['if-none-match']===etag){res.writeHead(304,headers);return res.end()}res.writeHead(status,{...headers,'Content-Length':b.length});return res.end(req.method==='HEAD'?undefined:b)}
 function rate(key,limit,windowMs){const stamp=now();let v=counters.get(key)||[];v=v.filter(t=>stamp-t<windowMs);if(v.length>=limit)err(429,'Too many requests, try again later');v.push(stamp);counters.set(key,v);if(counters.size>10000){for(const [k,t] of counters){if(t[t.length-1]<stamp-windowMs)counters.delete(k)}}}
 function csrf(req){if(['POST','PUT','PATCH','DELETE'].includes(req.method)){if(req.headers['x-replotre-client']!=='studio')err(403,'Required client header missing');if(req.headers.origin&&req.headers.origin!==origin)err(403,'Origin is not allowed')}}
 function cookieHeaders(raw,clear=false){return {'Set-Cookie':`rp_session=${clear?'':raw}; HttpOnly; Path=/; SameSite=Strict; Max-Age=${clear?'0':'2592000'}${production?'; Secure':''}`}}
@@ -68,12 +73,15 @@ const server=http.createServer(async(req,res)=>{
  security(res);
  try{
   const u=new URL(req.url||'/',origin),pathname=u.pathname,method=req.method;
+  if(pathname.startsWith('/api/'))res.setHeader('X-Robots-Tag','noindex, nofollow');
   // One canonical host in production: www., studio. and any other alias redirect to APP_ORIGIN.
   // Health checks and the billing webhook answer on every host (Railway probes internally; Whop does not follow redirects).
-  if(production&&canonicalHost&&req.headers.host&&req.headers.host.toLowerCase()!==canonicalHost&&pathname!=='/api/healthz'&&pathname!=='/api/billing/webhook'&&(method==='GET'||method==='HEAD')){res.writeHead(301,{Location:origin+(req.url||'/'),'Cache-Control':'public, max-age=3600'});return res.end()}
+  if(production&&canonicalHost&&req.headers.host&&req.headers.host.toLowerCase()!==canonicalHost&&pathname!=='/api/healthz'&&pathname!=='/api/billing/webhook'&&(method==='GET'||method==='HEAD')){res.writeHead(301,{Location:origin+(canonicalRedirect(pathname)||pathname)+u.search,'Cache-Control':'public, max-age=3600'});return res.end()}
   if(pathname.startsWith('/api/')&&pathname!=='/api/billing/webhook')csrf(req);
   if(pathname.startsWith('/api/auth/google/')&&await (googleHandler||=googleRoutes({db,origin,production,rate,cookies,createSessionCookie,maxUsers}))(req,res,pathname,method,u))return;
   if((pathname.startsWith('/api/account')||pathname.startsWith('/api/billing/'))&&await accountRoutes({req,res,pathname,method,db,authorized,origin,rate}))return;
+  // The studio is for subscribers: every editing API needs an active plan (account, billing and auth routes stay open).
+  if(/^\/api\/(projects|tasks|renders|workspace|ai|usage|events)(\/|$)/.test(pathname)){const u=currentUser(req);if(u&&!subscribed(db,u.id)){const e=new ApiError(402,'Choose a plan to open the studio');e.feature='subscription';throw e}}
   if(method==='GET'&&pathname==='/api/healthz')return json(res,200,{status:'ok',service:'replotre',version:'2.1.0'});
   if(method==='GET'&&pathname==='/api/status')return json(res,200,{cloud:true,authenticated:!!currentUser(req),ai:!!process.env.OPENAI_API_KEY,mp4:true,realtime:true,analysis:true,transcription:!!process.env.OPENAI_API_KEY,vision:!!process.env.OPENAI_API_KEY,director:true,maxRenderClips:120,signup:process.env.ALLOW_SIGNUP!=='false',google:googleConfigured(),inviteRequired:!!process.env.SIGNUP_INVITE_CODE,claude:claudeConfigured(),claudeModel:claudeConfigured()?CLAUDE_MODEL:null});
   if(method==='GET'&&pathname==='/api/events'){const user=authorized(req);return hub.connect(req,res,user,()=>!!currentUser(req))}
@@ -202,16 +210,21 @@ const server=http.createServer(async(req,res)=>{
   const renderRoute=pathname.match(new RegExp(`^/api/renders/(${idRegex})$`));if(renderRoute&&method==='GET'){const user=authorized(req),job=ownRender(renderRoute[1],user);return json(res,200,{render:renderPublic(job)})}
   if(pathname.startsWith('/api/'))err(404,'Endpoint not found');
   if(method!=='GET'&&method!=='HEAD')err(405,'Method not allowed');
-  if(pathname==='/studio/'){res.writeHead(301,{Location:'/studio'});return res.end()}
+  const redirect=canonicalRedirect(pathname);if(redirect){res.writeHead(301,{Location:redirect+u.search,'Cache-Control':'public, max-age=3600'});return res.end()}
+  if(pathname==='/robots.txt')return publicResponse(req,res,robotsText(origin,seoIndexable),'text/plain; charset=utf-8');
+  if(pathname==='/sitemap.xml')return publicResponse(req,res,sitemapXml(origin,seoIndexable),'application/xml; charset=utf-8');
+  const publicPage=getPublicPage(pathname);
+  if(publicPage){const template=publicPage.file?await readFile(path.join(root,publicPage.file),'utf8'):renderPublicPage(publicPage),html=applySeo(template,pathname,origin,seoOptions);security(res,html);res.setHeader('X-Robots-Tag',seoIndexable?INDEX_ROBOTS:NOINDEX_ROBOTS);return publicResponse(req,res,html,'text/html; charset=utf-8')}
+  if(pathname==='/learn.css')return publicResponse(req,res,await readFile(path.join(root,'learn.css')),'text/css; charset=utf-8');
   if(!staticFiles.has(pathname)&&!['/workspace-state.js','/workspace.js'].includes(pathname)&&!vendorFiles.has(pathname)&&!/^\/assets\/templates\/[a-z0-9-]{1,40}\.(mp4|jpg)$/.test(pathname)&&!/^\/assets\/fonts\/[a-z0-9-]{1,40}\.woff2$/.test(pathname))err(404,'Not found');let file=path.join(root,pathname==='/'||pathname==='/home'?'landing.html':pathname==='/studio'?'index.html':pathname==='/privacy'?'privacy.html':pathname==='/terms'?'terms.html':pathname.slice(1));
   // Template previews not shipped with the code (e.g. media kept out of the public repo) are served from the volume.
   if(pathname.startsWith('/assets/templates/')&&!fs.existsSync(file))file=path.join(dataDir,'templates',path.basename(pathname));
   if(pathname.startsWith('/assets/templates/')&&!fs.existsSync(file))err(404,'Not found');let b=await readFile(file);
   // Studio page: include who's signed in, so the sign-up/setup screen can show without a separate round trip to ask.
-  if(pathname==='/studio'){const me=currentUser(req),boot={auth:!!me,cloud:true,signup:process.env.ALLOW_SIGNUP!=='false',inviteRequired:!!process.env.SIGNUP_INVITE_CODE,google:googleConfigured()};
-   b=Buffer.from(b.toString('utf8').replace('data-app="studio"',`data-app="studio" data-boot="${JSON.stringify(boot).replace(/"/g,'&quot;')}"`))}
+  if(pathname==='/studio'){const me=currentUser(req),boot={auth:!!me,subscribed:!!me&&subscribed(db,me.id),cloud:true,signup:process.env.ALLOW_SIGNUP!=='false',inviteRequired:!!process.env.SIGNUP_INVITE_CODE,google:googleConfigured()};
+   b=Buffer.from(applySeo(b.toString('utf8'),pathname,origin,seoOptions).replace('data-app="studio"',`data-app="studio" data-boot="${JSON.stringify(boot).replace(/"/g,'&quot;')}"`));res.setHeader('X-Robots-Tag',NOINDEX_ROBOTS)}
   const etag=`"${createHash('sha1').update(b).digest('base64url').slice(0,22)}"`;const headers={'Content-Type':mime[path.extname(file)],'Cache-Control':pathname.startsWith('/assets/fonts/')||(/\.(js|css)$/.test(pathname)&&u.searchParams.has('v'))?'public, max-age=31536000, immutable':/^\/assets\/(templates|demo|brand)\//.test(pathname)?'public, max-age=86400, stale-while-revalidate=604800':pathname==='/studio'?'private, no-cache':'no-cache','ETag':etag,'Accept-Ranges':'bytes'};if(req.headers['if-none-match']===etag){res.writeHead(304,headers);return res.end()}const rg=/^bytes=(\d*)-(\d*)$/.exec(req.headers.range||'');if(rg&&(rg[1]||rg[2])){const start=rg[1]?Number(rg[1]):Math.max(0,b.length-Number(rg[2])),end=rg[1]&&rg[2]?Math.min(Number(rg[2]),b.length-1):b.length-1;if(start>=b.length||start>end){res.writeHead(416,{...headers,'Content-Range':`bytes */${b.length}`});return res.end()}res.writeHead(206,{...headers,'Content-Range':`bytes ${start}-${end}/${b.length}`,'Content-Length':end-start+1});return res.end(method==='HEAD'?undefined:b.subarray(start,end+1))}res.writeHead(200,{...headers,'Content-Length':b.length});return res.end(method==='HEAD'?undefined:b);
- }catch(e){if(!res.headersSent){const status=e instanceof ApiError?e.status:500;if(status>=500)console.error('[server]',e);return json(res,status,{error:status===500?'Internal server error':String(e.message||'Request failed'),...(e.feature?{feature:e.feature}:{})})}res.destroy()}
+ }catch(e){if(!res.headersSent){const status=e instanceof ApiError?e.status:500;res.setHeader('X-Robots-Tag','noindex, nofollow');if(status===404&&!String(req.url||'').startsWith('/api/')&&['GET','HEAD'].includes(req.method)){const html=applySeo(renderNotFound(),new URL(req.url||'/',origin).pathname,origin,{indexable:false});return publicResponse(req,res,html,'text/html; charset=utf-8',404)}if(status>=500)console.error('[server]',e);return json(res,status,{error:status===500?'Internal server error':String(e.message||'Request failed'),...(e.feature?{feature:e.feature}:{})})}res.destroy()}
 });
 server.headersTimeout=25000;server.requestTimeout=10*60*1000;server.maxRequestsPerSocket=250;
 server.listen(port,'0.0.0.0',()=>console.log(`[replotre] ready on port ${port}, origin=${origin}, data=${dataDir}`));

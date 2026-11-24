@@ -852,8 +852,6 @@ if(!reduce&&(md||(kz&&shot))){const t0=performance.now();let raf=0,last=0,on=fal
 {const secs=$$('main > section:not(.hero), .footer');
  const oio=new IntersectionObserver(es=>{for(const en of es)en.target.classList.toggle('offscreen',!en.isIntersecting)},{rootMargin:'300px 0px'});
  secs.forEach(s=>oio.observe(s))}
-})();
-
 /* ---------- Smoothness: pause decorative motion while scrolling, and an adaptive quality governor ---------- */
 {let scT=0,on=false;
  addEventListener('scroll',()=>{if(!on){on=true;root.classList.add('is-scrolling')}clearTimeout(scT);scT=setTimeout(()=>{on=false;root.classList.remove('is-scrolling')},160)},{passive:true});
@@ -865,3 +863,4 @@ if(!reduce&&(md||(kz&&shot))){const t0=performance.now();let raf=0,last=0,on=fal
     if(p75>22){if(++strikes>=2){root.classList.add('fx-lite');watching=false;return}}else strikes=0}
    requestAnimationFrame(tick)};
   new IntersectionObserver(([en])=>{const v=en.isIntersecting&&!root.classList.contains('fx-lite');if(v&&!watching){watching=true;lastT=0;samples=[];requestAnimationFrame(tick)}else if(!v)watching=false},{threshold:.25}).observe(hero)}}
+})();

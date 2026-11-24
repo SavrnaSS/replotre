@@ -1,0 +1,62 @@
+/* Public features and guides share the existing Replotre brand and local fonts. */
+:root{color-scheme:light;--learn-bg:#f7f4ee;--learn-panel:#fffdf9;--learn-text:#1c1a16;--learn-muted:#5d584f;--learn-line:rgba(40,32,20,.14);--learn-accent:#a8652d;--learn-fill:#e2ab77}
+[data-theme=dark]{color-scheme:dark;--learn-bg:#0c0d0e;--learn-panel:#17181a;--learn-text:#f2eee7;--learn-muted:#b5b0a8;--learn-line:rgba(255,255,255,.14);--learn-accent:#f0bd88}
+*{box-sizing:border-box}
+html{scroll-padding-top:6rem;scroll-behavior:smooth}
+body{--fs-md:1rem;margin:0;background:var(--learn-bg);color:var(--learn-text);font-size:1rem;line-height:1.7}
+a{color:inherit;text-underline-offset:.2em}
+a:focus-visible{outline:2px solid var(--learn-accent);outline-offset:5px;border-radius:3px}
+.learn-wrap{width:min(1120px,100% - 3rem);margin-inline:auto}
+.learn-skip{position:fixed;top:.5rem;left:-100vw;z-index:20;padding:.5rem 1rem;background:var(--learn-text);color:var(--learn-bg)}
+.learn-skip:focus{left:1rem}
+.learn-nav{position:sticky;top:0;z-index:10;background:var(--learn-bg);border-bottom:1px solid var(--learn-line)}
+.learn-nav-in{display:flex;align-items:center;justify-content:space-between;gap:1rem;min-height:76px}
+.learn-logo{display:inline-flex;align-items:center;gap:.45rem;text-decoration:none;font-family:var(--font-display,sans-serif);font-size:1.4rem;font-weight:800;letter-spacing:-.04em;white-space:nowrap}
+.learn-logo img{display:block;object-fit:contain}
+.learn-logo span{color:var(--learn-accent);margin-left:-.35rem}
+.learn-nav nav{display:flex;align-items:center;gap:1.5rem;font-size:.9rem;font-weight:600}
+.learn-nav nav>a{text-decoration:none}
+.learn-nav nav>a:hover,.learn-crumbs a:hover{color:var(--learn-accent)}
+.learn-button{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:.65rem 1.15rem;border:1px solid transparent;border-radius:10px;background:var(--learn-fill);color:#24180f;text-decoration:none;font-size:.95rem;font-weight:700;line-height:1.4}
+.learn-button:hover{filter:brightness(1.06)}
+.learn-crumbs{margin-top:1.75rem;color:var(--learn-muted);font-size:.875rem}
+.learn-crumbs ol{display:flex;flex-wrap:wrap;gap:.4rem 1.1rem;list-style:none;padding:0;margin:0}
+.learn-crumbs li+li:before{content:'/';margin-right:1.1rem;opacity:.6}
+.learn-crumbs a{text-decoration:none}
+.learn-hero{max-width:880px;padding:clamp(2.5rem,7vw,5.5rem) 0 clamp(2.5rem,5vw,4rem)}
+.learn-kicker{color:var(--learn-accent);font-size:.875rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;margin:0 0 1rem}
+.learn-hero h1{font-family:var(--font-display,sans-serif);font-size:clamp(2.35rem,5.5vw,4.5rem);font-weight:700;line-height:1.08;letter-spacing:-.045em;margin:0;text-wrap:balance}
+.learn-intro{font-size:clamp(1.05rem,1.8vw,1.3rem);color:var(--learn-muted);line-height:1.65;max-width:740px;margin:1.5rem 0 0}
+.learn-actions{display:flex;align-items:center;flex-wrap:wrap;gap:1rem 1.5rem;margin-top:2rem}
+.learn-actions span,.learn-byline{font-size:.9rem;color:var(--learn-muted)}
+.learn-byline{margin:1.5rem 0 0}
+.learn-layout{display:grid;grid-template-columns:240px minmax(0,1fr);gap:clamp(2rem,5vw,5rem);border-top:1px solid var(--learn-line)}
+.learn-toc{padding-top:2.25rem}
+.learn-toc nav{position:sticky;top:7rem}
+.learn-toc ol{list-style:none;padding:0;margin:0;display:grid;gap:.9rem;font-size:.925rem;line-height:1.45;color:var(--learn-muted)}
+.learn-toc a{text-decoration:none}
+.learn-toc a:hover{color:var(--learn-accent)}
+.learn-content{min-width:0;max-width:760px}
+.learn-section{padding:2.25rem 0;border-bottom:1px solid var(--learn-line)}
+.learn-section h2,.learn-related h2{font-family:var(--font-display,sans-serif);font-size:clamp(1.5rem,3vw,2rem);line-height:1.22;letter-spacing:-.025em;margin:0 0 1.25rem;text-wrap:balance}
+.learn-section p{color:var(--learn-muted);margin:1rem 0 0}
+.learn-section p:first-of-type{margin-top:0}
+.learn-steps{padding-left:1.5rem;color:var(--learn-muted);margin:0}
+.learn-steps li{padding:.35rem 0 .35rem .4rem}
+.learn-steps li::marker{color:var(--learn-accent);font-weight:700}
+.learn-note{display:flex;align-items:center;flex-wrap:wrap;gap:1rem 1.5rem;margin:2rem 0;padding:1.5rem;border:1px solid var(--learn-line);border-radius:16px;background:var(--learn-panel)}
+.learn-note p{flex-basis:100%;font-size:1.2rem;font-weight:600;margin:0}
+.learn-note>a:not(.learn-button){font-size:.9rem;color:var(--learn-muted)}
+.learn-related{padding:4rem 0}
+.learn-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,270px),1fr));gap:1rem;margin-top:1.5rem}
+.learn-card{display:flex;flex-direction:column;align-items:flex-start;gap:.9rem;border:1px solid var(--learn-line);border-radius:16px;padding:1.6rem;background:var(--learn-panel);text-decoration:none;transition:border-color .18s,transform .18s}
+.learn-card:hover{border-color:var(--learn-accent);transform:translateY(-2px)}
+.learn-card .learn-kicker{font-size:.875rem;margin:0}
+.learn-card h3{font-size:1.25rem;line-height:1.3;letter-spacing:-.02em;margin:0}
+.learn-card p{font-size:.975rem;color:var(--learn-muted);margin:0 0 .5rem}
+.learn-card-link{margin-top:auto;color:var(--learn-accent);font-size:.9rem;font-weight:600;text-decoration:underline;text-underline-offset:.2em}
+.learn-footer{display:flex;justify-content:space-between;gap:2rem;padding:2.5rem 0;border-top:1px solid var(--learn-line)}
+.learn-footer p{color:var(--learn-muted);max-width:290px;font-size:.9rem}
+.learn-footer nav{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:.65rem 1.5rem;max-width:560px;font-size:.9rem;color:var(--learn-muted)}
+@media(max-width:760px){.learn-wrap{width:calc(100% - 2rem)}.learn-nav nav{gap:1rem}.learn-nav nav>a:not(.learn-button){display:none}.learn-layout{grid-template-columns:minmax(0,1fr);gap:0}.learn-toc nav{position:static}.learn-toc{padding:1.5rem 0;border-bottom:1px solid var(--learn-line)}.learn-toc ol{gap:.65rem}.learn-footer{flex-direction:column}.learn-footer nav{justify-content:flex-start}.learn-related{padding:2.5rem 0}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.learn-card{transition:none}.learn-card:hover{transform:none}}

@@ -4,13 +4,13 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#f7f4ee" />
-<meta name="description" content="Describe the edit you want and watch it happen, then fine-tune anything by hand. Replotre is a free video editor that runs in your browser, and your videos stay on your device." />
+<meta name="description" content="Edit videos online with Replotre. Describe edits to the AI Director, trim your timeline, add speech captions, apply templates and export MP4 or WebM." />
 <meta name="color-scheme" content="light dark" />
-<title>Replotre: edit videos by describing what you want</title>
+<title>Replotre | Online AI Video Editor, Captions &amp; Templates</title>
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="Replotre" />
-<meta property="og:title" content="Replotre: edit videos by describing what you want" />
-<meta property="og:description" content="Describe the edit you want and watch it happen, then fine-tune anything by hand. A free video editor that runs in your browser." />
+<meta property="og:title" content="Replotre | Online AI Video Editor, Captions &amp; Templates" />
+<meta property="og:description" content="Describe edits to the AI Director, refine a real timeline, add captions and export your video in Replotre." />
 <meta property="og:image" content="/assets/og-image.jpg" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
@@ -21,7 +21,7 @@
 <script src="./landing-theme.js?v=2.21.0"></script>
 <link rel="preload" href="/assets/fonts/inter-opsz.woff2" as="font" type="font/woff2" crossorigin />
 <link rel="preload" href="/assets/fonts/jakarta.woff2" as="font" type="font/woff2" crossorigin />
-<link rel="stylesheet" href="./landing.css?v=25.2.1" />
+<link rel="stylesheet" href="./landing.css?v=25.3.0" />
 <link rel="stylesheet" href="./typography.css?v=1.0.0" />
 </head>
 <body>
@@ -48,7 +48,7 @@
   </div>
   <div class="mobile-menu" id="mobileMenu" hidden>
     <nav class="mm-list" aria-label="Sections"><a href="#how"><span class="mm-n">01</span><span class="mm-t">How it works<small>Three steps, start to finish</small></span></a><a href="#features"><span class="mm-n">02</span><span class="mm-t">Features<small>What the Director and timeline can do</small></span></a><a href="#looks"><span class="mm-n">03</span><span class="mm-t">Looks<small>Six built-in color looks</small></span></a><a href="#craft"><span class="mm-n">04</span><span class="mm-t">Craft<small>Frame accuracy, sound and export</small></span></a><a href="#why"><span class="mm-n">05</span><span class="mm-t">Why Replotre<small>How it compares</small></span></a><a href="#faq"><span class="mm-n">06</span><span class="mm-t">FAQ<small>Quick answers</small></span></a></nav>
-    <div class="mm-foot"><a class="btn primary lg" href="/studio">Open Studio <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a><p>No download needed · Your videos stay on your device</p></div>
+    <div class="mm-foot"><a class="btn primary lg" href="/studio">Open Studio <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a><p>No download needed · Sign in and choose a plan</p></div>
   </div>
   <span class="nav-prog" id="navProg" aria-hidden="true"><b class="np-head"></b></span>
 </header>
@@ -68,7 +68,7 @@
     <button class="hud hud-tl hud-btn" id="motionBtn" type="button" aria-pressed="false" aria-label="Pause background motion" title="Pause background motion"><b class="rec" aria-hidden="true"></b><span class="hud-state" aria-hidden="true">REC</span><span class="hud-tc" id="hudTc" aria-hidden="true">00:00:00:00</span></button>
     <div class="wrap hero-in">
       <h1 id="heroTitle">Shape every <span class="clip-word" data-label="your clip">frame<i class="cw-h l" aria-hidden="true"></i><i class="cw-h r" aria-hidden="true"></i></span>.</h1>
-      <p class="lede">Describe the edit you want and watch it happen. Then fine-tune anything by hand, right in your browser.</p>
+      <p class="lede">Your online AI video editor. Describe the edit you want, then fine-tune the timeline, captions and color right in your browser.</p>
       <form class="prompt" id="heroPrompt" action="/studio" method="get">
         <label class="sr" for="heroPromptInput">Describe an edit and see it on the demo below</label>
         <input id="heroPromptInput" name="q" type="text" placeholder="Describe an edit…" autocomplete="off" maxlength="140" enterkeyhint="go" aria-describedby="promptHint" />
@@ -81,8 +81,8 @@
         <button type="button" class="chip" data-sc="c" aria-pressed="false"><span class="chip-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 9h18M3 15h18"/></svg></span>Movie look</button>
       </div>
       <div class="hero-cta">
-        <a class="btn brand lg" href="/studio">Start editing, free <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
-        <p class="hero-trust"><span>No download needed</span><i aria-hidden="true"></i><span><b>Your videos stay on your device</b></span></p>
+        <a class="btn brand lg" href="/studio">Open Replotre Studio <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+        <p class="hero-trust"><span>No download needed</span><i aria-hidden="true"></i><span><b>Account and active plan required</b></span></p>
       </div>
     </div>
   </div>
@@ -131,8 +131,8 @@
             <div class="stage-toolbar"><span class="stage-heading"><i></i>Program monitor</span><div class="stage-tools"><span class="view-state" id="demoViewState">Original</span><button class="demo-icon" id="demoGuides" type="button" aria-label="Show safe areas" aria-pressed="false" title="Safe areas"><svg><use href="#demo-i-guides"/></svg></button></div></div>
             <div class="viewer-well">
             <div class="frame" id="demoFrame" role="img" aria-label="Sample footage: a young woman talking to the camera, then two friends laughing in front of a wall of flowers">
-              <div class="scene s1"><canvas class="scene-bg" width="48" height="27" aria-hidden="true"></canvas><video class="scene-vid" src="./assets/demo/vlog.mp4" poster="./assets/demo/vlog-poster.jpg" muted playsinline preload="auto" disablepictureinpicture disableremoteplayback aria-hidden="true"></video></div>
-              <div class="scene s2"><canvas class="scene-bg" width="48" height="27" aria-hidden="true"></canvas><video class="scene-vid" src="./assets/demo/friends.mp4" poster="./assets/demo/friends-poster.jpg" muted playsinline preload="auto" disablepictureinpicture disableremoteplayback aria-hidden="true"></video></div>
+              <div class="scene s1"><canvas class="scene-bg" width="48" height="27" aria-hidden="true"></canvas><video class="scene-vid" src="./assets/demo/vlog.mp4" poster="./assets/demo/vlog-poster.jpg" muted playsinline preload="metadata" disablepictureinpicture disableremoteplayback aria-hidden="true"></video></div>
+              <div class="scene s2"><canvas class="scene-bg" width="48" height="27" aria-hidden="true"></canvas><video class="scene-vid" src="./assets/demo/friends.mp4" poster="./assets/demo/friends-poster.jpg" muted playsinline preload="metadata" disablepictureinpicture disableremoteplayback aria-hidden="true"></video></div>
               <div class="veil"></div>
               <div class="flash" aria-hidden="true"></div>
               <div class="fx-layer" aria-hidden="true"><canvas class="fx-cv" width="180" height="320"></canvas><i class="fx-vig"></i><i class="fx-grain"></i><i class="fx-halo"></i><i class="fx-leak"></i><i class="fx-scan"></i><i class="fx-streak"></i></div>
@@ -210,7 +210,7 @@
           <span class="tile t4"><video class="st-vid" src="./assets/demo/import-4.mp4" poster="./assets/demo/import-4.jpg" muted loop playsinline preload="none" disablepictureinpicture disableremoteplayback aria-hidden="true"></video><em>24 fps</em></span>
           <span class="upload"><span class="up-row"><b>Diner dance.mp4</b><small>importing</small></span><span class="up-bar"><i></i></span></span>
         </div>
-        <div class="step3-copy"><h3><span class="sr">Step 1: </span>Drop in your shots</h3><p>Video, photos or audio. Thumbnails, filmstrips and waveforms appear right away, and files stay on this device.</p></div>
+        <div class="step3-copy"><h3><span class="sr">Step 1: </span>Drop in your shots</h3><p>Import video, photos or audio. Upload footage to your cloud project for storage, source analysis and server rendering.</p></div>
       </div></li>
       <li class="step3 reveal"><canvas class="st-fx" aria-hidden="true"></canvas><div class="step3-in">
         <span class="step3-label" aria-hidden="true"><span>02</span>Describe</span>
@@ -232,7 +232,7 @@
           <span class="exp-badge">Export</span>
           <span class="ready"><span class="ready-ok"><svg viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></svg>Export ready</span><span class="ready-meta">WebM · MP4 · 1080p</span></span>
         </div>
-        <div class="step3-copy"><h3><span class="sr">Step 3: </span>Export the exact cut</h3><p>Render the whole edit or just your in/out range. What you previewed is exactly what you get.</p></div>
+        <div class="step3-copy"><h3><span class="sr">Step 3: </span>Export your finished cut</h3><p>Render the whole edit or your in/out range. Choose browser WebM for template motion, or MP4 for supported grades and text.</p></div>
       </div></li>
     </ol>
     <div class="step3-dots" id="howDots" aria-hidden="true"><i class="on"></i><i></i><i></i></div>
@@ -339,7 +339,7 @@
 <!-- ============================== CRAFT ============================== -->
 <section class="section tint gx" id="craft" aria-labelledby="craftTitle">
   <div class="wrap">
-    <div class="sec-head reveal"><span class="eyebrow">Craft</span><h2 id="craftTitle">What you preview is what you <em>export</em></h2><p>No surprises after the render. The details that usually break between preview and export are built to match.</p></div>
+    <div class="sec-head reveal"><span class="eyebrow">Craft</span><h2 id="craftTitle">Preview the details. <em>Check the export.</em></h2><p>Fine-tune the cut, review the sound and choose the export format that supports your design.</p></div>
     <div class="cr-panel reveal">
       <div class="cr-grid">
         <article class="cr-card">
@@ -351,10 +351,10 @@
           </ul>
         </article>
         <article class="cr-card is-hi">
-          <header class="cr-head"><h3>Preview matches export</h3><span class="cr-badge" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></svg></span></header>
+          <header class="cr-head"><h3>Choose your export format</h3><span class="cr-badge" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></svg></span></header>
           <ul class="cr-list">
-            <li>Same framing, fades and transitions in both</li>
-            <li>Camera moves rebuilt step for step</li>
+            <li>WebM includes browser template motion layers</li>
+            <li>MP4 includes supported grades and text layers</li>
             <li>MP4 up to <span class="count" data-to="1080">1080</span>p, or WebM right in your browser</li>
           </ul>
         </article>
@@ -368,7 +368,7 @@
         </article>
       </div>
       <div class="cr-foot">
-        <p class="cr-private"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span><b><span class="count" data-to="0">0</span> uploads.</b> Your videos stay on this device until you choose to sign in.</span></p>
+        <p class="cr-private"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span><b>Private cloud projects.</b> Uploaded footage is stored and processed on our server. <a href="/privacy">Read our privacy policy.</a></span></p>
         <div class="keys cr-keys" id="keys" aria-label="Keyboard shortcuts">
           <div class="keys-head"><h3>Built for your hands</h3><p>Every core move has a key. <span class="keys-try">Go ahead, press one.</span></p></div>
           <ul>
@@ -404,7 +404,7 @@
             <li>Real keyframes, trims and transitions when you want control</li>
             <li>Undo any change with one click</li>
           </ul>
-          <a class="btn brand cp-cta" href="/studio">Start editing, free <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+          <a class="btn brand cp-cta" href="/studio">Open Replotre Studio <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
         </article>
         <article class="cp-card">
           <header class="cp-head"><span class="cp-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span><h3>Template apps</h3></header>
@@ -421,6 +421,19 @@
 </section>
 
 <!-- ============================== FAQ ============================== -->
+<section class="section gx" id="toolkit" aria-labelledby="toolkitTitle">
+  <div class="wrap">
+    <div class="sec-head"><span class="eyebrow">Explore the editor</span><h2 id="toolkitTitle">Find the tools for <em>your edit.</em></h2><p>Learn what each tool does, how to use it and what to check before you export.</p></div>
+    <div class="seo-grid">
+      <a class="seo-card" href="/ai-video-editor"><h3>AI video editor</h3><p>Describe trims, titles, framing and speed changes, then refine them on your timeline.</p><span>Explore AI editing</span></a>
+      <a class="seo-card" href="/auto-captions"><h3>Automatic video captions</h3><p>Turn source speech into timed captions and download SRT or WebVTT subtitles.</p><span>Explore captions</span></a>
+      <a class="seo-card" href="/video-templates"><h3>Editable video templates</h3><p>Start with a color look or motion style and adapt the text and placement to your footage.</p><span>Explore templates</span></a>
+      <a class="seo-card" href="/remove-silence-from-video"><h3>Remove silence from video</h3><p>Find quiet intervals, review the resulting cuts and shape the pace of a spoken video.</p><span>Explore silence removal</span></a>
+    </div>
+    <p class="seo-guide-link">New to editing? <a href="/guides">Browse our practical video editing guides.</a></p>
+  </div>
+</section>
+
 <section class="section tint gx" id="faq" aria-labelledby="faqTitle">
   <div class="wrap fq">
     <div class="fq-side reveal">
@@ -435,19 +448,18 @@
     </div>
     <div class="fq-list reveal" id="fqList">
         <details class="fq-item" id="faq-what-is" name="faq"><summary><span class="fq-q">What is Replotre?</span><span class="fq-ico" aria-hidden="true"></span></summary><div class="fq-a"><p>Replotre is a video editor that runs in your browser. Describe the edit you want and the AI Director makes it, or edit by hand on a real timeline with keyframes, trims and transitions.</p></div></details>
-        <details class="fq-item" id="faq-free" name="faq"><summary><span class="fq-q">Is it free?</span><span class="fq-ico" aria-hidden="true"></span></summary><div class="fq-a"><p>Yes. Open the studio and start editing right away, with no account needed. Signing in is optional and adds cloud projects and MP4 exports.</p></div></details>
+        <details class="fq-item" id="faq-free" name="faq"><summary><span class="fq-q">Do I need an account and a plan?</span><span class="fq-ico" aria-hidden="true"></span></summary><div class="fq-a"><p>Yes. Studio access requires an account and an active Creator or Pro subscription. You can explore the interactive demo on this page before signing in. Review the current plans in Studio before subscribing.</p></div></details>
         <details class="fq-item" id="faq-install" name="faq"><summary><span class="fq-q">Do I need to install anything?</span><span class="fq-ico" aria-hidden="true"></span></summary><div class="fq-a"><p>No. Replotre runs in a current Chromium browser such as Chrome, Edge, Arc or Brave. WebM export happens right in the browser.</p></div></details>
         <details class="fq-item" id="faq-experience" name="faq"><summary><span class="fq-q">Do I need editing experience?</span><span class="fq-ico" aria-hidden="true"></span></summary><div class="fq-a"><p>No. Start by describing what you want in plain words. When you want more control, every change is on the timeline where you can adjust it yourself.</p></div></details>
         <details class="fq-item" id="faq-director" name="faq"><summary><span class="fq-q">What can the AI Director do?</span><span class="fq-ico" aria-hidden="true"></span></summary><div class="fq-a"><p>It applies the edits you describe: aspect ratio, titles and captions, trims, splits, speed, color and positioning. It lists exactly what changed, and you can undo it with one click.</p></div></details>
-        <details class="fq-item" id="faq-privacy" name="faq"><summary><span class="fq-q">Where do my videos go?</span><span class="fq-ico" aria-hidden="true"></span></summary><div class="fq-a"><p>Your videos stay on your device until you choose to sign in. Signing in adds cloud projects, footage analysis and MP4 rendering on our server.</p></div></details>
-        <details class="fq-item" id="faq-export" name="faq"><summary><span class="fq-q">Will my export look like the preview?</span><span class="fq-ico" aria-hidden="true"></span></summary><div class="fq-a"><p>Yes. Framing, fades, transitions and camera moves follow the same math in the preview and in the export, and automated tests check that they match.</p></div></details>
+        <details class="fq-item" id="faq-privacy" name="faq"><summary><span class="fq-q">Where do my videos go?</span><span class="fq-ico" aria-hidden="true"></span></summary><div class="fq-a"><p>Media you upload to a cloud project is stored and processed on our server. Requested AI features may send source audio, sampled frames or project context to the relevant provider. Read our <a href="/privacy">Privacy Policy</a> for details.</p></div></details>
+        <details class="fq-item" id="faq-export" name="faq"><summary><span class="fq-q">Will my export look like the preview?</span><span class="fq-ico" aria-hidden="true"></span></summary><div class="fq-a"><p>Browser WebM includes template motion layers. Server MP4 includes supported grades and text layers, but not every template motion effect. Font rendering can also differ. Export a short test and review it before publishing.</p></div></details>
         <details class="fq-item" id="faq-formats" name="faq"><summary><span class="fq-q">Which formats can I export?</span><span class="fq-ico" aria-hidden="true"></span></summary><div class="fq-a"><p>WebM, straight from your browser, or MP4 up to 1080p when you’re signed in. You can export the whole video or just the part between your start and end marks.</p></div></details>
         <details class="fq-item" id="faq-phone" name="faq"><summary><span class="fq-q">Does it work on a phone?</span><span class="fq-ico" aria-hidden="true"></span></summary><div class="fq-a"><p>Yes. On a phone the editor switches to a touch layout with one set of playback controls, tool chips and larger buttons.</p></div></details>
       <p class="fq-empty" id="fqEmpty" hidden>No questions match that. Try another word, or <a href="/studio">open the studio</a> and press <kbd>?</kbd>.</p>
       <p class="sr" id="fqLive" aria-live="polite"></p>
     </div>
   </div>
-  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "What is Replotre?", "acceptedAnswer": {"@type": "Answer", "text": "Replotre is a video editor that runs in your browser. Describe the edit you want and the AI Director makes it, or edit by hand on a real timeline with keyframes, trims and transitions."}}, {"@type": "Question", "name": "Is it free?", "acceptedAnswer": {"@type": "Answer", "text": "Yes. Open the studio and start editing right away, with no account needed. Signing in is optional and adds cloud projects and MP4 exports."}}, {"@type": "Question", "name": "Do I need to install anything?", "acceptedAnswer": {"@type": "Answer", "text": "No. Replotre runs in a current Chromium browser such as Chrome, Edge, Arc or Brave. WebM export happens right in the browser."}}, {"@type": "Question", "name": "Do I need editing experience?", "acceptedAnswer": {"@type": "Answer", "text": "No. Start by describing what you want in plain words. When you want more control, every change is on the timeline where you can adjust it yourself."}}, {"@type": "Question", "name": "What can the AI Director do?", "acceptedAnswer": {"@type": "Answer", "text": "It applies the edits you describe: aspect ratio, titles and captions, trims, splits, speed, color and positioning. It lists exactly what changed, and you can undo it with one click."}}, {"@type": "Question", "name": "Where do my videos go?", "acceptedAnswer": {"@type": "Answer", "text": "Your videos stay on your device until you choose to sign in. Signing in adds cloud projects, footage analysis and MP4 rendering on our server."}}, {"@type": "Question", "name": "Will my export look like the preview?", "acceptedAnswer": {"@type": "Answer", "text": "Yes. Framing, fades, transitions and camera moves follow the same math in the preview and in the export, and automated tests check that they match."}}, {"@type": "Question", "name": "Which formats can I export?", "acceptedAnswer": {"@type": "Answer", "text": "WebM, straight from your browser, or MP4 up to 1080p when you're signed in. You can export the whole video or just the part between your start and end marks."}}, {"@type": "Question", "name": "Does it work on a phone?", "acceptedAnswer": {"@type": "Answer", "text": "Yes. On a phone the editor switches to a touch layout with one set of playback controls, tool chips and larger buttons."}}]}</script>
 </section>
 
 <!-- ============================== FINAL CTA ============================== -->
@@ -470,7 +482,7 @@
         <button type="button" data-q="Slow it down and fade in from black">Slow fade-in</button>
         <button type="button" data-q="Give it a warm, cinematic look">Warm cinematic</button>
       </div>
-      <p class="final-meta"><span>Free to start</span><i aria-hidden="true"></i><span>No account needed</span><i aria-hidden="true"></i><a href="/studio">or open an empty project</a></p>
+      <p class="final-meta"><span>Account and active plan required</span><i aria-hidden="true"></i><a href="/studio">View plans in Studio</a></p>
     </div>
   </div>
 </section>
@@ -480,17 +492,17 @@
   <div class="wrap foot-in">
     <div class="foot-brand"><a class="logo" href="/"><svg class="r-mark" viewBox="0 0 100 88" aria-hidden="true" focusable="false"><path fill="currentColor" fill-rule="evenodd" d="M0 0H58C82 0 96 12 96 28C96 40 89 49 77 53L100 88H65L46 56H30V88H0ZM30 20V37H56C63 37 67 33 67 28.5C67 24 63 20 56 20Z"/></svg><span>replotre<i>.</i></span></a><p>A browser video editor for people who care how the cut feels.</p></div>
     <nav class="foot-cols" aria-label="Footer">
-      <div><h4>Product</h4><a href="/studio">Studio</a><a href="#features">Features</a><a href="#looks">Looks</a><a href="#craft">Craft</a></div>
-      <div><h4>Learn</h4><a href="#how">How it works</a><a href="#why">Why Replotre</a><a href="#faq">FAQ</a><a href="#faq-privacy">Privacy FAQ</a><a href="/privacy">Privacy Policy</a><a href="/terms">Terms of Service</a></div>
+      <div><h4>Product</h4><a href="/studio">Studio</a><a href="/ai-video-editor">AI video editor</a><a href="/auto-captions">Automatic captions</a><a href="/video-templates">Video templates</a><a href="/remove-silence-from-video">Remove silence</a></div>
+      <div><h4>Learn</h4><a href="/guides">Video editing guides</a><a href="/guides/how-to-edit-videos-online">How to edit videos online</a><a href="/guides/add-captions-to-video">How to add captions</a><a href="#faq">FAQ</a><a href="/privacy">Privacy Policy</a><a href="/terms">Terms of Service</a></div>
     </nav>
   </div>
   <div class="wrap foot-mark" aria-hidden="true">replotre<i>.</i></div>
-  <div class="wrap foot-base"><span>© <span id="year">2026</span> Replotre</span><span class="foot-status"><i></i>Runs in your browser · Videos stay on your device</span><a class="foot-top" href="#main">Back to top <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg></a></div>
+  <div class="wrap foot-base"><span>© <span id="year">2026</span> Replotre</span><span class="foot-status"><i></i>Browser editing · Cloud projects</span><a class="foot-top" href="#main">Back to top <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg></a></div>
 </footer>
 
 <!-- Phone: sticky call to action after the hero -->
 <div class="dock" id="dock" aria-hidden="true"><span><b>Replotre Studio</b>Edit in your browser</span><a class="btn primary sm" href="/studio" tabindex="-1">Open Studio</a></div>
 
-<script src="./landing.js?v=24.6.3" defer></script>
+<script src="./landing.js?v=24.6.4" defer></script>
 </body>
 </html>

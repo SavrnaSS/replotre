@@ -8,9 +8,10 @@ export const setupMissing=d=>[!d?.role&&'role',!d?.aspect&&'aspect'].filter(Bool
    Every limit listed here is enforced by the server (AI requests, storage, upload size, export resolution, render length).
    Prices are display values; the Whop plans (env WHOP_PLAN_*) are what customers are actually charged. */
 export const PLANS=[
- {id:'free',name:'Free',tagline:'Explore the studio',price:{month:0,year:0},
-  limits:{aiDaily:10,storageGB:2,maxFileMB:300,maxExport:720,renderMinutes:2,projects:5},
-  features:['720p MP4 export','10 AI requests a day','2 GB cloud storage','All templates with on-device depth','Captions, history and live sync']},
+ // Internal "no subscription" state: not offered for sale and gives no studio access (see subscribed()).
+ {id:'free',name:'No plan',tagline:'Subscribe to open the studio',price:{month:0,year:0},internal:true,
+  limits:{aiDaily:0,storageGB:0,maxFileMB:0,maxExport:0,renderMinutes:0,projects:0},
+  features:[]},
  {id:'creator',name:'Creator',tagline:'For weekly creators',price:{month:12,year:115},popular:true,
   limits:{aiDaily:100,storageGB:50,maxFileMB:2048,maxExport:1080,renderMinutes:5,projects:100},
   features:['1080p MP4 export','100 AI requests a day','50 GB cloud storage','2 GB uploads','AI-fitted templates and Design with AI','Speech-synced captions']},
@@ -18,7 +19,8 @@ export const PLANS=[
   limits:{aiDaily:400,storageGB:250,maxFileMB:4096,maxExport:1080,renderMinutes:5,projects:1000},
   features:['Everything in Creator','400 AI requests a day','250 GB cloud storage','4 GB uploads','Unlimited projects (up to 1,000)']}
 ];
-const PLAN_IDS=PLANS.map(p=>p.id);
+const PLAN_IDS=PLANS.filter(p=>!p.internal).map(p=>p.id);
+export const subscribed=(db,userId)=>effectivePlan(db,userId).id!=='free';
 export const planById=id=>PLANS.find(p=>p.id===id)||PLANS[0];
 const ACTIVE=new Set(['active','trialing','past_due']);
 
@@ -105,7 +107,7 @@ export function accountView(db,user){
  const day=now()-86400000,month=now()-30*86400000;
  return {user:{id:user.id,email:user.email,createdAt:user.created_at},
   profile:prof?(()=>{const d=JSON.parse(prof.data_json),missing=setupMissing(d);return {...d,step:prof.step,onboardedAt:missing.length?null:prof.onboarded_at,setupMissing:missing}})():{step:0,onboardedAt:null,setupMissing:setupMissing({})},
-  plan:{id:plan.id,name:plan.name},
+  plan:{id:plan.id,name:plan.name},subscribed:plan.id!=='free',
   subscription:sub?{plan:sub.plan,status:sub.status,interval:sub.interval,provider:sub.provider,currentPeriodEnd:sub.current_period_end,cancelAtPeriodEnd:!!sub.cancel_at_period_end}:null,
   entitlements:ent,
   usage:{aiToday:db.prepare('SELECT COUNT(*) n FROM ai_usage WHERE user_id=? AND created_at>?').get(user.id,day).n,
@@ -121,7 +123,7 @@ async function rawBody(req,max=1_000_000){let size=0;const chunks=[];for await(c
 /** Handles /api/account and /api/billing routes. Returns true when the request was handled. */
 export async function accountRoutes({req,res,pathname,method,db,authorized,origin,rate}){
  if(pathname==='/api/billing/plans'&&method==='GET'){
-  const mode=billingMode();return json(res,200,{mode,provider:mode==='whop'?'whop':null,plans:PLANS.map(p=>({...p,purchasable:{month:p.id==='free'||mode==='test'||!!variantEnv(p.id,'month'),year:p.id==='free'||mode==='test'||!!variantEnv(p.id,'year')}})),options:PROFILE_OPTIONS}),true;
+  const mode=billingMode();return json(res,200,{mode,provider:mode==='whop'?'whop':null,plans:PLANS.filter(p=>!p.internal).map(p=>({...p,purchasable:{month:mode==='test'||!!variantEnv(p.id,'month'),year:mode==='test'||!!variantEnv(p.id,'year')}})),options:PROFILE_OPTIONS}),true;
  }
  if(pathname==='/api/billing/webhook'&&method==='POST'){
   const secret=process.env.WHOP_WEBHOOK_SECRET;if(!secret)err(404,'Endpoint not found');
@@ -156,7 +158,6 @@ export async function accountRoutes({req,res,pathname,method,db,authorized,origi
   rate(`checkout:${user.id}`,20,3600000);const b=await bodyJSON(req,2000),planId=String(b.plan||''),interval=b.interval==='year'?'year':'month';
   if(!PLAN_IDS.includes(planId))err(400,'Unknown plan');const mode=billingMode(),existing=subscriptionRow(db,user.id);
   const paidWhop=existing?.provider==='whop'&&ACTIVE.has(existing.status)&&existing.plan!=='free';
-  if(planId==='free'){if(paidWhop)err(409,'Cancel your paid plan from Billing to move to Free');upsertSubscription(db,user.id,{plan:'free',status:'inactive',provider:existing?.provider||'none',interval:null,cancel_at_period_end:0});return json(res,200,{account:accountView(db,user)}),true}
   if(paidWhop)err(409,'To switch plans, cancel your current plan in Billing, then choose the new one when it ends.');
   if(mode==='test'){upsertSubscription(db,user.id,{plan:planId,interval,status:'active',provider:'test',current_period_end:now()+(interval==='year'?365:30)*86400000,cancel_at_period_end:0});return json(res,200,{account:accountView(db,user),test:true}),true}
   if(mode!=='whop')err(503,'Payments are not configured on this server');

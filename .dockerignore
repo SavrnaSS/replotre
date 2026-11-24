@@ -5,6 +5,7 @@
 node_modules
 *.zip
 *.png
+!assets/brand/apple-touch-icon.png
 data
 previews
 *.log
