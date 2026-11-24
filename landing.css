@@ -3153,3 +3153,7 @@ html{overflow-x:clip}
 .fx-lite .hl-grain{display:none}
 /* Sections far below the fold skip rendering work until they come near the viewport */
 #looks,#craft,#why,#faq,#final{content-visibility:auto;contain-intrinsic-size:auto 900px}
+/* Wordmark: "Replotre." with a tan capital R (no separate R mark next to it) */
+.wm-r{font-style:normal;color:var(--brand-tan,var(--accent2))}
+.logo>.r-mark{display:none}
+.foot-mark .wm-r{color:transparent;background:linear-gradient(180deg,rgba(226,171,119,.9),rgba(226,171,119,.12) 92%);-webkit-background-clip:text;background-clip:text}

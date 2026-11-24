@@ -235,11 +235,11 @@ function shell(content) {
 <body>
 <a class="learn-skip" href="#main">Skip to content</a>
 <header class="learn-nav"><div class="learn-wrap learn-nav-in">
-<a class="learn-logo" href="/" aria-label="Replotre home"><img src="/assets/brand/replotre-mark.svg" alt="" width="28" height="25" />replotre<span>.</span></a>
+<a class="learn-logo" href="/" aria-label="Replotre home"><em class="wm-r">R</em>eplotre<span>.</span></a>
 <nav aria-label="Main navigation"><a href="/ai-video-editor">AI editor</a><a href="/auto-captions">Captions</a><a href="/guides">Guides</a><a class="learn-button" href="/studio">Open Studio</a></nav>
 </div></header>
 ${content}
-<footer class="learn-footer learn-wrap"><div><a class="learn-logo" href="/">replotre<span>.</span></a><p>Thoughtful edits. A real timeline. Right in your browser.</p></div><nav aria-label="Footer"><a href="/ai-video-editor">AI video editor</a><a href="/auto-captions">Automatic captions</a><a href="/video-templates">Video templates</a><a href="/remove-silence-from-video">Remove silence</a><a href="/guides">Editing guides</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></nav></footer>
+<footer class="learn-footer learn-wrap"><div><a class="learn-logo" href="/"><em class="wm-r">R</em>eplotre<span>.</span></a><p>Thoughtful edits. A real timeline. Right in your browser.</p></div><nav aria-label="Footer"><a href="/ai-video-editor">AI video editor</a><a href="/auto-captions">Automatic captions</a><a href="/video-templates">Video templates</a><a href="/remove-silence-from-video">Remove silence</a><a href="/guides">Editing guides</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></nav></footer>
 </body>
 </html>`;
 }

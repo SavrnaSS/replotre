@@ -53,3 +53,5 @@ a{color:var(--accent);text-underline-offset:3px}
 }
 @media (max-width:520px){.lg-nav a:not(.lg-cta):not([aria-current]){display:none}}
 @media print{.lg-top,.lg-toc,.lg-foot{display:none}.lg-wrap{display:block;padding:0}body{background:#fff;color:#000}}
+.lg-logo .wm-r{font-style:normal;color:#b8834f}
+[data-theme="dark"] .lg-logo .wm-r{color:#e2ab77}
