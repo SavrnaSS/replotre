@@ -1443,3 +1443,6 @@ html.rp-bare body>*:not(.ob){display:none!important}
  .q-ico{width:36px;height:36px}
 }
 @media (min-width:721px) and (max-height:820px){.ob .obx-main[data-step=about] .obx-grid{max-width:720px}}
+/* frame icons */
+.q-ico .q-frame{width:24px;height:24px;display:block}
+.q-opt.is-on .q-ico .q-frame{color:var(--acc,#e2ab77)}
