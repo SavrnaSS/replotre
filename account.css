@@ -1446,3 +1446,8 @@ html.rp-bare body>*:not(.ob){display:none!important}
 /* frame icons */
 .q-ico .q-frame{width:24px;height:24px;display:block}
 .q-opt.is-on .q-ico .q-frame{color:var(--acc,#e2ab77)}
+/* option rows: one border only; focus ring just for keyboard users */
+.ob button.q-opt:focus,.ob button.q-opt:focus-visible{outline:none}
+.ob.kb button.q-opt:focus-visible{box-shadow:0 0 0 2px var(--n0,#0c0d0f),0 0 0 4px rgba(226,171,119,.55)}
+.ob button.ob-chip:focus:not(:focus-visible),.ob button.ob-aspect:focus:not(:focus-visible){outline:none}
+.ob:not(.kb) button.ob-chip:focus-visible,.ob:not(.kb) button.ob-aspect:focus-visible,.ob:not(.kb) .pl-card button:focus-visible{outline:none}
