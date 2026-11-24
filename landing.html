@@ -21,7 +21,7 @@
 <script src="./landing-theme.js?v=2.21.0"></script>
 <link rel="preload" href="/assets/fonts/inter-opsz.woff2" as="font" type="font/woff2" crossorigin />
 <link rel="preload" href="/assets/fonts/jakarta.woff2" as="font" type="font/woff2" crossorigin />
-<link rel="stylesheet" href="./landing.css?v=25.5.0" />
+<link rel="stylesheet" href="./landing.css?v=25.6.1" />
 <link rel="stylesheet" href="./typography.css?v=1.0.0" />
 </head>
 <body>
@@ -66,8 +66,8 @@
     </div>
     <button class="hud hud-tl hud-btn" id="motionBtn" type="button" aria-pressed="false" aria-label="Pause background motion" title="Pause background motion"><b class="rec" aria-hidden="true"></b><span class="hud-state" aria-hidden="true">REC</span><span class="hud-tc" id="hudTc" aria-hidden="true">00:00:00:00</span></button>
     <div class="wrap hero-in">
-      <h1 id="heroTitle">Shape every <span class="clip-word" data-label="your clip">frame<i class="cw-h l" aria-hidden="true"></i><i class="cw-h r" aria-hidden="true"></i></span>.</h1>
-      <p class="lede">Your online AI video editor. Describe the edit you want, then fine-tune the timeline, captions and color right in your browser.</p>
+      <h1 id="heroTitle"><span class="h1-kw">AI video editor</span>Shape every <span class="clip-word" data-label="your clip">frame<i class="cw-h l" aria-hidden="true"></i><i class="cw-h r" aria-hidden="true"></i></span>.</h1>
+      <p class="lede">Replotre is an online AI video editor. Describe the edit you want, then fine-tune the timeline, captions and color right in your browser.</p>
       <form class="prompt" id="heroPrompt" action="/studio" method="get">
         <label class="sr" for="heroPromptInput">Describe an edit and see it on the demo below</label>
         <input id="heroPromptInput" name="q" type="text" placeholder="Describe an edit…" autocomplete="off" maxlength="140" enterkeyhint="go" aria-describedby="promptHint" />
@@ -446,7 +446,9 @@
       </div>
     </div>
     <div class="fq-list reveal" id="fqList">
-        <details class="fq-item" id="faq-what-is" name="faq"><summary><span class="fq-q">What is Replotre?</span><span class="fq-ico" aria-hidden="true"></span></summary><div class="fq-a"><p>Replotre is a video editor that runs in your browser. Describe the edit you want and the AI Director makes it, or edit by hand on a real timeline with keyframes, trims and transitions.</p></div></details>
+        <details class="fq-item" id="faq-what-is" name="faq"><summary><span class="fq-q">What is Replotre?</span><span class="fq-ico" aria-hidden="true"></span></summary><div class="fq-a"><p>Replotre is an AI video editor that runs in your browser. Describe the edit you want and the AI Director makes it, or edit by hand on a real timeline with keyframes, trims and transitions.</p></div></details>
+        <details class="fq-item" id="faq-ai-editor" name="faq"><summary><span class="fq-q">What is an AI video editor?</span><span class="fq-ico" aria-hidden="true"></span></summary><div class="fq-a"><p>An AI video editor lets you change a video by describing what you want, like “make it vertical, add a title and slow the last clip”, instead of doing every step by hand. In Replotre each AI change lands on a normal timeline, so you can review it, undo it or adjust it yourself. <a href="/ai-video-editor">See how the AI video editor works</a>.</p></div></details>
+        <details class="fq-item" id="faq-price" name="faq"><summary><span class="fq-q">How much does Replotre cost?</span><span class="fq-ico" aria-hidden="true"></span></summary><div class="fq-a"><p>Creator is $12 a month (or $115 a year) and Pro is $29 a month (or $278 a year), in USD. Both include the AI Director, captions, templates and MP4 export; Pro adds higher AI, storage and upload limits. You can cancel any time.</p></div></details>
         <details class="fq-item" id="faq-free" name="faq"><summary><span class="fq-q">Do I need an account and a plan?</span><span class="fq-ico" aria-hidden="true"></span></summary><div class="fq-a"><p>Yes. Studio access requires an account and an active Creator or Pro subscription. You can explore the interactive demo on this page before signing in. Review the current plans in Studio before subscribing.</p></div></details>
         <details class="fq-item" id="faq-install" name="faq"><summary><span class="fq-q">Do I need to install anything?</span><span class="fq-ico" aria-hidden="true"></span></summary><div class="fq-a"><p>No. Replotre runs in a current Chromium browser such as Chrome, Edge, Arc or Brave. WebM export happens right in the browser.</p></div></details>
         <details class="fq-item" id="faq-experience" name="faq"><summary><span class="fq-q">Do I need editing experience?</span><span class="fq-ico" aria-hidden="true"></span></summary><div class="fq-a"><p>No. Start by describing what you want in plain words. When you want more control, every change is on the timeline where you can adjust it yourself.</p></div></details>
@@ -491,8 +493,8 @@
   <div class="wrap foot-in">
     <div class="foot-brand"><a class="logo" href="/"><span><em class="wm-r">R</em>eplotre<i>.</i></span></a><p>A browser video editor for people who care how the cut feels.</p></div>
     <nav class="foot-cols" aria-label="Footer">
-      <div><h4>Product</h4><a href="/studio">Studio</a><a href="/ai-video-editor">AI video editor</a><a href="/auto-captions">Automatic captions</a><a href="/video-templates">Video templates</a><a href="/remove-silence-from-video">Remove silence</a></div>
-      <div><h4>Learn</h4><a href="/guides">Video editing guides</a><a href="/guides/how-to-edit-videos-online">How to edit videos online</a><a href="/guides/add-captions-to-video">How to add captions</a><a href="#faq">FAQ</a><a href="/privacy">Privacy Policy</a><a href="/terms">Terms of Service</a></div>
+      <div><h4>Product</h4><a href="/studio">Studio</a><a href="/ai-video-editor">AI video editor</a><a href="/ai-video-editor-for-social-media">AI editor for Reels &amp; Shorts</a><a href="/auto-captions">Automatic captions</a><a href="/video-templates">Video templates</a><a href="/remove-silence-from-video">Remove silence</a></div>
+      <div><h4>Learn</h4><a href="/guides">Video editing guides</a><a href="/guides/how-to-edit-videos-online">How to edit videos online</a><a href="/guides/how-to-edit-videos-with-ai">How to edit videos with AI</a><a href="/guides/add-captions-to-video">How to add captions</a><a href="#faq">FAQ</a><a href="/privacy">Privacy Policy</a><a href="/terms">Terms of Service</a></div>
     </nav>
   </div>
   <div class="wrap foot-mark" aria-hidden="true"><em class="wm-r">R</em>eplotre<i>.</i></div>

@@ -55,14 +55,15 @@ test('metadata is idempotent, uses the configured origin and safely escapes veri
   assert.match(html, /bing&amp;value/);
   assert.doesNotMatch(html, /<script>alert/);
   const schema = JSON.parse(html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)[1]);
-  assert.ok(schema['@graph'].some(node => node['@type'] === 'SoftwareApplication'));
+  assert.ok(schema['@graph'].some(node => node['@type'] === 'WebApplication' && node.offers?.length));
   assert.ok(schema['@graph'].every(node => !node.aggregateRating && !node.review));
 });
 
 test('sitemaps include canonical public pages and staging remains crawlable for noindex', () => {
   const xml = sitemapXml('https://video.example');
   assert.equal((xml.match(/<loc>/g) || []).length, publicPages.length);
-  assert.doesNotMatch(xml, /\/studio|\/api\/|<lastmod>|<priority>|<changefreq>/);
+  assert.doesNotMatch(xml, /\/studio|\/api\/|<priority>|<changefreq>/);
+  for (const m of xml.matchAll(/<lastmod>([^<]*)<\/lastmod>/g)) assert.match(m[1], /^\d{4}-\d{2}-\d{2}$/, 'lastmod is a real calendar date');
   assert.doesNotMatch(sitemapXml('https://video.example', false), /<loc>/);
   assert.match(robotsText('https://video.example'), /Sitemap: https:\/\/video\.example\/sitemap.xml/);
   assert.doesNotMatch(robotsText('https://video.example', false), /Sitemap:|Disallow: \/\s*$/m);

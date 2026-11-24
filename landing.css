@@ -3164,3 +3164,9 @@ html{overflow-x:clip}
 /* Comparison card: the Replotre column is headed by the wordmark itself */
 .cp-head h3.cp-wm-h{flex:1;font:800 19px/1 var(--display);letter-spacing:-.035em;color:var(--btn-fg)}
 .cp-wm i{font-style:normal;color:var(--brand-tan,var(--accent2))}
+/* SEO: the keyword sits in the H1 as a small label above the headline (fixed size, unaffected by the one-line fit) */
+#heroTitle .h1-kw{display:flex;align-items:center;justify-content:center;gap:10px;margin:0 auto clamp(10px,1.6svh,16px);font:600 12.5px/1 var(--mono,ui-monospace,monospace);letter-spacing:.14em;text-transform:uppercase;color:var(--accent2,#b8834f)}
+#heroTitle .h1-kw:before,#heroTitle .h1-kw:after{content:'';width:22px;height:1px;background:currentColor;opacity:.6}
+@media (max-width:640px){#heroTitle .h1-kw{font-size:11px;letter-spacing:.12em}}
+#heroTitle .h1-kw{margin-bottom:clamp(26px,3.6svh,36px)}
+@media (max-width:640px){#heroTitle .h1-kw{margin-bottom:30px}}

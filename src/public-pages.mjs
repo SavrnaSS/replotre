@@ -2,37 +2,35 @@
 export const publicPages = [
   {
     path: '/', file: 'landing.html', label: 'Home',
-    title: 'Replotre | Online AI Video Editor, Captions & Templates',
-    description: 'Edit videos online with Replotre. Describe edits to the AI Director, trim your timeline, add speech captions, apply templates and export MP4 or WebM.',
+    title: 'AI Video Editor Online: Edit by Describing It | Replotre',
+    description: 'Replotre is an AI video editor in your browser. Describe the edit, then fine-tune trims, captions, titles and color on a real timeline. Export MP4.',
+    updated: '2026-11-24',
   },
   {
-    path: '/ai-video-editor', label: 'AI video editor', kind: 'feature',
-    title: 'AI Video Editor with Timeline Control | Replotre',
-    description: 'Describe video edits in plain language, then refine them on a real timeline. Use Replotre AI Director for trims, titles, framing, speed and color.',
-    heading: 'An AI video editor that keeps you in control.',
-    intro: 'Start with your own footage. Tell the Director what to change, review the result on the timeline, and adjust the details by hand. Replotre combines natural-language editing with a browser video workspace.',
-    sections: [
-      { id: 'describe', title: 'Describe the edit, then check the result', paragraphs: [
-        'A useful editing prompt names the action and the result you want: “Make it vertical and add a title saying Launch day,” or “Slow the selected clip to half speed.” The Director can change framing, add text, trim or split clips, adjust speed and volume, and apply color changes. Supported actions produce editable timeline changes.',
-        'Review the action list and play the affected section before continuing. If a change does not fit your story, undo it or refine it on the timeline. Keep prompts focused when you need precise control over one clip.',
-      ] },
-      { id: 'footage', title: 'Work with your footage, speech and soundtrack', paragraphs: [
-        'Cloud uploads can be analyzed for scene boundaries, quiet intervals and audio onsets. Those measurements support actions such as splitting at scenes and removing detected silence. Speech transcription and sampled-frame descriptions are separate actions that depend on the AI services available on the server.',
-        'Analysis gives you starting points to review. A quiet pause may be intentional, and an audio onset is not always a musical beat. Listen to the transitions and choose the moments that serve your edit.',
-      ] },
-      { id: 'workflow', title: 'How to edit a video with the Director', steps: [
-        'Sign in, choose a plan and create a project in Studio.',
-        'Import your footage and choose a frame: vertical, landscape, square or portrait.',
-        'Select a clip when your instruction applies to one shot, then describe an edit in Director.',
-        'Review the timeline, refine trims and text, and preview the sequence.',
-        'Export a browser WebM or a server-rendered MP4 within your plan limits.',
-      ] },
-      { id: 'expectations', title: 'What to know before you start', paragraphs: [
-        'Replotre edits existing media; it does not generate an entire film from a text prompt. Some explicit editing tools work without an external AI provider, while flexible AI planning, transcription and AI-designed looks require configured services. Studio access requires an account and an active subscription.',
-        'Cloud projects upload media to the server. Requested AI actions may send the audio, sampled frames or project context needed for that task to the relevant provider. Read the privacy policy before uploading sensitive footage.',
-      ] },
-    ],
-    related: ['/auto-captions', '/remove-silence-from-video', '/guides/how-to-edit-videos-online'],
+    path: "/ai-video-editor",
+    label: "AI video editor",
+    kind: "feature",
+    updated: "2026-11-24",
+    title: "AI Video Editor: Edit Videos by Describing Them | Replotre",
+    description: "Replotre is an AI video editor in your browser. Describe trims, titles, captions, speed and framing in plain words, then fine-tune every change on a real timeline.",
+    heading: "The AI video editor that edits the way you describe it.",
+    intro: "Tell Replotre what you want, like “make it vertical, add a title and slow the last clip”, and the AI Director makes the change on a real timeline. Review it, undo it or adjust it by hand. No installs: it runs in your browser.",
+    sections: [{"id": "what", "title": "What is an AI video editor?", "paragraphs": ["An AI video editor lets you change a video by describing the result instead of performing every step yourself. Rather than hunting through menus to crop, retime and caption a clip, you write the instruction and the editor carries it out.", "Many AI video tools generate a finished video from a template and give you little control afterwards. Replotre takes a different approach: every AI change becomes an ordinary edit on a multi-track timeline. You keep the speed of describing an edit and the precision of a real editor, so you can fix a single frame, nudge a caption or undo one step without starting over."]}, {"id": "ask", "title": "What you can ask the AI Director", "paragraphs": ["Write instructions the way you would brief an editor. Clear prompts name the action and the result. These are the kinds of edits the Director handles today:"], "list": ["Change the frame: “Make it vertical for Reels” or “Switch to 16:9 for YouTube.”", "Add and style text: “Add a title saying Launch day at the top in white.”", "Trim and split: “Trim the first clip to 4 seconds” or “Split the clip at the playhead.”", "Change speed: “Slow the last clip to half speed for a slow-motion ending.”", "Fix sound: “Lower the music to 30%” or “Remove the background music.”", "Caption speech: “Add captions from what I say” to turn speech into timed captions.", "Restyle the look: ask for a mood such as a warm, cinematic look and refine it."]}, {"id": "control", "title": "AI speed with real timeline control", "paragraphs": ["Each instruction produces a list of changes you can see on the timeline. Play the affected section, then keep it, undo it or refine it with the timeline tools: trims, splits, speed, volume, keyframes and text. Selecting a clip before you write a prompt focuses the edit on that shot.", "Because the AI works on the same timeline you do, you never have to choose between automatic and manual editing. Use the Director for the repetitive steps and your own judgement for the moments that matter."]}, {"id": "footage", "title": "Built around your footage, speech and sound", "paragraphs": ["Replotre edits the videos you bring. Cloud uploads can be analyzed for scene changes, quiet stretches and audio onsets, which power actions like splitting at scenes and removing silence. Speech transcription turns what people say into captions you can edit and export as SRT or WebVTT.", "Analysis gives you starting points rather than final decisions. A quiet pause can be intentional, so listen to each transition and keep the moments that serve your story."]}, {"id": "social", "title": "Made for Reels, TikTok and YouTube Shorts", "paragraphs": ["Short-form video rewards fast, consistent editing. Start in a vertical 9:16 frame, add speech captions, put a title in the first seconds and trim the pauses. When the same story needs a landscape cut for YouTube or a square post, ask the Director to change the frame and adjust the framing on the timeline.", "See the full workflow in the guide to the AI video editor for Reels, TikTok and Shorts."]}, {"id": "workflow", "title": "How to edit a video with AI in Replotre", "steps": ["Open Replotre Studio, sign in and choose a plan.", "Import your footage and pick a frame: vertical, landscape, square or portrait.", "Select a clip if your instruction is about one shot, then describe the edit to the AI Director.", "Review the changes on the timeline and refine trims, text and timing by hand.", "Preview the whole sequence and export an MP4 or WebM."]}, {"id": "compare", "title": "How Replotre compares", "paragraphs": ["Desktop editors give full control but take time to install and learn. Template apps are quick but lock you into presets. Replotre sits between them: you describe edits in plain language like a template app, and you keep a real timeline like a desktop editor, all in a browser tab.", "Replotre edits existing footage. It does not generate a whole film from a text prompt, and flexible AI planning, transcription and AI-designed looks rely on connected AI services."]}, {"id": "pricing", "title": "Pricing", "paragraphs": ["Studio access needs an account and a Creator or Pro subscription. Creator is $12 a month or $115 a year, and Pro is $29 a month or $278 a year (USD). Both include the AI Director, captions, templates and MP4 export; Pro raises the AI, storage and upload limits. Cancel any time."]}],
+    faq: [["What is the best way to edit videos with AI?", "Describe one clear change at a time, check it on the timeline, then refine it. In Replotre every AI edit becomes a normal timeline change, so you can keep, undo or adjust it."], ["Can the AI edit my video automatically?", "Yes. The AI Director can change the frame, add and style titles, trim and split clips, change speed and volume, remove background music and add captions from speech. You review each change before you export."], ["Do I need to download software?", "No. Replotre runs in a current Chromium browser such as Chrome, Edge, Brave or Arc."], ["Does Replotre add captions automatically?", "Yes. It transcribes speech into timed captions that you can edit and style, and you can export them as SRT or WebVTT subtitle files."], ["Is Replotre free?", "No. You can explore the interactive demo on the home page for free, but the Studio needs a Creator ($12/month) or Pro ($29/month) plan."], ["Can I edit vertical videos for TikTok, Reels and Shorts?", "Yes. Start in a 9:16 frame, or ask the Director to switch any project to vertical, square, portrait or landscape."]],
+    related: ["/ai-video-editor-for-social-media", "/guides/how-to-edit-videos-with-ai", "/auto-captions"],
+  },
+  {
+    path: "/ai-video-editor-for-social-media",
+    label: "AI video editor for Reels, TikTok and Shorts",
+    kind: "feature",
+    updated: "2026-11-24",
+    title: "AI Video Editor for Reels, TikTok & YouTube Shorts | Replotre",
+    description: "Edit vertical videos for Instagram Reels, TikTok and YouTube Shorts with AI. Captions from speech, titles, trims and 9:16 framing in your browser.",
+    heading: "Edit Reels, TikToks and Shorts by describing them.",
+    intro: "Short videos live or die in the first seconds. Replotre's AI video editor handles the repetitive steps, vertical framing, captions, titles and tight trims, so you can spend your time on the hook and the story.",
+    sections: [{"id": "vertical", "title": "Start vertical, stay flexible", "paragraphs": ["Choose a 9:16 frame for Reels, TikTok and Shorts when you create a project. If you also need a landscape version for YouTube or a square post, ask the AI Director to change the frame, then adjust the framing of each shot on the timeline."]}, {"id": "captions", "title": "Captions viewers can read with the sound off", "paragraphs": ["Many people watch short videos muted. Turn speech into timed captions, check the words, and choose a caption style that stays readable on a phone. Keep lines short and away from the bottom edge, where app buttons and descriptions cover the video."]}, {"id": "hook", "title": "A stronger hook in the first seconds", "paragraphs": ["Open on the most interesting moment, then add a short title that tells viewers why to keep watching. Prompts such as “Trim the first clip to start at the reaction” or “Add a title saying Wait for it at the top” keep the opening tight."]}, {"id": "prompts", "title": "Prompts that work well for short-form video", "list": ["“Make it vertical and add captions from what I say.”", "“Add a title saying 3 editing tips at the top for the first 3 seconds.”", "“Trim the first clip to 2 seconds.”", "“Slow the last clip to half speed.”", "“Lower the music so the voice is clear.”"]}, {"id": "workflow", "title": "A fast short-form workflow", "steps": ["Create a vertical 9:16 project in Replotre Studio and import your clips.", "Ask the AI Director to add captions from speech, then fix any misheard words.", "Tighten the opening and remove dead air between sentences.", "Add a title for the hook and check it stays inside the safe area.", "Preview on the timeline and export an MP4 for upload."]}, {"id": "limits", "title": "Good to know", "paragraphs": ["Replotre edits your own footage; it does not post to social apps for you. Export the finished MP4 and upload it in the app. Studio access needs a Creator or Pro plan."]}],
+    faq: [["What size should a Reel, TikTok or Short be?", "Use a vertical 9:16 frame, 1080×1920 pixels. Replotre's vertical frame uses that size."], ["Can I add captions to TikTok videos automatically?", "Yes. Replotre turns speech into timed captions you can edit and style before you export the video."], ["Can I make a landscape version of the same video?", "Yes. Ask the Director to switch the frame to 16:9, then adjust the framing of each clip."]],
+    related: ["/ai-video-editor", "/auto-captions", "/guides/add-captions-to-video"],
   },
   {
     path: '/auto-captions', label: 'Automatic video captions', kind: 'feature',
@@ -165,6 +163,19 @@ export const publicPages = [
     related: ['/ai-video-editor', '/remove-silence-from-video', '/guides/add-captions-to-video'],
   },
   {
+    path: "/guides/how-to-edit-videos-with-ai",
+    label: "How to edit videos with AI",
+    kind: "article",
+    updated: "2026-11-24",
+    title: "How to Edit Videos with AI: A Step-by-Step Guide | Replotre",
+    description: "Learn how to edit a video with AI: write clear prompts, review each change on the timeline, add captions and export. A practical guide using Replotre.",
+    heading: "How to edit videos with AI, step by step.",
+    intro: "AI makes editing faster when you treat it like a capable assistant: give it a clear brief, check its work and keep the final decisions. This guide shows a reliable way to edit a video with AI in Replotre.",
+    sections: [{"id": "plan", "title": "1. Know what the video is for", "paragraphs": ["Write one sentence about the purpose of the video and where it will be posted. A 30-second Reel, a YouTube tutorial and a product demo need different frames, lengths and openings. That sentence becomes the context for every prompt you write."]}, {"id": "import", "title": "2. Import footage and pick a frame", "paragraphs": ["Create a project, import your clips and choose a frame: vertical 9:16 for Reels, TikTok and Shorts, 16:9 for YouTube, 1:1 or 4:5 for feed posts. Put the clips in a rough order on the timeline before asking for detailed edits."]}, {"id": "prompt", "title": "3. Write prompts that name the action and the result", "paragraphs": ["Good prompts are specific. “Make it better” gives the AI nothing to act on; “Trim the first clip to 3 seconds and add a title saying Day one at the top” does. Select a clip first when the instruction is about one shot."], "list": ["Name the action: trim, split, slow down, add a title, add captions.", "Name the target: the first clip, the selected clip, the music.", "Name the result: 3 seconds, half speed, at the top, in white."]}, {"id": "review", "title": "4. Review every change on the timeline", "paragraphs": ["After each prompt, play the part of the video that changed. Keep what works, undo what doesn't and fine-tune the rest by hand. Small, frequent checks are faster than fixing a long chain of edits at the end."]}, {"id": "captions", "title": "5. Add captions and check the words", "paragraphs": ["Ask for captions from speech, then read them through. Fix names, numbers and any misheard words, and keep each line short enough to read on a phone. Export SRT or WebVTT files if you also need separate subtitles."]}, {"id": "export", "title": "6. Preview the whole video and export", "paragraphs": ["Watch the full sequence once from start to finish, listening for abrupt cuts and checking that text stays inside the frame. Then export an MP4 for publishing."]}],
+    faq: [["Will AI replace manual editing?", "Not entirely. AI speeds up repetitive steps like trimming, captions and reframing, but taste and timing still come from you. That's why Replotre keeps every AI change editable on the timeline."], ["What should I write in an AI editing prompt?", "Name the action, the target and the result, for example “Slow the last clip to half speed.”"]],
+    related: ["/ai-video-editor", "/guides/how-to-edit-videos-online", "/ai-video-editor-for-social-media"],
+  },
+  {
     path: '/guides/add-captions-to-video', label: 'How to add video captions', kind: 'article',
     title: 'How to Add Captions & Export SRT Subtitles | Replotre',
     description: 'Add captions to a video in Replotre: transcribe speech, check words and timing, style readable captions and export video or SRT and WebVTT subtitle files.',
@@ -229,7 +240,7 @@ function shell(content) {
 <link rel="apple-touch-icon" href="/assets/brand/apple-touch-icon.png" />
 <link rel="preload" href="/assets/fonts/inter-opsz.woff2" as="font" type="font/woff2" crossorigin />
 <link rel="stylesheet" href="/typography.css?v=1.0.0" />
-<link rel="stylesheet" href="/learn.css?v=1.0.1" />
+<link rel="stylesheet" href="/learn.css?v=1.1.0" />
 <script src="/landing-theme.js?v=2.21.0"></script>
 </head>
 <body>
@@ -239,7 +250,7 @@ function shell(content) {
 <nav aria-label="Main navigation"><a href="/ai-video-editor">AI editor</a><a href="/auto-captions">Captions</a><a href="/guides">Guides</a><a class="learn-button" href="/studio">Open Studio</a></nav>
 </div></header>
 ${content}
-<footer class="learn-footer learn-wrap"><div><a class="learn-logo" href="/"><em class="wm-r">R</em>eplotre<span>.</span></a><p>Thoughtful edits. A real timeline. Right in your browser.</p></div><nav aria-label="Footer"><a href="/ai-video-editor">AI video editor</a><a href="/auto-captions">Automatic captions</a><a href="/video-templates">Video templates</a><a href="/remove-silence-from-video">Remove silence</a><a href="/guides">Editing guides</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></nav></footer>
+<footer class="learn-footer learn-wrap"><div><a class="learn-logo" href="/"><em class="wm-r">R</em>eplotre<span>.</span></a><p>Thoughtful edits. A real timeline. Right in your browser.</p></div><nav aria-label="Footer"><a href="/ai-video-editor">AI video editor</a><a href="/ai-video-editor-for-social-media">AI editor for Reels &amp; Shorts</a><a href="/guides/how-to-edit-videos-with-ai">Edit videos with AI</a><a href="/auto-captions">Automatic captions</a><a href="/video-templates">Video templates</a><a href="/remove-silence-from-video">Remove silence</a><a href="/guides">Editing guides</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></nav></footer>
 </body>
 </html>`;
 }
@@ -253,8 +264,9 @@ export function renderPublicPage(page) {
 <${isArticle ? 'article' : 'div'}>
 <header class="learn-hero"><p class="learn-kicker">${isArticle ? 'Replotre editing guides' : page.kind === 'collection' ? 'Learn with Replotre' : 'The Replotre toolkit'}</p><h1>${escapeHtml(page.heading)}</h1><p class="learn-intro">${escapeHtml(page.intro)}</p>${isArticle ? '<p class="learn-byline">By the Replotre team</p>' : '<div class="learn-actions"><a class="learn-button" href="/studio">Open Replotre Studio</a><span>Account and active plan required</span></div>'}</header>
 ${page.kind === 'collection' ? `<section class="learn-section" aria-labelledby="guidesTitle"><h2 id="guidesTitle">Start with a practical guide</h2>${cards(publicPages.filter(p => p.kind === 'article'))}</section>` : `
-<div class="learn-layout"><aside class="learn-toc"><nav aria-label="On this page"><p class="learn-kicker">On this page</p><ol>${sections.map(section => `<li><a href="#${section.id}">${escapeHtml(section.title.replace(/^\d+\. /, ''))}</a></li>`).join('')}</ol></nav></aside>
-<div class="learn-content">${sections.map(section => `<section id="${section.id}" class="learn-section"><h2>${escapeHtml(section.title)}</h2>${(section.paragraphs || []).map(p => `<p>${escapeHtml(p)}</p>`).join('')}${section.steps ? `<ol class="learn-steps">${section.steps.map(step => `<li>${escapeHtml(step)}</li>`).join('')}</ol>` : ''}</section>`).join('')}
+<div class="learn-layout"><aside class="learn-toc"><nav aria-label="On this page"><p class="learn-kicker">On this page</p><ol>${sections.map(section => `<li><a href="#${section.id}">${escapeHtml(section.title.replace(/^\d+\. /, ''))}</a></li>`).join('')}${page.faq?.length ? '<li><a href="#faq">FAQ</a></li>' : ''}</ol></nav></aside>
+<div class="learn-content">${sections.map(section => `<section id="${section.id}" class="learn-section"><h2>${escapeHtml(section.title)}</h2>${(section.paragraphs || []).map(p => `<p>${escapeHtml(p)}</p>`).join('')}${section.steps ? `<ol class="learn-steps">${section.steps.map(step => `<li>${escapeHtml(step)}</li>`).join('')}</ol>` : ''}${section.list ? `<ul class="learn-list">${section.list.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>` : ''}</section>`).join('')}
+${page.faq?.length ? `<section id="faq" class="learn-section learn-faq"><h2>Frequently asked questions</h2>${page.faq.map(([q, ans]) => `<details><summary>${escapeHtml(q)}</summary><p>${escapeHtml(ans)}</p></details>`).join('')}</section>` : ''}
 <div class="learn-note"><p>Ready to try this with your footage?</p><a class="learn-button" href="/studio">Open Studio</a><a href="/privacy">Read the privacy policy</a></div></div></div>`}
 </${isArticle ? 'article' : 'div'}>
 <section class="learn-related" aria-labelledby="relatedTitle"><p class="learn-kicker">Keep exploring</p><h2 id="relatedTitle">More ways to shape your edit</h2>${cards(page.related.map(getPublicPage))}</section>

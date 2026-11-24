@@ -20,7 +20,7 @@ import {initResetSchema,resetRoutes,resetConfigured} from './src/password-reset.
 import {claudeConfigured,claudeTemplate,localTemplate,timelineContext,CLAUDE_MODEL} from './src/template-ai.mjs';
 import {readActiveWorkspace,readProjectWorkspace,saveWorkspace} from './src/workspace.mjs';
 import {getPublicPage,renderPublicPage,renderNotFound} from './src/public-pages.mjs';
-import {applySeo,canonicalRedirect,robotsText,sitemapXml,INDEX_ROBOTS,NOINDEX_ROBOTS} from './src/seo.mjs';
+import {applySeo,canonicalRedirect,robotsText,sitemapXml,INDEX_ROBOTS,NOINDEX_ROBOTS,INDEXNOW_KEY} from './src/seo.mjs';
 const root=path.dirname(fileURLToPath(import.meta.url));
 const port=Number(process.env.PORT||4173);
 const dataDir=path.resolve(process.env.DATA_DIR||path.join(root,'data'));
@@ -86,6 +86,7 @@ const server=http.createServer(async(req,res)=>{
   if(pathname==='/.well-known/apple-developer-merchantid-domain-association'&&(method==='GET'||method==='HEAD')){
    if(!globalThis.__applePayAssoc){const r=await fetch('https://whop.com/.well-known/apple-platform-integrator/apple-developer-merchantid-domain-association',{signal:AbortSignal.timeout(10000)});if(!r.ok)err(502,'Apple Pay association unavailable');globalThis.__applePayAssoc=Buffer.from(await r.arrayBuffer())}
    res.writeHead(200,{'Content-Type':'text/plain; charset=utf-8','Content-Length':globalThis.__applePayAssoc.length,'Cache-Control':'public, max-age=3600'});return res.end(method==='HEAD'?undefined:globalThis.__applePayAssoc)}
+  if(method==='GET'&&pathname===`/${INDEXNOW_KEY}.txt`){res.writeHead(200,{'Content-Type':'text/plain; charset=utf-8','Cache-Control':'public, max-age=86400'});return res.end(INDEXNOW_KEY)}
   if(method==='GET'&&pathname==='/api/healthz')return json(res,200,{status:'ok',service:'replotre',version:'2.1.0'});
   if(method==='GET'&&pathname==='/api/status')return json(res,200,{cloud:true,authenticated:!!currentUser(req),ai:!!process.env.OPENAI_API_KEY,mp4:true,realtime:true,analysis:true,transcription:!!process.env.OPENAI_API_KEY,vision:!!process.env.OPENAI_API_KEY,director:true,maxRenderClips:120,signup:process.env.ALLOW_SIGNUP!=='false',google:googleConfigured(),inviteRequired:!!process.env.SIGNUP_INVITE_CODE,passwordReset:resetConfigured(),claude:claudeConfigured(),claudeModel:claudeConfigured()?CLAUDE_MODEL:null});
   if(method==='GET'&&pathname==='/api/events'){const user=authorized(req);return hub.connect(req,res,user,()=>!!currentUser(req))}

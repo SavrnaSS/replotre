@@ -1,5 +1,7 @@
 import {publicPages, getPublicPage, breadcrumbs, escapeHtml} from './public-pages.mjs';
 
+// IndexNow: public key served at /<key>.txt so Bing and other engines accept change notifications from this site.
+export const INDEXNOW_KEY = 'b5bfcdd61ec118107965c033df4b17f9';
 export const INDEX_ROBOTS = 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1';
 export const NOINDEX_ROBOTS = 'noindex, follow';
 
@@ -18,18 +20,35 @@ export function robotsText(origin, indexable = true) {
 
 export function sitemapXml(origin, indexable = true) {
   // No synthetic lastmod timestamps: only canonical, public URLs belong here.
-  const urls = indexable ? publicPages.map(page => `  <url><loc>${escapeHtml(origin + page.path)}</loc></url>`).join('\n') : '';
+  // lastmod only where a page records a real content update date.
+  const urls = indexable ? publicPages.map(page => `  <url><loc>${escapeHtml(origin + page.path)}</loc>${page.updated ? `<lastmod>${page.updated}</lastmod>` : ''}</url>`).join('\n') : '';
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`;
 }
 
-function structuredData(page, origin) {
-  const organization = {'@type':'Organization', '@id':origin+'/#organization', name:'Replotre', url:origin+'/', logo:{'@type':'ImageObject', url:origin+'/assets/brand/apple-touch-icon.png'}};
+const stripTags = s => s.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;|&rsquo;/g, '’').replace(/\s+/g, ' ').trim();
+// FAQ entries straight from the visible page, so structured data always matches what people can read.
+function faqFromHtml(html) {
+  const out = [];
+  for (const m of html.matchAll(/<details class="fq-item"[\s\S]*?<span class="fq-q">([\s\S]*?)<\/span>[\s\S]*?<div class="fq-a">([\s\S]*?)<\/div>\s*<\/details>/g)) out.push({q:stripTags(m[1]), a:stripTags(m[2])});
+  return out;
+}
+const faqLd = (items, id) => ({'@type':'FAQPage', '@id':id, mainEntity:items.map(({q, a}) => ({'@type':'Question', name:q, acceptedAnswer:{'@type':'Answer', text:a}}))});
+const PLAN_OFFERS = [['Creator', '12.00', '115.00'], ['Pro', '29.00', '278.00']];
+function structuredData(page, origin, html = '') {
+  const organization = {'@type':'Organization', '@id':origin+'/#organization', name:'Replotre', url:origin+'/', description:'Replotre makes an AI video editor that runs in the browser.', email:'hello@replotre.com', logo:{'@type':'ImageObject', url:origin+'/assets/brand/apple-touch-icon.png', width:180, height:180}};
   const website = {'@type':'WebSite', '@id':origin+'/#website', url:origin+'/', name:'Replotre', inLanguage:'en', publisher:{'@id':organization['@id']}};
   const webpage = {'@type':page.kind === 'collection' ? 'CollectionPage' : 'WebPage', '@id':origin+page.path+'#webpage', url:origin+page.path, name:page.title, description:page.description, inLanguage:'en', isPartOf:{'@id':website['@id']}, publisher:{'@id':organization['@id']}};
   const graph = [organization, website, webpage];
   if (page.path === '/') {
-    graph.push({'@type':'SoftwareApplication', '@id':origin+'/#software', name:'Replotre Studio', url:origin+'/', applicationCategory:'MultimediaApplication', operatingSystem:'Web browser', description:page.description, featureList:['Timeline video editing', 'AI Director editing', 'Speech captions', 'Video templates', 'MP4 and WebM export'], publisher:{'@id':organization['@id']}});
+    graph.push({'@type':'WebApplication', '@id':origin+'/#software', name:'Replotre', alternateName:['Replotre AI Video Editor', 'Replotre Studio'], url:origin+'/', applicationCategory:'MultimediaApplication', applicationSubCategory:'AI video editor', operatingSystem:'Web browser (Chrome, Edge, Brave, Arc)', browserRequirements:'Requires a current Chromium-based browser', description:page.description, image:origin+'/assets/og-image.jpg', screenshot:origin+'/assets/og-image.jpg',
+      featureList:['AI video editing from plain-language prompts (AI Director)', 'Multi-track timeline with trims, splits, speed and keyframes', 'Automatic speech captions with SRT and WebVTT export', 'AI-designed video templates and looks', 'Remove silence and split at scene changes', 'Vertical, landscape, square and portrait frames', 'MP4 and WebM export'],
+      offers:PLAN_OFFERS.flatMap(([name, month, year]) => [
+        {'@type':'Offer', name:`${name} (monthly)`, price:month, priceCurrency:'USD', category:'subscription', url:origin+'/studio', priceSpecification:{'@type':'UnitPriceSpecification', price:month, priceCurrency:'USD', billingDuration:'P1M', unitText:'MONTH'}},
+        {'@type':'Offer', name:`${name} (yearly)`, price:year, priceCurrency:'USD', category:'subscription', url:origin+'/studio', priceSpecification:{'@type':'UnitPriceSpecification', price:year, priceCurrency:'USD', billingDuration:'P1Y', unitText:'YEAR'}}]),
+      publisher:{'@id':organization['@id']}});
     webpage.mainEntity = {'@id':origin+'/#software'};
+    const faq = faqFromHtml(html);
+    if (faq.length) graph.push(faqLd(faq, origin+'/#faq'));
   } else {
     const breadcrumbId = origin+page.path+'#breadcrumb';
     graph.push({'@type':'BreadcrumbList', '@id':breadcrumbId, itemListElement:breadcrumbs(page).map((crumb, index) => ({'@type':'ListItem', position:index+1, name:crumb.label, item:origin+crumb.path}))});
@@ -39,6 +58,8 @@ function structuredData(page, origin) {
     graph.push({'@type':'TechArticle', '@id':origin+page.path+'#article', headline:page.heading, description:page.description, image:origin+'/assets/og-image.jpg', inLanguage:'en', author:{'@id':organization['@id']}, publisher:{'@id':organization['@id']}, mainEntityOfPage:{'@id':webpage['@id']}});
     webpage.mainEntity = {'@id':origin+page.path+'#article'};
   }
+  if (page.faq?.length) graph.push(faqLd(page.faq.map(([q, a]) => ({q, a})), origin+page.path+'#faq'));
+  if (page.updated) webpage.dateModified = page.updated;
   if (page.kind === 'collection') webpage.mainEntity = {'@type':'ItemList', itemListElement:publicPages.filter(p => p.kind === 'article').map((p, index) => ({'@type':'ListItem', position:index+1, name:p.label, url:origin+p.path}))};
   return {'@context':'https://schema.org', '@graph':graph};
 }
@@ -79,7 +100,7 @@ export function applySeo(html, pathname, origin, {indexable = true, googleVerifi
   if (page) {
     if (googleVerification.trim()) tags.push(`<meta name="google-site-verification" content="${escapeHtml(googleVerification.trim())}" />`);
     if (bingVerification.trim()) tags.push(`<meta name="msvalidate.01" content="${escapeHtml(bingVerification.trim())}" />`);
-    const json = JSON.stringify(structuredData(page, origin)).replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
+    const json = JSON.stringify(structuredData(page, origin, html)).replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
     tags.push(`<script type="application/ld+json">${json}</script>`);
   }
   return clean.replace('</head>', tags.join('\n')+'\n</head>');
