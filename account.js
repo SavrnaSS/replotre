@@ -26,12 +26,9 @@ const LABEL={
  captionStyle:{box:'Highlight box',karaoke:'Karaoke',script:'Script accent',minimal:'Minimal'}
 };
 const STEPS=[
- {id:'account',label:'Sign up',title:'Create your account.',sub:'Your projects, media and plan live in your Replotre account. It takes a minute.'},
- {id:'about',label:'About you',title:'Who are you?',sub:'We’ll tailor the studio to you.'},
- {id:'work',label:'Your work',title:'What will you make?',sub:'Pick all that apply.'},
- {id:'style',label:'Style',title:'Your default look',sub:'Change it any time in the studio.'},
- {id:'plan',label:'Plan',title:'Choose your plan',sub:'Start free. Upgrade any time.'},
- {id:'ready',label:'Ready',title:'Your studio is ready.',sub:''}
+ {id:'account',label:'Sign up',title:'Create your account.',sub:''},
+ {id:'about',label:'You',title:'Make it yours',sub:'One quick pick and you’re in.'},
+ {id:'plan',label:'Plan',title:'Choose your plan',sub:'Start free. Upgrade any time.'}
 ];
 
 /* ---------- Data ---------- */
@@ -56,10 +53,10 @@ function renderChip(){let chip=document.getElementById('planChip');const a=S.acc
 function ensureOb(){let el=document.querySelector('.ob');if(!el){el=document.createElement('div');el.className='ob';el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.setAttribute('aria-labelledby','obTitle');document.body.appendChild(el);el.addEventListener('click',onObClick);el.addEventListener('input',onObInput);el.addEventListener('keydown',onObKey);el.addEventListener('submit',onAuthSubmit);el.addEventListener('focusout',e=>{if(e.target.id==='auEmail'&&!e.relatedTarget?.matches?.('[data-ob=fix-email]'))checkEmailField(e.target,true)});
   el._inert=[...document.body.children].filter(n=>n!==el&&!n.inert);for(const n of el._inert)n.inert=true;document.body.style.overflow='hidden'}return el}
 async function startOnboarding(fromStep){await Promise.all([S.account?null:loadAccount(),loadPlans()]);if(!S.account)return;
- const p=S.account.profile||{};const miss=p.setupMissing||[],gap=miss.includes('role')?'about':miss.includes('goals')?'work':miss.includes('aspect')?'style':null;
+ const p=S.account.profile||{};const miss=p.setupMissing||[],gap=miss.length?'about':null;
  // resume at the first unanswered step (an older account marked done but missing answers starts there, not at step 1)
  const first=fromStep??(gap&&p.step>=STEPS.findIndex(x=>x.id===gap)?STEPS.findIndex(x=>x.id===gap):Math.min(STEPS.length-1,Math.max(1,p.onboardedAt?1:(p.step||1))));
- S.ob={step:first,data:{...p},dir:1,anim:true};ensureOb();renderOb();ungate()}
+ S.ob={step:first,data:{aspect:'9:16',...p},dir:1,anim:true};ensureOb();renderOb();ungate()}
 /* Account gate: the studio is for signed-in creators. Step 0 of the same flow is sign up / sign in. */
 function startGate(){try{const e=localStorage.getItem('replotre_last_email'),m=localStorage.getItem('replotre_last_method');if(m==='google')S.authMode='login';else if(e&&!S.authEmail){S.authEmail=e;S.authMode='login'}}catch{}S.ob={step:0,data:{},dir:1,gate:true};ensureOb();renderOb();document.documentElement.classList.remove('rp-gate')}// the full-screen sign-up covers the page; no editor needed
 /* The editor (7 stylesheets, 8 scripts) is preloaded by the page but only applied/executed here, when it's needed:
@@ -78,7 +75,7 @@ const editorReady=()=>ensureEditor().then(()=>E()?.ready?null:new Promise(r=>add
 function ungate(){ensureEditor().then(()=>document.documentElement.classList.remove('rp-gate'))}
 function closeOnboarding(){const el=document.querySelector('.ob');ungate();if(!el)return;for(const n of el._inert||[])n.inert=false;document.body.style.overflow='';el.remove();S.ob=null;renderChip()}
 const sel=(k,v)=>Array.isArray(S.ob.data[k])?S.ob.data[k].includes(v):S.ob.data[k]===v;
-function valid(step){const d=S.ob.data;switch(STEPS[step].id){case 'about':return !!d.role&&(d.role!=='other'||!!(d.roleOther||'').trim());case 'work':return (d.goals||[]).length>0;case 'style':return !!d.aspect;case 'experience':return !!d.experience&&!!d.team;default:return true}}
+function valid(step){const d=S.ob.data;switch(STEPS[step].id){case 'about':return !!d.role&&!!d.aspect&&(d.role!=='other'||!!(d.roleOther||'').trim());case 'work':return (d.goals||[]).length>0;case 'style':return !!d.aspect;case 'experience':return !!d.experience&&!!d.team;default:return true}}
 function recommendWhy(){const d=S.ob?.data||S.account?.profile||{},p=recommend(),cad={daily:'every day',weekly:'every week'}[d.cadence];
  if(p==='pro')return d.team==='mid'||d.team==='large'?'you edit with a team':d.role==='agency'?'you work for clients as an agency':'you publish daily at a professional level';
  if(p==='creator')return cad?`you publish ${cad}`:`you're a ${({social:'social media manager',agency:'marketing team',freelance:'freelance editor',business:'business owner'})[d.role]||(LABEL.role[d.role]||'creator').toLowerCase()}`;
@@ -166,9 +163,11 @@ async function finishOnboarding(start){saveProfile({},{step:STEPS.length-1,compl
  E()?.notify(S.ob?.data?.name?`Welcome to Replotre, ${S.ob.data.name}`:'Welcome to Replotre')}
 function stepBody(id){const d=S.ob.data;
  if(id==='account')return authBody();
- if(id==='about')return `<label class="ob-field"><span>What should we call you? <small>Optional</small></span><input type="text" maxlength="60" autocomplete="given-name" data-ob-text="name" value="${esc(d.name||'')}" placeholder="Your first name"></label>
+ if(id==='about'){const frames=Object.entries(LABEL.aspect).map(([v,l])=>{const [w,h]=v.split(':').map(Number),k=26/Math.max(w,h);return `<button type="button" class="ob-aspect${sel('aspect',v)?' is-on':''}" role="radio" aria-checked="${sel('aspect',v)}" data-ob-pick="aspect" data-value="${v}"><i style="width:${(w*k).toFixed(1)}px;height:${(h*k).toFixed(1)}px"></i><strong>${v}</strong><small>${l}</small></button>`}).join('');
+  return `<label class="ob-field ob-name"><span>Your name <small>Optional</small></span><input type="text" maxlength="60" autocomplete="given-name" data-ob-text="name" value="${esc(d.name||'')}" placeholder="First name"></label>
   <div class="ob-group"><span class="ob-label">I'm a…</span>${chips('role')}</div>
-  ${d.role==='other'?`<label class="ob-field ob-field-inline"><span>Tell us more</span><input type="text" maxlength="60" data-ob-text="roleOther" value="${esc(d.roleOther||'')}" placeholder="e.g. Teacher, musician, nonprofit"></label>`:''}`;
+  ${d.role==='other'?`<label class="ob-field ob-field-inline"><span>Tell us more</span><input type="text" maxlength="60" data-ob-text="roleOther" value="${esc(d.roleOther||'')}" placeholder="e.g. Teacher, musician, nonprofit"></label>`:''}
+  <div class="ob-group"><span class="ob-label">Default frame <small>Change any time</small></span><div class="ob-aspects" role="radiogroup" aria-label="Default frame">${frames}</div></div>`}
  if(id==='work')return `<div class="ob-group">${chips('goals',{multi:true,icons:{shorts:'monitor-play',youtube:'film',ads:'zap',podcast:'volume-2',tutorial:'captions',realestate:'layout',events:'sparkles',brand:'palette'}})}</div>`;
  if(id==='style'){const C=window.ReplotreTemplateCatalog;const favs=d.favoriteTemplates||[];const want=new Set(d.goals||[]);
   const tpls=(C?.TEMPLATES||[]).slice().sort((a,b)=>score(b,want)-score(a,want)).slice(0,8);
@@ -187,7 +186,7 @@ function previewPoster(d){const C=window.ReplotreTemplateCatalog;const fav=(d.fa
 function obSummary(d){const c=[];const n=(k,one,many)=>{const v=(d[k]||[]).length;if(v)c.push(v===1?LABEL[k][d[k][0]]:`${v} ${many}`)};
  if(d.aspect)c.push(`${d.aspect} ${LABEL.aspect[d.aspect]}`);if(d.captionStyle)c.push(LABEL.captionStyle[d.captionStyle]);n('goals','','formats');n('platforms','','platforms');
  if(d.cadence)c.push(LABEL.cadence[d.cadence]);if(d.experience)c.push(LABEL.experience[d.experience][0]);if(d.team)c.push(LABEL.team[d.team]);
- const ids=['about','work','style'],done=ids.filter(id=>valid(STEPS.findIndex(x=>x.id===id))).length,total=ids.length;
+ const ids=['about'],done=ids.filter(id=>valid(STEPS.findIndex(x=>x.id===id))).length,total=ids.length;
  return `<div class="obp-sum"><div class="obp-chips">${c.length?c.slice(0,4).map(x=>`<span>${esc(x)}</span>`).join('')+(c.length>4?`<span class="more">+${c.length-4}</span>`:''):'<em>Your picks will show up here</em>'}</div><span class="obp-prog" aria-label="${done} of ${total} sections done"><i style="--p:${(done/total*100).toFixed(0)}%"></i>${done}/${total}</span></div>`}
 function obPreview(){const d=S.ob.data,i=S.ob.step,id=STEPS[i].id;
  const name=(d.name||'').trim(),role=d.role==='other'?(d.roleOther||'').trim()||'Other':LABEL.role[d.role]||'';
@@ -198,10 +197,9 @@ function obPreview(){const d=S.ob.data,i=S.ob.step,id=STEPS[i].id;
  const tpls=(d.favoriteTemplates||[]).map(x=>window.ReplotreTemplateCatalog?.get(x)?.name).filter(Boolean);
  return `<aside class="obp" aria-label="Your studio preview"><div class="obp-card">
   <div class="obp-head"><span class="obp-avatar" aria-hidden="true">${esc((name||'R')[0].toUpperCase())}</span><div><strong class="obp-name">${esc(name||'Your studio')}</strong><small>${esc(role||'Live preview')}</small></div><span class="obp-live" aria-hidden="true"><i></i>Live</span></div>
-  <div class="obp-stage${id==='style'?' is-active':''}" aria-hidden="true"><div class="obp-frame" style="--fw:${(w*k).toFixed(0)}px;--fh:${(h*k).toFixed(0)}px"><img src="/assets/templates/${esc(poster)}.jpg" alt=""><span class="obp-cap obp-cap-${cs}">${CAP_DEMO[cs]}</span><span class="obp-ar">${esc(d.aspect||'9:16')}</span></div></div>
+  <div class="obp-stage${id==='about'?' is-active':''}" aria-hidden="true"><div class="obp-frame" style="--fw:${(w*k).toFixed(0)}px;--fh:${(h*k).toFixed(0)}px"><img src="/assets/templates/${esc(poster)}.jpg" alt=""><span class="obp-cap obp-cap-${cs}">${CAP_DEMO[cs]}</span><span class="obp-ar">${esc(d.aspect||'9:16')}</span></div></div>
   <dl class="obp-facts">
-   ${row('Makes',list('goals',4),id==='work')}
-   ${row('Look',d.aspect?`<span>${esc(d.aspect)} ${esc(LABEL.aspect[d.aspect])}</span>${d.captionStyle?`<span>${esc(LABEL.captionStyle[d.captionStyle])}</span>`:''}${tpls.length?`<span>${esc(tpls.length)} favourite${tpls.length>1?'s':''}</span>`:''}`:'',id==='style')}
+   ${row('Look',d.aspect?`<span>${esc(d.aspect)} ${esc(LABEL.aspect[d.aspect])}</span>${d.captionStyle?`<span>${esc(LABEL.captionStyle[d.captionStyle])}</span>`:''}${tpls.length?`<span>${esc(tpls.length)} favourite${tpls.length>1?'s':''}</span>`:''}`:'',id==='about')}
   </dl>${obSummary(d)}</div>
   <p class="obp-note">${ico('sparkles')}Everything here becomes your studio’s defaults. Change it any time.</p></aside>`}
 function renderOb(){const el=document.querySelector('.ob');if(!el||!S.ob)return;const i=S.ob.step,st=STEPS[i],total=STEPS.length-1;const last=i===total;
@@ -234,9 +232,12 @@ function planCarousel(el,first){const g=el.querySelector('.pl[data-context=onboa
  dots.forEach((d,k)=>d.addEventListener('click',()=>go(k)));g.addEventListener('scroll',()=>requestAnimationFrame(mark),{passive:true});
  requestAnimationFrame(()=>{if(g.scrollWidth<=g.clientWidth+4)return;if(first||S.plScroll==null){const k=Math.max(0,cards.findIndex(c=>c.classList.contains('is-featured')));const c=cards[k];g.scrollLeft=c.offsetLeft-(g.clientWidth-c.offsetWidth)/2}else g.scrollLeft=S.plScroll;mark()});
  g.addEventListener('scroll',()=>{S.plScroll=g.scrollLeft},{passive:true})}
+async function finishSetup(){await saveProfile({},{step:STEPS.length-1,complete:true});const miss=S.account?.profile?.setupMissing||[];
+ if(miss.length&&S.ob){S.ob.dir=-1;S.ob.anim=true;S.ob.step=STEPS.findIndex(x=>x.id==='about');renderOb();E()?.notify('One more pick needed to finish setup');return false}
+ applyPrefs();closeOnboarding();editorReady().then(()=>E()?.notify(S.ob?.data?.name?`Welcome to Replotre, ${S.ob.data.name}`:'Welcome to Replotre'));return true}
 async function go(delta){const o=S.ob;if(!o)return;const next=o.step+delta;if(delta>0&&!valid(o.step))return;
  if(delta>0)await saveProfile({},{step:next});
- if(next>=STEPS.length){await saveProfile({},{step:STEPS.length-1,complete:true});applyPrefs();closeOnboarding();E()?.notify('Welcome to Replotre');return}
+ if(next>=STEPS.length){await finishSetup();return}
  if(STEPS[next].id==='ready'){await saveProfile({},{step:next,complete:true});const miss=S.account?.profile?.setupMissing||[];
   if(miss.length){const id=miss.includes('role')?'about':miss.includes('goals')?'work':'style';o.dir=-1;o.anim=true;o.step=STEPS.findIndex(x=>x.id===id);renderOb();E()?.notify('One more answer needed to finish setup');return}}
  o.dir=delta;o.anim=true;o.step=Math.max(1,next);renderOb()}
@@ -305,7 +306,7 @@ async function choosePlan(planId,context){const btns=document.querySelectorAll(`
    // Local/http: Whop can't send the buyer back, so checkout opens in a new tab and we watch for the membership.
    window.open(r.url,'_blank','noopener');btns.forEach(b=>{b.innerHTML='<span class="acct-spin"></span>Waiting for payment…'});awaitCheckout(context);return}
   if(r.account){S.account=r.account;renderChip();E()?.notify(planId==='free'?'You are on the Free plan':`${S.account.plan.name} is active${r.test?' (test mode)':''}`);
-   if(context==='onboarding'){S.ob.dir=1;S.ob.step=STEPS.findIndex(s=>s.id==='ready');await saveProfile({},{step:S.ob.step,complete:true});renderOb()}else renderCenter()}}
+   if(context==='onboarding')await finishSetup();else renderCenter()}}
  catch(e){E()?.notify(e.message);btns.forEach(b=>{b.disabled=false;b.innerHTML=b.dataset.label||'Choose'})}}
 
 /* ---------- Account centre ---------- */
@@ -362,7 +363,7 @@ async function onCenterSubmit(e){e.preventDefault();const f=e.target,btn=f.query
 
 async function awaitCheckout(context){E()?.notify('Finish payment in the Whop tab. Your plan unlocks here automatically.');const t0=Date.now(),before=S.account?.plan?.id||'free';
  while(Date.now()-t0<10*60000){await new Promise(r=>setTimeout(r,document.visibilityState==='visible'?3000:6000));let a;try{a=(await api('/api/billing/refresh',{method:'POST'})).account}catch{continue}
-  if(a?.plan?.id&&a.plan.id!=='free'&&a.plan.id!==before){S.account=a;renderChip();E()?.notify(`Welcome to ${a.plan.name}`);if(context==='onboarding'&&S.ob){S.ob.dir=1;S.ob.step=STEPS.findIndex(s=>s.id==='ready');await saveProfile({},{step:S.ob.step,complete:true});renderOb()}else renderCenter();return}}
+  if(a?.plan?.id&&a.plan.id!=='free'&&a.plan.id!==before){S.account=a;renderChip();E()?.notify(`Welcome to ${a.plan.name}`);if(context==='onboarding'&&S.ob)await finishSetup();else renderCenter();return}}
  E()?.notify('Still waiting on Whop. Your plan unlocks as soon as the payment is confirmed.');document.querySelectorAll('[data-plan]').forEach(b=>{b.disabled=false});renderCenter()}
 /* ---------- Upgrade prompt, billing return, lifecycle ---------- */
 function upgrade({message}={}){if(!Cloud()?.isConnected?.())return;openCenter('plans',message||'Upgrade to unlock this')}
@@ -372,7 +373,7 @@ async function billingReturn(){const u=new URL(location.href),state=u.searchPara
   // Whop confirms the membership by webhook; wait for it (up to ~40s), refreshing from Whop as we go.
   for(let i=0;i<20;i++){try{S.account=(await api('/api/billing/refresh',{method:'POST'})).account}catch{}if(S.account?.plan?.id&&S.account.plan.id!=='free'&&S.account.plan.id!==before||S.account?.subscription?.provider==='whop'&&S.account.plan.id!=='free')break;await new Promise(r=>setTimeout(r,2000))}
   renderChip();const ok=S.account?.plan?.id&&S.account.plan.id!=='free';E()?.notify(ok?`Welcome to ${S.account.plan.name}`:'Your payment is processing. Your plan unlocks as soon as Whop confirms it.');
-  if(ctx==='onboarding'&&!S.account?.profile?.onboardedAt)startOnboarding(STEPS.findIndex(s=>s.id==='ready'));else openCenter(ok?'overview':'billing')}
+  if(ctx==='onboarding'&&!S.account?.profile?.onboardedAt){if(!S.ob)S.ob={step:STEPS.length-1,data:{...(S.account?.profile||{})},dir:1};await finishSetup()}else openCenter(ok?'overview':'billing')}
  else if(state==='cancel'){E()?.notify('Checkout cancelled. Nothing was charged.');if(ctx==='onboarding')startOnboarding(STEPS.findIndex(s=>s.id==='plan'))}
  else if(state==='return'){try{S.account=(await api('/api/billing/refresh',{method:'POST'})).account}catch{await loadAccount()}renderChip();openCenter('billing')}}
 let wasConnected=false;

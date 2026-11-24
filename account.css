@@ -898,3 +898,12 @@ html.rp-bare body>*:not(.ob){display:none!important}
  .ob:has(.au-wall) .au-feats-row{padding:0}
  .au-wall.is-phone:after{background:linear-gradient(180deg,#0c0d0f99 0%,#0c0d0f66 30%,#0c0d0f99 70%,#0c0d0fe6 100%)}
 }
+/* One-screen setup: name, role, frame */
+.obx-main[data-step=about] .ob-name{max-width:420px}
+.obx-main[data-step=about] .ob-label small{letter-spacing:.02em;text-transform:none;font-weight:600;color:var(--a-faint);margin-left:6px}
+.obx-main[data-step=about] .ob-aspects{grid-template-columns:repeat(4,minmax(0,1fr));max-width:560px;gap:8px}
+.obx-main[data-step=about] .ob-aspects button.ob-aspect{padding:12px 6px 10px;gap:3px}
+.obx-main[data-step=about] .ob-aspects button.ob-aspect strong{font-size:13.5px}
+.obx-main[data-step=about] .ob-aspects button.ob-aspect small{font-size:11px}
+@media (max-width:640px){.obx-main[data-step=about] .ob-body{gap:16px}.obx-main[data-step=about] .ob-name input{height:46px}}
+.obp-prog{display:none!important}

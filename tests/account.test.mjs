@@ -41,8 +41,8 @@ test('onboarding profile, plan limits, test-mode subscriptions and Whop webhooks
  const plans=await call('/api/billing/plans');assert.deepEqual(plans.json.plans.map(p=>p.id),['free','creator','pro']);
 
  // Setup can't be finished while required answers are missing
- let early=await call('/api/account/profile',{method:'PUT',body:{profile:{},step:6,complete:true}});assert.equal(early.status,400);assert.match(early.json.error,/role, goals, aspect/);
- acct=await call('/api/account');assert.deepEqual(acct.json.profile.setupMissing,['role','goals','aspect']);assert.equal(acct.json.profile.onboardedAt,null);
+ let early=await call('/api/account/profile',{method:'PUT',body:{profile:{},step:6,complete:true}});assert.equal(early.status,400);assert.match(early.json.error,/role, aspect/);
+ acct=await call('/api/account');assert.deepEqual(acct.json.profile.setupMissing,['role','aspect']);assert.equal(acct.json.profile.onboardedAt,null);
 
  // Profile validation and resume
  assert.equal((await call('/api/account/profile',{method:'PUT',body:{profile:{role:'wizard'}}})).status,400);

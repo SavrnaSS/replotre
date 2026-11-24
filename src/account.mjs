@@ -1,8 +1,8 @@
 /** Accounts: onboarding profile, plans, entitlements and Whop billing. */
 import {createHmac,timingSafeEqual} from 'node:crypto';
 import {json,bodyJSON,err,now,uuid} from './core.mjs';
-// Setup is finished only when the answers the steps ask for are present (role, what they make, default frame).
-export const setupMissing=d=>[!d?.role&&'role',!(Array.isArray(d?.goals)&&d.goals.length)&&'goals',!d?.aspect&&'aspect'].filter(Boolean);
+// Setup is finished only when the answers the steps ask for are present (role and default frame).
+export const setupMissing=d=>[!d?.role&&'role',!d?.aspect&&'aspect'].filter(Boolean);
 
 /* ---------- Plans ----------
    Every limit listed here is enforced by the server (AI requests, storage, upload size, export resolution, render length).
