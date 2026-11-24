@@ -27,8 +27,8 @@ const LABEL={
 };
 const STEPS=[
  {id:'account',label:'Sign up',title:'Create your account.',sub:''},
- {id:'about',label:'You',title:'Who are you?',sub:'Tell us how you’ll use Replotre. We’ll set up the studio around it.'},
- {id:'frame',label:'Frame',title:'Where will you post?',sub:'Pick the shape your videos usually start in. You can change it on any project.'},
+ {id:'about',label:'You',title:'Who are you?',sub:'We use this to set up your studio and suggest a plan'},
+ {id:'frame',label:'Frame',title:'Where will you post?',sub:'New projects start in this shape. You can change it on any project'},
  {id:'plan',label:'Plan',title:'Choose your plan',sub:'Pick a plan to open your studio. Cancel any time'}
 ];
 
@@ -227,7 +227,7 @@ function renderOb(){const el=document.querySelector('.ob');if(!el||!S.ob)return;
  <main class="ob-main obx-main${anim?` ob-dir-${S.ob.dir>0?'next':'prev'} is-anim`:''}" data-step="${st.id}">
   <div class="obx-grid${side?' has-side':''}">
    <section class="ob-content obx-content"><i class="fx-vf" aria-hidden="true"><b></b><b></b><b></b><b></b></i>${['about','frame','plan'].includes(st.id)?`<div class="q-top">${i>1?`<button type="button" class="q-back" data-ob="back">${ico('chevron-down')}<span>Back</span></button>`:'<span></span>'}<div class="q-prog" role="progressbar" aria-valuemin="1" aria-valuemax="${STEPS.length-1}" aria-valuenow="${i}" aria-label="Step ${i} of ${STEPS.length-1}">${STEPS.slice(1).map((x,k)=>`<i class="${k+1<i?'done':k+1===i?'on':''}"></i>`).join('')}</div></div>`:''}${last?`<div class="rd-mark${anim?' is-anim':''}" aria-hidden="true">${ico('check')}${'<i></i>'.repeat(10)}</div>`:''}<p class="obx-kicker">${esc(st.label)}</p><h1 id="obTitle" tabindex="-1">${esc(last?((S.ob.data.name||'').trim()?`You’re all set, ${S.ob.data.name.trim()}.`:'You’re all set.'):st.title)}</h1>${last?`<p class="ob-sub">Your studio is tuned to how you work. Change anything here, or later in Settings.</p>`:st.sub?`<p class="ob-sub">${esc(st.sub)}</p>`:''}
-    <div class="ob-body">${stepBody(st.id)}</div>${['about','frame'].includes(st.id)?`<div class="obx-inline"><button type="button" class="ob-next" data-ob="next" ${valid(i)?'':'disabled'}><span>${valid(i)?'Continue':st.id==='about'?'Choose an option to continue':'Choose a frame to continue'}</span>${ico('arrow-up')}</button><span class="ob-hint" aria-hidden="true">or press <kbd>Enter ↵</kbd></span></div>`:''}</section>
+    <div class="ob-body">${stepBody(st.id)}</div>${['about','frame'].includes(st.id)?`<div class="obx-inline"><button type="button" class="ob-next" data-ob="next" ${valid(i)?'':'disabled'}><span>${valid(i)?'Continue':st.id==='about'?'Choose an option to continue':'Choose a frame to continue'}</span>${ico('arrow-up')}</button></div>`:''}</section>
    ${side?obPreview():''}
   </div></main>
  ${['about','frame'].includes(st.id)?'':`<footer class="obx-bar"><div class="obx-bar-in">
@@ -310,7 +310,7 @@ function plansMarkup({recommended,context,reason,why}={}){const plans=S.plans||[
   ${reason?`<div class="pl-reason">${ico('zap')}<span>${esc(reason)}</span></div>`:''}
   ${why&&recName?`<div class="pl-why">${ico('sparkles')}<span>We recommend <b>${esc(recName)}</b> because ${esc(why)}.</span></div>`:''}
   <div class="pl-head"><div class="pl-toggle" role="radiogroup" aria-label="Billing period"><button type="button" role="radio" aria-checked="${S.interval==='month'}" data-interval="month">Monthly</button><button type="button" role="radio" aria-checked="${S.interval==='year'}" data-interval="year">Yearly${maxSave?` <em>Save ${maxSave}%</em>`:''}</button></div>
-   ${S.mode==='test'?`<span class="pl-test" title="No card is charged. Add WHOP_API_KEY to take payments.">${ico('shield-check')}Test mode<span class="pl-more">, no charge</span></span>`:S.mode==='off'?`<span class="pl-test">Payments are not configured</span>`:`<span class="pl-secure">${ico('shield-check')}Secure checkout by Whop</span>`}</div>
+   ${S.mode==='test'?`<span class="pl-test" title="No card is charged. Add WHOP_API_KEY to take payments.">${ico('shield-check')}Test mode<span class="pl-more"> · no charge</span></span>`:S.mode==='off'?`<span class="pl-test">Payments are not configured</span>`:`<span class="pl-secure">${ico('shield-check')}Secure checkout by Whop</span>`}</div>
   <div class="pl-grid">${plans.map(p=>{const pr=planPrice(p),isCur=p.id===cur,rec=p.id===recommended&&!isCur,locked=sub?.provider==='whop'&&cur!=='free'&&!isCur,can=p.purchasable?.[S.interval]!==false&&S.mode!=='off'&&!locked;
    return `<article class="pl-card${isCur?' is-current':''}${rec||(!recommended&&p.popular&&!isCur)?' is-featured':''}">
     ${isCur?'<span class="pl-flag">Current plan</span>':rec?'<span class="pl-flag is-rec">Recommended for you</span>':p.popular&&!recommended?'<span class="pl-flag is-rec">Most popular</span>':''}
