@@ -335,7 +335,7 @@ function loadWhopElements(){if(window.WhopElements)return Promise.resolve(true);
  whopLoader=new Promise(res=>{const sc=document.createElement('script');sc.src='https://cdn.whop.com/elements/amber/elements.js';sc.async=true;sc.setAttribute('data-whop-elements','');
   const t=setTimeout(()=>res(false),12000);sc.onload=()=>{clearTimeout(t);res(!!window.WhopElements)};sc.onerror=()=>{clearTimeout(t);res(false)};document.head.appendChild(sc)});
  return whopLoader}
-function closeCheckout(){const el=document.querySelector('.ck');if(!el)return;try{el._checkout?.unmount?.()}catch{}el.classList.add('is-out');setTimeout(()=>el.remove(),220);document.removeEventListener('keydown',el._esc)}
+function closeCheckout(){const el=document.querySelector('.ck');if(!el)return;try{el._checkout?.unmount?.();el._wallets?.unmount?.()}catch{}el.classList.add('is-out');setTimeout(()=>el.remove(),220);document.removeEventListener('keydown',el._esc)}
 async function openEmbeddedCheckout(planId,r,context){
  if(!await loadWhopElements())return false;
  const p=(S.plans||[]).find(x=>x.id===planId);if(!p)return false;const pr=planPrice(p),yearly=S.interval==='year';
@@ -350,7 +350,7 @@ async function openEmbeddedCheckout(planId,r,context){
    <div class="ck-total"><span>Due today</span><b>${yearly?money(p.price.year):money(p.price.month)}</b></div>
    <p class="ck-fine">${ico('shield-check')}<span>Secure payment by Whop. Renews ${yearly?'yearly':'monthly'} until you cancel; cancel any time. Your bank may show the amount in your local currency.</span></p>
   </aside>
-  <section class="ck-pay"><div class="ck-loading"><span class="acct-spin"></span>Loading secure checkout…</div><div id="ckMount" class="ck-mount"></div></section>
+  <section class="ck-pay"><div class="ck-loading"><span class="acct-spin"></span>Loading secure checkout…</div><div id="ckWallets" class="ck-wallets" hidden></div><div class="ck-or" hidden><span>or pay with card</span></div><div id="ckMount" class="ck-mount"></div></section>
  </div>`;
  document.body.appendChild(el);el.addEventListener('click',e=>{if(e.target.closest('[data-ck=close]'))closeCheckout()});
  el._esc=e=>{if(e.key==='Escape')closeCheckout()};document.addEventListener('keydown',el._esc);
@@ -359,13 +359,19 @@ async function openEmbeddedCheckout(planId,r,context){
   const returnUrl=location.origin.startsWith('https://')?`${location.origin}/studio?billing=success`:undefined;
   const group=whop.checkout.create({checkoutConfiguration:r.checkoutConfiguration,...(returnUrl?{returnUrl}:{}),
    onLoadingChange:({loading})=>el.querySelector('.ck-loading')?.toggleAttribute('hidden',!loading),
-   onComplete:async()=>{el.querySelector('.ck-pay').innerHTML=`<div class="ck-done"><span class="acct-spin"></span><strong>Payment received</strong><small>Activating your plan…</small></div>`;
+   onComplete:el._onDone=async()=>{if(el._completed)return;el._completed=true;el.querySelector('.ck-pay').innerHTML=`<div class="ck-done"><span class="acct-spin"></span><strong>Payment received</strong><small>Activating your plan…</small></div>`;
     sessionStorage.setItem('replotre_billing_ctx',context);
     for(let i=0;i<20&&!S.account?.subscribed;i++){try{S.account=(await api('/api/billing/refresh',{method:'POST'})).account}catch{}if(!S.account?.subscribed)await new Promise(x=>setTimeout(x,2000))}
     renderChip();closeCheckout();
     if(S.account?.subscribed){E()?.notify?.(`Welcome to ${S.account.plan.name}`);if(context==='onboarding'||document.querySelector('.ob'))await enterStudio();else renderCenter()}
     else showPaywall('Your payment is processing. The studio opens as soon as Whop confirms it')}});
   const node=group.create('checkout');node.mount('#ckMount');el._checkout=node;
+  // Wallets (Apple Pay / Google Pay / PayPal) are a separate express element; it only shows buttons the device and domain support.
+  try{const wg=whop.checkout.create({checkoutConfiguration:r.checkoutConfiguration,...(returnUrl?{returnUrl}:{}),onComplete:(...a)=>el._onDone?.(...a)});
+   const ex=wg.create('expressCheckout',{wallets:{applePay:'auto',googlePay:'auto',payPal:'auto'},layout:'horizontal',
+    onReady:()=>{el.querySelector('#ckWallets').hidden=false;el.querySelector('.ck-or').hidden=false},
+    onError:e=>{console.info('[checkout] wallets unavailable',e?.code||e);el.querySelector('#ckWallets').hidden=true;el.querySelector('.ck-or').hidden=true}});
+   ex.mount('#ckWallets');el._wallets=ex}catch(e){console.info('[checkout] express checkout not available',e)}
   setTimeout(()=>el.querySelector('.ck-loading')?.setAttribute('hidden',''),9000);
   return true}
  catch(err){console.warn('[checkout] embed failed, using hosted checkout',err);el.remove();document.removeEventListener('keydown',el._esc);return false}}
