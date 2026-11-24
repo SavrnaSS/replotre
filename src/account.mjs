@@ -58,7 +58,11 @@ function cleanProfile(input,prev={}){
 
 /* ---------- Subscription state ---------- */
 export function subscriptionRow(db,userId){return db.prepare('SELECT * FROM subscriptions WHERE user_id=?').get(userId)||null}
-export function effectivePlan(db,userId){const s=subscriptionRow(db,userId);if(!s||!ACTIVE.has(s.status))return planById('free');if(s.current_period_end&&s.current_period_end<now()-3*86400000)return planById('free');return planById(s.plan)}
+// Complimentary access: emails in STUDIO_FREE_ACCESS_EMAILS (comma-separated) get Pro without paying (owners, testers, friends).
+const compEmails=()=>new Set(String(process.env.STUDIO_FREE_ACCESS_EMAILS||'').split(',').map(e=>e.trim().toLowerCase()).filter(Boolean));
+function isComp(db,userId){const set=compEmails();if(!set.size)return false;const u=db.prepare('SELECT email FROM users WHERE id=?').get(userId);return !!u&&set.has(String(u.email).toLowerCase())}
+export function effectivePlan(db,userId){const s=subscriptionRow(db,userId),paid=s&&ACTIVE.has(s.status)&&!(s.current_period_end&&s.current_period_end<now()-3*86400000)&&s.plan!=='free';
+ if(paid)return planById(s.plan);if(isComp(db,userId))return {...planById('pro'),name:'Pro (complimentary)',comp:true};return planById('free')}
 export function entitlements(db,userId){const plan=effectivePlan(db,userId);return {plan:plan.id,...plan.limits,maxFileBytes:plan.limits.maxFileMB*1024*1024,maxStorageBytes:plan.limits.storageGB*1024**3}}
 function upsertSubscription(db,userId,fields){const prev=subscriptionRow(db,userId)||{};const row={plan:'free',status:'inactive',interval:null,provider:'none',customer_id:null,subscription_id:null,current_period_end:null,cancel_at_period_end:0,...prev,...fields,updated_at:now()};
  db.prepare(`INSERT INTO subscriptions(user_id,plan,status,interval,provider,customer_id,subscription_id,current_period_end,cancel_at_period_end,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?)

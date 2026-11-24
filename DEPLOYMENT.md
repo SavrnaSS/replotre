@@ -118,3 +118,7 @@ The public homepage, four feature pages, guides index, two editing guides, priva
 Review Google Search Console and Bing reports for indexing failures, queries, impressions, clicks and page performance. Improve existing guides around questions users actually ask, add original examples or product demonstrations, and earn relevant links through useful public material. Keep the product, pricing and privacy claims accurate. Compare changes over several weeks using the search reports; do not treat a successful technical audit as proof of rankings or traffic.
 
 References: [Google SEO Starter Guide](https://developers.google.com/search/docs/fundamentals/seo-starter-guide), [sitemap guidance](https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap), [noindex guidance](https://developers.google.com/search/docs/crawling-indexing/block-indexing) and [structured data policies](https://developers.google.com/search/docs/appearance/structured-data/sd-policies).
+
+## Complimentary access
+
+The studio requires an active Creator or Pro plan. To let specific people in without paying (the owner, testers), set `STUDIO_FREE_ACCESS_EMAILS` on Railway to a comma-separated list of account emails. They get Pro limits and show as "Pro (complimentary)". Remove an email to end their access.

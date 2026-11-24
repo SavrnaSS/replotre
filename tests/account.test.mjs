@@ -28,7 +28,7 @@ test('Whop webhook signatures: valid accepted; tampered, stale, foreign and malf
 
 test('onboarding profile, plan limits, test-mode subscriptions and Whop webhooks',{timeout:60000},async t=>{
  const dir=await mkdtemp(path.join(os.tmpdir(),'replotre-acct-')),port=await freePort(),base=`http://127.0.0.1:${port}`,secret='ws_'+randomUUID().replace(/-/g,'');
- const server=spawn(process.execPath,['server.mjs'],{cwd:root,env:{...process.env,DATA_DIR:dir,PORT:String(port),APP_ORIGIN:base,NODE_ENV:'test',ALLOW_SIGNUP:'true',SIGNUP_INVITE_CODE:'',WHOP_API_KEY:'',WHOP_WEBHOOK_SECRET:secret,WHOP_PLAN_PRO_MONTHLY:'plan_pro_m',BILLING_TEST_MODE:'',OPENAI_API_KEY:'',ANTHROPIC_API_KEY:''},stdio:'ignore'});
+ const server=spawn(process.execPath,['server.mjs'],{cwd:root,env:{...process.env,DATA_DIR:dir,PORT:String(port),APP_ORIGIN:base,NODE_ENV:'test',ALLOW_SIGNUP:'true',SIGNUP_INVITE_CODE:'',WHOP_API_KEY:'',WHOP_WEBHOOK_SECRET:secret,WHOP_PLAN_PRO_MONTHLY:'plan_pro_m',BILLING_TEST_MODE:'',STUDIO_FREE_ACCESS_EMAILS:' vip@example.org ,other@example.org',OPENAI_API_KEY:'',ANTHROPIC_API_KEY:''},stdio:'ignore'});
  t.after(async()=>{server.kill('SIGTERM');await wait(300);await rm(dir,{recursive:true,force:true})});
  for(let i=0;i<80;i++){try{if((await fetch(base+'/api/healthz')).ok)break}catch{}await wait(100)}
  let cookie='';
@@ -84,6 +84,11 @@ test('onboarding profile, plan limits, test-mode subscriptions and Whop webhooks
  assert.equal((await hook(whopHeaders(gone,secret),gone)).status,200);acct=await call('/api/account');assert.equal(acct.json.plan.id,'free','expired memberships lose the plan');assert.equal(acct.json.subscribed,false);assert.equal((await call('/api/projects')).status,402,'studio closes when the membership expires');
  const stranger=JSON.stringify({type:'membership.updated',data:{...membership,id:'mem_other',user_id:'user_other',metadata:{user_id:'not-a-user'}}});
  assert.equal((await hook(whopHeaders(stranger,secret),stranger)).status,200,'unknown users are acknowledged without changes');
+
+ // Complimentary access by email: no payment, full studio access
+ const vip=await fetch(base+'/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json','X-Replotre-Client':'studio'},body:JSON.stringify({email:'VIP@Example.org',password:'A-long-enough-password-1'})});assert.equal(vip.status,200);
+ const vipCookie=vip.headers.get('set-cookie').split(';')[0];const vipAcct=await (await fetch(base+'/api/account',{headers:{Cookie:vipCookie,'X-Replotre-Client':'studio'}})).json();
+ assert.equal(vipAcct.subscribed,true);assert.equal(vipAcct.plan.id,'pro');assert.equal((await fetch(base+'/api/projects',{headers:{Cookie:vipCookie,'X-Replotre-Client':'studio'}})).status,200);
 
  // Unauthenticated access is rejected
  cookie='';assert.equal((await call('/api/account')).status,401);
