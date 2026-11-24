@@ -1456,3 +1456,12 @@ html.rp-bare body>*:not(.ob){display:none!important}
 .ob .au-card-wrap:before,.ob .au-card-wrap:after,.ob .au-card-wrap>.fx-vf{display:none!important}
 .ob .au-input input:focus{box-shadow:0 0 0 3px rgba(226,171,119,.22)}
 @media (max-width:640px){.ob .au-card-wrap,.ob:has(.au-wall) .au-card-wrap{background:var(--n1,#131416);border:1px solid var(--hair,rgba(242,238,231,.08));box-shadow:0 12px 32px rgba(0,0,0,.5)}}
+/* Setup steps: same backdrop as sign-in (wall visible, no solid header bar) */
+.ob:has(.obx-main[data-step=about]) .au-wall:after,.ob:has(.obx-main[data-step=frame]) .au-wall:after,.ob:has(.obx-main[data-step=plan]) .au-wall:after{background:linear-gradient(180deg,#0c0d0f 0%,#0c0d0fb3 22%,#0c0d0f99 50%,#0c0d0fb3 78%,#0c0d0f 100%)}
+.ob:has(.obx-main[data-step=about]) .au-wall.is-phone:after,.ob:has(.obx-main[data-step=frame]) .au-wall.is-phone:after,.ob:has(.obx-main[data-step=plan]) .au-wall.is-phone:after{background:linear-gradient(180deg,#0c0d0f8c 0%,#0c0d0f59 35%,#0c0d0f73 75%,#0c0d0fb3 100%)}
+.ob .obx-top{background:transparent!important;border-bottom:0!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+/* headings stay readable over the brighter wall */
+.ob .obx-main[data-step=about] h1,.ob .obx-main[data-step=frame] h1,.ob .obx-main[data-step=plan] h1,.ob .obx-main .ob-sub,.ob button.q-back{text-shadow:0 1px 12px rgba(0,0,0,.85),0 0 2px rgba(0,0,0,.6)}
+.ob button.q-opt{background:rgba(19,20,22,.94)}
+.ob button.q-opt:hover{background:rgba(24,25,28,.96)}
+.ob button.q-opt.is-on{background:rgba(24,25,28,.97)}
