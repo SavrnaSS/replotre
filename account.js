@@ -27,7 +27,8 @@ const LABEL={
 };
 const STEPS=[
  {id:'account',label:'Sign up',title:'Create your account.',sub:''},
- {id:'about',label:'You',title:'Set up your studio',sub:'Pick a role and a default frame'},
+ {id:'about',label:'You',title:'Who are you?',sub:'Tell us how you’ll use Replotre. We’ll set up the studio around it.'},
+ {id:'frame',label:'Frame',title:'Where will you post?',sub:'Pick the shape your videos usually start in. You can change it on any project.'},
  {id:'plan',label:'Plan',title:'Choose your plan',sub:'Pick a plan to open your studio. Cancel any time'}
 ];
 
@@ -53,7 +54,7 @@ function renderChip(){let chip=document.getElementById('planChip');const a=S.acc
 function ensureOb(){let el=document.querySelector('.ob');if(!el){el=document.createElement('div');el.className='ob';el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.setAttribute('aria-labelledby','obTitle');document.body.appendChild(el);el.addEventListener('click',onObClick);el.addEventListener('input',onObInput);el.addEventListener('keydown',onObKey);el.addEventListener('submit',onAuthSubmit);el.addEventListener('focusout',e=>{if(e.target.id==='auEmail'&&!e.relatedTarget?.matches?.('[data-ob=fix-email]'))checkEmailField(e.target,true)});
   el._inert=[...document.body.children].filter(n=>n!==el&&!n.inert);for(const n of el._inert)n.inert=true;document.body.style.overflow='hidden'}return el}
 async function startOnboarding(fromStep){await Promise.all([S.account?null:loadAccount(),loadPlans()]);if(!S.account)return;
- const p=S.account.profile||{};const miss=p.setupMissing||[],gap=miss.length?'about':null;
+ const p=S.account.profile||{};const miss=p.setupMissing||[],gap=miss.includes('role')?'about':miss.includes('aspect')?'frame':null;
  // resume at the first unanswered step (an older account marked done but missing answers starts there, not at step 1)
  const first=fromStep??(gap?STEPS.findIndex(x=>x.id===gap):p.onboardedAt?STEPS.findIndex(x=>x.id==='plan'):Math.min(STEPS.length-1,Math.max(1,p.step||1)));
  S.ob={step:first,data:{aspect:'9:16',...p},dir:1,anim:true};ensureOb();renderOb();document.documentElement.classList.remove('rp-gate');if(S.account.subscribed)ensureEditor()}
@@ -83,7 +84,7 @@ function runTimecode(){clearInterval(tcTimer);const t0=performance.now();const t
  if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;tick();tcTimer=setInterval(tick,1000/12)}
 function closeOnboarding(){clearInterval(tcTimer);const el=document.querySelector('.ob');ungate();if(!el)return;for(const n of el._inert||[])n.inert=false;document.body.style.overflow='';el.remove();S.ob=null;renderChip()}
 const sel=(k,v)=>Array.isArray(S.ob.data[k])?S.ob.data[k].includes(v):S.ob.data[k]===v;
-function valid(step){const d=S.ob.data;switch(STEPS[step].id){case 'about':return !!d.role&&!!d.aspect&&(d.role!=='other'||!!(d.roleOther||'').trim());case 'work':return (d.goals||[]).length>0;case 'style':return !!d.aspect;case 'experience':return !!d.experience&&!!d.team;default:return true}}
+function valid(step){const d=S.ob.data;switch(STEPS[step].id){case 'about':return !!d.role&&(d.role!=='other'||!!(d.roleOther||'').trim());case 'frame':return !!d.aspect;case 'work':return (d.goals||[]).length>0;case 'style':return !!d.aspect;case 'experience':return !!d.experience&&!!d.team;default:return true}}
 function recommendWhy(){const d=S.ob?.data||S.account?.profile||{},p=recommend(),cad={daily:'every day',weekly:'every week'}[d.cadence];
  if(p==='pro')return d.team==='mid'||d.team==='large'?'you edit with a team':d.role==='agency'?'you work for clients as an agency':'you publish daily at a professional level';
  if(p==='creator')return cad?`you publish ${cad}`:`you're a ${({social:'social media manager',agency:'marketing team',freelance:'freelance editor',business:'business owner'})[d.role]||(LABEL.role[d.role]||'creator').toLowerCase()}`;
@@ -173,13 +174,13 @@ async function finishOnboarding(start){saveProfile({},{step:STEPS.length-1,compl
  else if(start==='sample')q('[data-action="add-demo"][data-index="0"]')?.click();
  else if(start==='templates')q('.rail-item[data-tab="templates"]')?.click();
  E()?.notify(S.ob?.data?.name?`Welcome to Replotre, ${S.ob.data.name}`:'Welcome to Replotre')}
+const ROLE_INFO={creator:['clapperboard','Videos for my own channels'],social:['sparkles','Accounts for a brand or clients'],agency:['grid','Client videos, as a team'],freelance:['wand-sparkles','Editing for clients'],business:['shield-check','Promoting my own business'],hobbyist:['image','For fun, friends and family'],student:['captions','Learning or school projects'],other:['sliders-horizontal','Something else']};
+const FRAME_INFO={'9:16':['Vertical','Reels, TikTok and Shorts','1080×1920'],'16:9':['Landscape','YouTube, presentations and the web','1920×1080'],'1:1':['Square','Feed posts','1080×1080'],'4:5':['Portrait','Instagram and Facebook feed','1080×1350']};
+function optList(k,items){return `<div class="q-list" role="radiogroup" aria-label="${esc(k)}">${items.map(([v,icon,title,desc,meta],n)=>`<button type="button" class="q-opt${sel(k,v)?' is-on':''}" role="radio" aria-checked="${sel(k,v)}" data-ob-pick="${k}" data-value="${esc(v)}"><span class="q-ico">${icon}</span><span class="q-txt"><strong>${esc(title)}</strong><small>${esc(desc)}</small></span>${meta?`<em class="q-meta">${esc(meta)}</em>`:''}<kbd class="fx-key" aria-hidden="true">${n+1}</kbd><i class="q-radio" aria-hidden="true"></i></button>`).join('')}</div>`}
 function stepBody(id){const d=S.ob.data;
  if(id==='account')return authBody();
- if(id==='about'){const frames=Object.entries(LABEL.aspect).map(([v,l])=>{const [w,h]=v.split(':').map(Number),k=26/Math.max(w,h);return `<button type="button" class="ob-aspect${sel('aspect',v)?' is-on':''}" role="radio" aria-checked="${sel('aspect',v)}" data-ob-pick="aspect" data-value="${v}"><span class="fx-glyph"><i style="width:${(w*k).toFixed(1)}px;height:${(h*k).toFixed(1)}px"></i></span><strong>${v}</strong><small>${l}</small><em class="fx-res">${{'9:16':'1080×1920','16:9':'1920×1080','1:1':'1080×1080','4:5':'1080×1350'}[v]||''}</em></button>`}).join('');
-  return `<label class="ob-field ob-name"><span><i class="fx-idx" aria-hidden="true">01</i>Your name <small>Optional</small></span><input type="text" maxlength="60" autocomplete="given-name" data-ob-text="name" value="${esc(d.name||'')}" placeholder="First name"></label>
-  <div class="ob-group"><span class="ob-label"><i class="fx-idx" aria-hidden="true">02</i>Your role</span>${chips('role',{keys:true,icons:{creator:'clapperboard',social:'sparkles',agency:'grid',freelance:'wand-sparkles',business:'shield-check',hobbyist:'image',student:'captions',other:'sliders-horizontal'}})}</div>
-  ${d.role==='other'?`<label class="ob-field ob-field-inline"><span>Tell us more</span><input type="text" maxlength="60" data-ob-text="roleOther" value="${esc(d.roleOther||'')}" placeholder="e.g. Teacher, musician, nonprofit"></label>`:''}
-  <div class="ob-group"><span class="ob-label"><i class="fx-idx" aria-hidden="true">03</i>Default frame <small>Change any time</small></span><div class="ob-aspects" role="radiogroup" aria-label="Default frame">${frames}</div></div>`}
+ if(id==='about')return optList('role',Object.entries(LABEL.role).map(([v,l])=>[v,ico(ROLE_INFO[v]?.[0]||'check'),l,ROLE_INFO[v]?.[1]||''])) +(S.ob.data.role==='other'?`<label class="ob-field ob-field-inline q-other"><span>Tell us more</span><input type="text" maxlength="60" data-ob-text="roleOther" value="${esc(S.ob.data.roleOther||'')}" placeholder="e.g. Teacher, musician, nonprofit"></label>`:'');
+ if(id==='frame')return optList('aspect',Object.entries(FRAME_INFO).map(([v,[t,d,res]])=>{const [w,h]=v.split(':').map(Number),k=22/Math.max(w,h);return [v,`<i class="q-shape" style="width:${(w*k).toFixed(1)}px;height:${(h*k).toFixed(1)}px"></i>`,`${t} · ${v}`,d,res]}));
  if(id==='work')return `<div class="ob-group">${chips('goals',{multi:true,icons:{shorts:'monitor-play',youtube:'film',ads:'zap',podcast:'volume-2',tutorial:'captions',realestate:'layout',events:'sparkles',brand:'palette'}})}</div>`;
  if(id==='style'){const C=window.ReplotreTemplateCatalog;const favs=d.favoriteTemplates||[];const want=new Set(d.goals||[]);
   const tpls=(C?.TEMPLATES||[]).slice().sort((a,b)=>score(b,want)-score(a,want)).slice(0,8);
@@ -225,11 +226,11 @@ function renderOb(){const el=document.querySelector('.ob');if(!el||!S.ob)return;
   ${last?'<span class="obx-spacer"></span>':`<button type="button" class="ob-skip obx-signout" data-ob="signout">${ico('link')}<span>Sign out</span></button>`}</header>
  <main class="ob-main obx-main${anim?` ob-dir-${S.ob.dir>0?'next':'prev'} is-anim`:''}" data-step="${st.id}">
   <div class="obx-grid${side?' has-side':''}">
-   <section class="ob-content obx-content"><i class="fx-vf" aria-hidden="true"><b></b><b></b><b></b><b></b></i>${['about','plan'].includes(st.id)?`<div class="fx-hud" aria-label="Step ${i} of ${STEPS.length-1}"><span class="fx-hud-l"><b class="fx-rec" aria-hidden="true"></b><span aria-hidden="true">REC</span><span class="fx-tc" aria-hidden="true">00:00:00:00</span></span><span class="fx-hud-r" aria-hidden="true"><span class="fx-steps">${STEPS.slice(1).map((x,k)=>`<i class="${k+1<i?'done':k+1===i?'on':''}"></i>`).join('')}</span>STEP 0${i}/0${STEPS.length-1}</span></div>`:''}${last?`<div class="rd-mark${anim?' is-anim':''}" aria-hidden="true">${ico('check')}${'<i></i>'.repeat(10)}</div>`:''}<p class="obx-kicker">${esc(st.label)}</p><h1 id="obTitle" tabindex="-1">${esc(last?((S.ob.data.name||'').trim()?`You’re all set, ${S.ob.data.name.trim()}.`:'You’re all set.'):st.title)}</h1>${last?`<p class="ob-sub">Your studio is tuned to how you work. Change anything here, or later in Settings.</p>`:st.sub?`<p class="ob-sub">${esc(st.sub)}</p>`:''}
-    <div class="ob-body">${stepBody(st.id)}</div>${st.id==='about'?`<div class="obx-inline"><button type="button" class="ob-next" data-ob="next" ${valid(i)?'':'disabled'}><span>${valid(i)?`Continue as ${esc(S.ob.data.role==='other'?((S.ob.data.roleOther||'').trim()||'Other'):LABEL.role[S.ob.data.role]||'')} <b class="fx-sum">· ${esc(S.ob.data.aspect||'9:16')}</b>`:'Pick your role to continue'}</span>${ico('arrow-up')}</button><span class="ob-hint" aria-hidden="true">or press <kbd>Enter ↵</kbd></span></div>`:''}</section>
+   <section class="ob-content obx-content"><i class="fx-vf" aria-hidden="true"><b></b><b></b><b></b><b></b></i>${['about','frame','plan'].includes(st.id)?`<div class="q-top">${i>1?`<button type="button" class="q-back" data-ob="back">${ico('chevron-down')}<span>Back</span></button>`:'<span></span>'}<div class="q-prog" role="progressbar" aria-valuemin="1" aria-valuemax="${STEPS.length-1}" aria-valuenow="${i}" aria-label="Step ${i} of ${STEPS.length-1}">${STEPS.slice(1).map((x,k)=>`<i class="${k+1<i?'done':k+1===i?'on':''}"></i>`).join('')}</div></div>`:''}${last?`<div class="rd-mark${anim?' is-anim':''}" aria-hidden="true">${ico('check')}${'<i></i>'.repeat(10)}</div>`:''}<p class="obx-kicker">${esc(st.label)}</p><h1 id="obTitle" tabindex="-1">${esc(last?((S.ob.data.name||'').trim()?`You’re all set, ${S.ob.data.name.trim()}.`:'You’re all set.'):st.title)}</h1>${last?`<p class="ob-sub">Your studio is tuned to how you work. Change anything here, or later in Settings.</p>`:st.sub?`<p class="ob-sub">${esc(st.sub)}</p>`:''}
+    <div class="ob-body">${stepBody(st.id)}</div>${['about','frame'].includes(st.id)?`<div class="obx-inline"><button type="button" class="ob-next" data-ob="next" ${valid(i)?'':'disabled'}><span>${valid(i)?'Continue':st.id==='about'?'Choose an option to continue':'Choose a frame to continue'}</span>${ico('arrow-up')}</button><span class="ob-hint" aria-hidden="true">or press <kbd>Enter ↵</kbd></span></div>`:''}</section>
    ${side?obPreview():''}
   </div></main>
- ${st.id==='about'?'':`<footer class="obx-bar"><div class="obx-bar-in">
+ ${['about','frame'].includes(st.id)?'':`<footer class="obx-bar"><div class="obx-bar-in">
   ${i>1&&!last?`<button type="button" class="ob-back" data-ob="back">${ico('chevron-down')}<span>Back</span></button>`:'<span></span>'}
   <div class="obx-bar-end">
    ${!last&&st.id!=='plan'?`<span class="ob-hint" aria-hidden="true">${valid(i)?'Press':'Choose an option, then press'} <kbd>Enter ↵</kbd></span>`:''}
@@ -246,12 +247,12 @@ function planCarousel(el,first){const g=el.querySelector('.pl[data-context=onboa
  requestAnimationFrame(()=>{if(g.scrollWidth<=g.clientWidth+4)return;if(first||S.plScroll==null){const k=Math.max(0,cards.findIndex(c=>c.classList.contains('is-featured')));const c=cards[k];g.scrollLeft=c.offsetLeft-(g.clientWidth-c.offsetWidth)/2}else g.scrollLeft=S.plScroll;mark()});
  g.addEventListener('scroll',()=>{S.plScroll=g.scrollLeft},{passive:true})}
 async function enterStudio(){const a=S.account;
- if(a?.profile?.setupMissing?.length&&S.ob){S.ob.dir=-1;S.ob.anim=true;S.ob.step=STEPS.findIndex(x=>x.id==='about');renderOb();return false}
+ if(a?.profile?.setupMissing?.length&&S.ob){const m=a.profile.setupMissing;S.ob.dir=-1;S.ob.anim=true;S.ob.step=STEPS.findIndex(x=>x.id===(m.includes('role')?'about':'frame'));renderOb();return false}
  if(!a?.subscribed){showPaywall();return false}
  applyPrefs();closeOnboarding();editorReady().then(()=>E()?.notify(S.ob?.data?.name?`Welcome to Replotre, ${S.ob.data.name}`:'Welcome to Replotre'));return true}
 const finishSetup=enterStudio;
 async function go(delta){const o=S.ob;if(!o)return;const next=o.step+delta;if(delta>0&&!valid(o.step))return;
- if(delta>0&&STEPS[o.step].id==='about'){await saveProfile({},{step:next,complete:true});if(S.account?.profile?.setupMissing?.length){renderOb();return}
+ if(delta>0&&STEPS[o.step].id==='frame'){await saveProfile({},{step:next,complete:true});if(S.account?.profile?.setupMissing?.length){renderOb();return}
   if(S.account?.subscribed){await enterStudio();return}}// already subscribed (e.g. re-answering): straight in
  else if(delta>0)await saveProfile({},{step:next});
  if(next>=STEPS.length){await enterStudio();return}
@@ -286,8 +287,8 @@ function onObInput(e){if(e.target.name==='password'&&S.authMode==='register'){co
  const k=e.target.dataset.obText;if(!k)return;S.ob.data[k]=e.target.value;saveProfile({[k]:e.target.value});const n=document.querySelector('.ob-next');if(n)n.disabled=!valid(S.ob.step);if(k==='name'){const v=e.target.value.trim(),pn=document.querySelector('.obp-name'),pa=document.querySelector('.obp-avatar');if(pn)pn.textContent=v||'Your studio';if(pa)pa.textContent=(v||'R')[0].toUpperCase()}}
 function onObKey(e){if(e.target.name==='password'&&e.getModifierState){const c=document.querySelector('.au-caps');if(c)c.hidden=!e.getModifierState('CapsLock')}
  if(e.key==='Enter'&&!e.isComposing&&e.target.tagName!=='BUTTON'&&S.ob.step>0&&STEPS[S.ob.step].id!=='plan'){e.preventDefault();go(1);return}
- if(STEPS[S.ob?.step]?.id==='about'&&!/^(INPUT|TEXTAREA)$/.test(e.target.tagName)&&!e.metaKey&&!e.ctrlKey&&!e.altKey){
-  if(/^[1-9]$/.test(e.key)){const b=document.querySelectorAll('[data-ob-pick=role]')[+e.key-1];if(b){e.preventDefault();b.click()}return}
+ if(['about','frame'].includes(STEPS[S.ob?.step]?.id)&&!/^(INPUT|TEXTAREA)$/.test(e.target.tagName)&&!e.metaKey&&!e.ctrlKey&&!e.altKey){
+  if(/^[1-9]$/.test(e.key)){const b=document.querySelectorAll('.q-opt')[+e.key-1];if(b){e.preventDefault();b.click()}return}
   if(e.key==='ArrowLeft'||e.key==='ArrowRight'){const list=[...document.querySelectorAll('[data-ob-pick=aspect]')],cur=list.findIndex(b=>b.classList.contains('is-on')),n=list[(cur+(e.key==='ArrowRight'?1:-1)+list.length)%list.length];if(n){e.preventDefault();n.click()}}}}
 async function onAuthSubmit(e){e.preventDefault();const f=e.target,btn=f.querySelector('[type=submit]'),err=f.querySelector('.ob-auth-error'),fd=new FormData(f),reg=S.authMode==='register';
  const email=String(fd.get('email')||'').trim(),password=String(fd.get('password')||'');S.authEmail=email;
