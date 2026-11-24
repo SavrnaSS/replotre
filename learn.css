@@ -61,3 +61,6 @@ a:focus-visible{outline:2px solid var(--learn-accent);outline-offset:5px;border-
 @media(max-width:760px){.learn-wrap{width:calc(100% - 2rem)}.learn-nav nav{gap:1rem}.learn-nav nav>a:not(.learn-button){display:none}.learn-layout{grid-template-columns:minmax(0,1fr);gap:0}.learn-toc nav{position:static}.learn-toc{padding:1.5rem 0;border-bottom:1px solid var(--learn-line)}.learn-toc ol{gap:.65rem}.learn-footer{flex-direction:column}.learn-footer nav{justify-content:flex-start}.learn-related{padding:2.5rem 0}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.learn-card{transition:none}.learn-card:hover{transform:none}}
 .learn-logo .wm-r{font-style:normal;color:var(--learn-accent)}
+
+/* Wordmark: R in the same colour as the rest of the name; only the full stop is tan */
+.wm-r,.lg-logo .wm-r,.learn-logo .wm-r,.au-word .wm-r,.ck-brand .wm-r,.brand-name .wm-r,html[data-theme="light"] .brand-name .wm-r,[data-theme="dark"] .lg-logo .wm-r{color:inherit!important}

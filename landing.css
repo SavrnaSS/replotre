@@ -3157,3 +3157,7 @@ html{overflow-x:clip}
 .wm-r{font-style:normal;color:var(--brand-tan,var(--accent2))}
 .logo>.r-mark{display:none}
 .foot-mark .wm-r{color:transparent;background:linear-gradient(180deg,rgba(226,171,119,.9),rgba(226,171,119,.12) 92%);-webkit-background-clip:text;background-clip:text}
+
+/* Wordmark: R in the same colour as the rest of the name; only the full stop is tan */
+.wm-r,.lg-logo .wm-r,.learn-logo .wm-r,.au-word .wm-r,.ck-brand .wm-r,.brand-name .wm-r,html[data-theme="light"] .brand-name .wm-r,[data-theme="dark"] .lg-logo .wm-r{color:inherit!important}
+.foot-mark .wm-r{background:none!important;-webkit-background-clip:initial;background-clip:initial}

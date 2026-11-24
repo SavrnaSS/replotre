@@ -229,7 +229,7 @@ function shell(content) {
 <link rel="apple-touch-icon" href="/assets/brand/apple-touch-icon.png" />
 <link rel="preload" href="/assets/fonts/inter-opsz.woff2" as="font" type="font/woff2" crossorigin />
 <link rel="stylesheet" href="/typography.css?v=1.0.0" />
-<link rel="stylesheet" href="/learn.css?v=1.0.0" />
+<link rel="stylesheet" href="/learn.css?v=1.0.1" />
 <script src="/landing-theme.js?v=2.21.0"></script>
 </head>
 <body>

@@ -1591,3 +1591,6 @@ html.rp-bare body>*:not(.ob):not(.ck){display:none!important}
 @media (min-width:701px){.header-brand .brand-mark{display:none!important}}
 .brand-name .wm-r{color:#ddb07f}
 html[data-theme="light"] .brand-name .wm-r{color:#b8834f}
+
+/* Wordmark: R in the same colour as the rest of the name; only the full stop is tan */
+.wm-r,.lg-logo .wm-r,.learn-logo .wm-r,.au-word .wm-r,.ck-brand .wm-r,.brand-name .wm-r,html[data-theme="light"] .brand-name .wm-r,[data-theme="dark"] .lg-logo .wm-r{color:inherit!important}
