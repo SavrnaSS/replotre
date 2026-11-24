@@ -27,7 +27,7 @@ const LABEL={
 };
 const STEPS=[
  {id:'account',label:'Sign up',title:'Create your account.',sub:''},
- {id:'about',label:'You',title:'Make it yours',sub:'One quick pick and you’re in.'},
+ {id:'about',label:'You',title:'Set up your studio',sub:'Pick a role and a default frame'},
  {id:'plan',label:'Plan',title:'Choose your plan',sub:'Start free. Upgrade any time.'}
 ];
 
@@ -111,7 +111,7 @@ function authBody(){const reg=S.authMode==='register',st=S.status||{},closed=reg
   ${reg&&st.inviteRequired?`<label class="ob-field"><span>Invitation code</span><span class="au-input"><input type="text" name="invite" autocomplete="off" required maxlength="120" placeholder="From your invite email"></span></label>`:''}
   <p class="ob-auth-error" role="alert" hidden></p>
   <button type="submit" class="ob-next au-submit" ${closed?'disabled':''}><span>${reg?'Create account':'Sign in'}</span>${ico('arrow-up')}</button>
-  ${reg?`<p class="ob-legal au-legal">${AU_I.lock}<span>Encrypted. By continuing you agree to our <a href="/terms" target="_blank" rel="noopener">Terms</a> and <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>.</span></p>`:`<p class="ob-legal au-legal">Forgot your password? <a href="mailto:hello@replotre.com?subject=Password%20reset">Email us</a> and we'll reset it.</p>`}
+  ${reg?`<p class="ob-legal au-legal">${AU_I.lock}<span>Encrypted · by continuing you agree to our <a href="/terms" target="_blank" rel="noopener">Terms</a> and <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>.</span></p>`:`<p class="ob-legal au-legal">Forgot your password? <a href="mailto:hello@replotre.com?subject=Password%20reset">Email us</a> and we'll reset it.</p>`}
  </form>`}
 const WALL=['crimson','editorial','neon-pulse','candlelit','pop-captions','documentary','hero-float','field-journal','beat-keyword','cinematic-wide','motion-deck','quote-card'];
 function wall(){if(document.documentElement.classList.contains('lite'))return '';const phone=!matchMedia('(min-width:721px)').matches;
@@ -120,7 +120,7 @@ function wall(){if(document.documentElement.classList.contains('lite'))return ''
 /* The backdrop (glow + drifting template wall) is drawn once and kept: taps and tab switches only redraw the card,
    so the wall never restarts or reloads its images. */
 function stageOf(el){let st=el.querySelector(':scope>.ob-stage');if(st)return st;
- el.innerHTML=`<div class="ob-backdrop" aria-hidden="true"><div class="ob-bg au-bg"><i class="au-orb a"></i><i class="au-orb b"></i><i class="au-dots-bg"></i></div>${wall()}</div><div class="ob-stage"></div>`;
+ el.innerHTML=`<div class="ob-backdrop" aria-hidden="true"><div class="ob-bg au-bg"></div>${wall()}</div><div class="ob-stage"></div>`;
  return el.querySelector(':scope>.ob-stage')}
 function renderAuth(el){const reg=S.authMode==='register';
  stageOf(el).innerHTML=`
@@ -128,12 +128,12 @@ function renderAuth(el){const reg=S.authMode==='register';
   <a class="au-brand" href="/" aria-label="Replotre home"><span class="ob-brand" aria-hidden="true">${brandMark()}</span><span class="au-word">replotre<b>.</b></span></a>
   <div class="au-center">
    <section class="au-card-wrap ob-content">
-    ${reg?`<div class="au-steps" aria-label="Step 1 of ${STEPS.length}"><span class="au-dots" aria-hidden="true">${'<i></i>'.repeat(STEPS.length)}</span><span>Step 1 of ${STEPS.length}</span></div>`:''}
+    ${reg?`<div class="au-steps" aria-label="Step 1 of ${STEPS.length}"><span class="au-dots" aria-hidden="true">${'<i></i>'.repeat(STEPS.length)}</span><span class="tc">01 / 0${STEPS.length}</span></div>`:''}
     <h1 id="obTitle" tabindex="-1">${reg?'Create your account':'Welcome back'}</h1>
-    <p class="ob-sub">${reg?'Start editing in minutes. Free, no card needed.':'Sign in to pick up where you left off.'}</p>
+    <p class="ob-sub">${reg?'Start editing in minutes. Free, no card needed':'Sign in to pick up where you left off'}</p>
     ${authBody()}
    </section>
-   <ul class="au-feats-row" aria-label="What you get"><li>${ico('wand-sparkles')}<span>AI Director</span></li><li>${ico('captions')}<span>Auto captions</span></li><li>${ico('zap')}<span>Smart templates</span></li></ul>
+
   </div>
  </main>`;
  if(S.authError){const er=el.querySelector('.ob-auth-error');if(er){er.textContent=S.authError;er.hidden=false}S.authError=''}
@@ -170,7 +170,7 @@ function stepBody(id){const d=S.ob.data;
  if(id==='account')return authBody();
  if(id==='about'){const frames=Object.entries(LABEL.aspect).map(([v,l])=>{const [w,h]=v.split(':').map(Number),k=26/Math.max(w,h);return `<button type="button" class="ob-aspect${sel('aspect',v)?' is-on':''}" role="radio" aria-checked="${sel('aspect',v)}" data-ob-pick="aspect" data-value="${v}"><i style="width:${(w*k).toFixed(1)}px;height:${(h*k).toFixed(1)}px"></i><strong>${v}</strong><small>${l}</small></button>`}).join('');
   return `<label class="ob-field ob-name"><span>Your name <small>Optional</small></span><input type="text" maxlength="60" autocomplete="given-name" data-ob-text="name" value="${esc(d.name||'')}" placeholder="First name"></label>
-  <div class="ob-group"><span class="ob-label">I'm a…</span>${chips('role',{icons:{creator:'clapperboard',social:'sparkles',agency:'grid',freelance:'wand-sparkles',business:'shield-check',hobbyist:'image',student:'captions',other:'sliders-horizontal'}})}</div>
+  <div class="ob-group"><span class="ob-label">Your role</span>${chips('role',{icons:{creator:'clapperboard',social:'sparkles',agency:'grid',freelance:'wand-sparkles',business:'shield-check',hobbyist:'image',student:'captions',other:'sliders-horizontal'}})}</div>
   ${d.role==='other'?`<label class="ob-field ob-field-inline"><span>Tell us more</span><input type="text" maxlength="60" data-ob-text="roleOther" value="${esc(d.roleOther||'')}" placeholder="e.g. Teacher, musician, nonprofit"></label>`:''}
   <div class="ob-group"><span class="ob-label">Default frame <small>Change any time</small></span><div class="ob-aspects" role="radiogroup" aria-label="Default frame">${frames}</div></div>`}
  if(id==='work')return `<div class="ob-group">${chips('goals',{multi:true,icons:{shorts:'monitor-play',youtube:'film',ads:'zap',podcast:'volume-2',tutorial:'captions',realestate:'layout',events:'sparkles',brand:'palette'}})}</div>`;
@@ -218,7 +218,7 @@ function renderOb(){const el=document.querySelector('.ob');if(!el||!S.ob)return;
   ${last?'<span class="obx-spacer"></span>':`<button type="button" class="ob-skip obx-signout" data-ob="signout">${ico('link')}<span>Sign out</span></button>`}</header>
  <main class="ob-main obx-main${anim?` ob-dir-${S.ob.dir>0?'next':'prev'} is-anim`:''}" data-step="${st.id}">
   <div class="obx-grid${side?' has-side':''}">
-   <section class="ob-content obx-content">${['about','plan'].includes(st.id)?`<div class="obx-dots" aria-label="Step ${i+1} of ${STEPS.length}"><span aria-hidden="true">${STEPS.map((x,k)=>`<i class="${k<i?'done':k===i?'on':''}"></i>`).join('')}</span>Step ${i+1} of ${STEPS.length}</div>`:''}${last?`<div class="rd-mark${anim?' is-anim':''}" aria-hidden="true">${ico('check')}${'<i></i>'.repeat(10)}</div>`:''}<p class="obx-kicker">${esc(st.label)}</p><h1 id="obTitle" tabindex="-1">${esc(last?((S.ob.data.name||'').trim()?`You’re all set, ${S.ob.data.name.trim()}.`:'You’re all set.'):st.title)}</h1>${last?`<p class="ob-sub">Your studio is tuned to how you work. Change anything here, or later in Settings.</p>`:st.sub?`<p class="ob-sub">${esc(st.sub)}</p>`:''}
+   <section class="ob-content obx-content">${['about','plan'].includes(st.id)?`<div class="obx-dots" aria-label="Step ${i+1} of ${STEPS.length}"><span aria-hidden="true">${STEPS.map((x,k)=>`<i class="${k<i?'done':k===i?'on':''}"></i>`).join('')}</span><span class="tc">0${i+1} / 0${STEPS.length}</span></div>`:''}${last?`<div class="rd-mark${anim?' is-anim':''}" aria-hidden="true">${ico('check')}${'<i></i>'.repeat(10)}</div>`:''}<p class="obx-kicker">${esc(st.label)}</p><h1 id="obTitle" tabindex="-1">${esc(last?((S.ob.data.name||'').trim()?`You’re all set, ${S.ob.data.name.trim()}.`:'You’re all set.'):st.title)}</h1>${last?`<p class="ob-sub">Your studio is tuned to how you work. Change anything here, or later in Settings.</p>`:st.sub?`<p class="ob-sub">${esc(st.sub)}</p>`:''}
     <div class="ob-body">${stepBody(st.id)}</div>${st.id==='about'?`<div class="obx-inline"><button type="button" class="ob-next" data-ob="next" ${valid(i)?'':'disabled'}><span>Continue</span>${ico('arrow-up')}</button><span class="ob-hint" aria-hidden="true">or press <kbd>Enter ↵</kbd></span></div>`:''}</section>
    ${side?obPreview():''}
   </div></main>

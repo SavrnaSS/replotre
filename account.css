@@ -980,3 +980,111 @@ html.rp-bare body>*:not(.ob){display:none!important}
 /* Persistent backdrop + card stage (the stage's children lay out exactly as before) */
 .ob-backdrop{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden}
 .ob-stage{display:contents}
+
+/* ======================================================================
+   Sign-up + setup design pass following the "unslop" skill
+   (https://github.com/heydamir/unslop by Damir Sokolovsky @heydamir, CC BY 4.0).
+   Direction: editorial, warm, precise. One neutral ramp, one accent, hairlines,
+   4px spacing, sentence case, weights 400-600, quiet controls, timecode step counter.
+   ====================================================================== */
+.ob{
+ --n0:#0c0d0f;--n1:#131416;--n2:#18191c;--n3:#202124;--n4:#2a2b2f;
+ --t1:#f2eee7;--t2:#a8a49c;--t3:#77746e;
+ --hair:rgba(242,238,231,.08);--hair2:rgba(242,238,231,.14);
+ --acc:#e2ab77;--acc-hover:#e9b98a;--acc-ink:#1a1410;
+ --r-ctl:10px;--r-tile:12px;--r-card:20px;
+ --ease:cubic-bezier(.2,.7,.2,1);
+}
+/* ---- Color + visuals: no gradients, glows, glass, gradient borders, blobs ---- */
+.ob .au-orb,.ob .au-dots-bg{display:none}
+.ob .au-bg{background:var(--n0)}
+.ob .au-card-wrap,.ob .obx-main[data-step=about] .obx-content{
+ background:var(--n1);border:1px solid var(--hair);border-radius:var(--r-card);
+ box-shadow:0 16px 40px rgba(0,0,0,.45);backdrop-filter:none;-webkit-backdrop-filter:none}
+.ob .au-card-wrap:before,.ob .au-card-wrap:after,.ob .obx-main[data-step=about] .obx-content:after{display:none}
+/* ---- Type: one family + display partner, weights 400-600, sentence case ---- */
+.ob .au-main h1,.ob .obx-main h1{font-weight:600;letter-spacing:-.02em;line-height:1.15;font-size:28px;color:var(--t1)}
+.ob .au-main .ob-sub,.ob .obx-main .ob-sub{font-size:15px;line-height:1.5;color:var(--t2);margin-top:8px}
+.ob .ob-label,.ob .obx-main .ob-label{text-transform:none;letter-spacing:0;font-size:13px;font-weight:500;color:var(--t2)}
+.ob .ob-label small,.ob .obx-main[data-step=about] .ob-label small{text-transform:none;letter-spacing:0;font-size:12px;font-weight:400;color:var(--t3);margin-left:8px}
+.ob .ob-field>span,.ob .au-f>label,.ob .au-f .au-row>label{font-size:13px;font-weight:500;color:var(--t2)}
+.ob .ob-field small{font-weight:400;color:var(--t3)}
+/* signature: timecode step counter */
+.ob .au-steps,.ob .obx-dots{margin:0 0 16px;gap:12px;color:var(--t3);font-size:12px;font-weight:500;letter-spacing:0}
+.ob .au-steps .tc,.ob .obx-dots .tc{font-family:var(--font-mono,ui-monospace,monospace);font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.ob .au-dots i,.ob .obx-dots i{width:12px;height:4px;border-radius:2px;background:var(--n4)}
+.ob .au-dots i:first-child,.ob .obx-dots i.on{width:20px;background:var(--acc)}
+.ob .obx-dots i.done{background:rgba(226,171,119,.5)}
+/* ---- Spacing (4px grid) + card layout ---- */
+.ob .au-card-wrap{padding:32px 32px 24px}
+.ob .obx-main[data-step=about] .obx-content{padding:32px 32px 24px}
+.ob .au-tabs{margin:24px 0 16px}
+.ob .ob-auth{gap:16px}
+.ob .au-or{margin:16px 0 12px;font-size:12px;color:var(--t3)}
+.ob .au-or:before,.ob .au-or:after{background:var(--hair)}
+.ob .obx-main[data-step=about] .ob-body{margin-top:24px;gap:20px}
+.ob .obx-inline{margin-top:24px;gap:8px}
+/* ---- Controls: one control radius, hairline borders, quiet surfaces ---- */
+.ob .au-input input,.ob .obx-main .ob-field input{height:48px;border-radius:var(--r-ctl);background:var(--n0);border:1px solid var(--hair2);color:var(--t1);font-size:15px}
+.ob .au-input input:hover,.ob .obx-main .ob-field input:hover{border-color:rgba(242,238,231,.22)}
+.ob .au-input input:focus,.ob .obx-main .ob-field input:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(226,171,119,.22);background:var(--n0)}
+.ob .au-fi{color:var(--t3)}
+/* tabs: active = surface step + hairline */
+.ob .au-tabs{padding:4px;border-radius:var(--r-ctl);background:var(--n0);border:1px solid var(--hair)}
+.ob .au-tabs>i{top:4px;bottom:4px;left:4px;border-radius:6px;background:var(--n3);box-shadow:inset 0 0 0 1px var(--hair2)}
+.ob .au-tabs button{height:36px;border-radius:6px;font-size:14px;font-weight:500;color:var(--t2)}
+.ob .au-tabs button.is-on{color:var(--t1)}
+/* primary action: flat accent, dark text, no glow/sheen/lift */
+.ob .ob-auth button.au-submit,.ob .obx-inline button.ob-next,.ob .obx-bar button.ob-next:not(.is-ghost){
+ background:var(--acc);color:var(--acc-ink);border:0;border-radius:var(--r-ctl);height:48px;min-height:48px;font-size:15px;font-weight:600;box-shadow:none;
+ transition:background-color .15s var(--ease),transform .1s var(--ease)}
+.ob .ob-auth button.au-submit:before{display:none}
+.ob .ob-auth button.au-submit:hover:not(:disabled),.ob .obx-inline button.ob-next:hover:not(:disabled),.ob .obx-bar button.ob-next:not(.is-ghost):hover:not(:disabled){background:var(--acc-hover);transform:none;box-shadow:none;filter:none}
+.ob .ob-auth button.au-submit:active:not(:disabled),.ob .obx-inline button.ob-next:active:not(:disabled){transform:scale(.99)}
+.ob .obx-inline button.ob-next:disabled{background:var(--n3);color:var(--t3)}
+/* Google: neutral control with the full-colour mark, no tile, sheen or sliding arrow */
+.ob button.au-google{height:48px;padding:0 16px;gap:12px;justify-content:center;border-radius:var(--r-ctl);background:var(--n2);border:1px solid var(--hair2);color:var(--t1);font-size:15px;font-weight:500;box-shadow:none;transition:background-color .15s var(--ease),border-color .15s var(--ease)}
+.ob button.au-google:before,.ob .au-g-go{display:none}
+.ob button.au-google:hover:not(:disabled){background:var(--n3);border-color:rgba(242,238,231,.22);transform:none;box-shadow:none}
+.ob .au-g-chip{position:static;width:20px;height:20px;margin:0;border-radius:0;background:none;box-shadow:none;display:grid;place-items:center}
+.ob .au-g-chip .au-g-spin{border-color:rgba(242,238,231,.25);border-top-color:var(--t1)}
+.ob button.au-google.has-last{padding-right:96px;padding-left:16px}
+.ob button.au-google .au-last{right:16px;padding:0;background:none;border:0;color:var(--t3);font-size:12px;font-weight:500;letter-spacing:0}
+.ob button.au-google .au-last i{display:none}
+/* suggestions / small text links */
+.ob button.au-suggest{color:var(--t2);font-weight:500}
+.ob button.au-suggest:hover{color:var(--t1);background:var(--n2);border-color:var(--hair)}
+.ob .au-reqs li{font-size:12px}
+.ob .ob-legal,.ob .au-legal{font-size:12px;color:var(--t3);line-height:1.5}
+.ob .ob-legal a{color:var(--t2)}
+/* ---- Selectable tiles: selected = surface step + accent hairline, never a solid fill ---- */
+.ob .obx-main button.ob-chip,.ob .obx-main .ob-aspects button.ob-aspect{border-radius:var(--r-tile);background:var(--n1);border:1px solid var(--hair2);color:var(--t1);font-weight:500;
+ transition:background-color .15s var(--ease),border-color .15s var(--ease),color .15s var(--ease)}
+.ob .obx-main button.ob-chip:hover,.ob .obx-main .ob-aspects button.ob-aspect:hover{background:var(--n2);border-color:rgba(242,238,231,.22)}
+.ob .obx-main button.ob-chip[role=radio].is-on,.ob .obx-main button.ob-chip.is-on,.ob .obx-main .ob-aspects button.ob-aspect.is-on{background:var(--n3);border-color:var(--acc);color:var(--t1);font-weight:500;box-shadow:inset 0 0 0 1px rgba(226,171,119,.35)}
+.ob .obx-main .ob-chip-ico{color:var(--t3)}
+.ob .obx-main[data-step=about] .ob-chips[data-set=role] button.ob-chip.is-on .ob-chip-ico,.ob .obx-main button.ob-chip.is-on .ob-chip-ico{color:var(--acc)}
+.ob .obx-main .ob-aspects button.ob-aspect i{color:var(--t3)}
+.ob .obx-main .ob-aspects button.ob-aspect.is-on i{color:var(--acc)}
+.ob .obx-main .ob-aspects button.ob-aspect small{color:var(--t3);font-weight:400}
+/* ---- Header + plan step ---- */
+.ob .obx-signout{border-color:var(--hair2);color:var(--t2);font-weight:500}
+.ob .obx-main[data-step=plan] .pl-why{background:var(--n1);border:1px solid var(--hair);color:var(--t2)}
+.ob .obx-main .pl-card,.ob .obx-main[data-step=plan] .pl-card{background:var(--n1);border:1px solid var(--hair);box-shadow:none}
+.ob .obx-main .pl-card.is-featured,.ob .obx-main[data-step=plan] .pl-card.is-featured{background:var(--n2);border-color:var(--acc);box-shadow:inset 0 0 0 1px rgba(226,171,119,.25);transform:none}
+.ob .obx-main .pl-card.is-featured:hover,.ob .obx-main .pl-card:hover{transform:none;box-shadow:inset 0 0 0 1px var(--hair)}
+.ob .obx-main .pl-flag{text-transform:none;letter-spacing:0;font-weight:500}
+.ob .obx-main .pl-flag.is-rec{background:var(--n3);color:var(--acc);box-shadow:inset 0 0 0 1px rgba(226,171,119,.4)}
+.ob .pl button.pl-cta.is-primary{background:var(--acc);color:var(--acc-ink);box-shadow:none;font-weight:600}
+.ob .obx-main .pl-card .pl-price b{font-weight:600;font-variant-numeric:tabular-nums}
+/* ---- Motion: one entrance, no looping decoration ---- */
+.ob .au-card-wrap,.ob .obx-main.is-anim .obx-content{animation:obIn .32s var(--ease) both}
+/* ---- Phones ---- */
+@media (max-width:640px){
+ .ob .au-main h1,.ob .obx-main h1{font-size:24px}
+ .ob .ob:has(.au-wall) .au-card-wrap,.ob:has(.au-wall) .au-card-wrap,.ob .obx-main[data-step=about] .obx-content{background:var(--n1);border:1px solid var(--hair);border-radius:16px;box-shadow:0 12px 32px rgba(0,0,0,.5);backdrop-filter:none;-webkit-backdrop-filter:none;padding:24px 16px 16px}
+ .ob .au-card-wrap{padding:24px 16px 16px}
+ .ob .au-tabs{margin:20px 0 16px}
+}
+@media (max-width:520px){.ob:not(:has(.au-wall)) .au-card-wrap{background:none;border:0;box-shadow:none}}
+@media (prefers-reduced-motion:reduce){.ob .au-card-wrap,.ob .obx-main.is-anim .obx-content{animation:none}}
