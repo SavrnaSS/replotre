@@ -344,18 +344,19 @@ async function openEmbeddedCheckout(planId,r,context){
   <aside class="ck-sum"><button type="button" class="ck-x" data-ck="close" aria-label="Close checkout">${ico('x')}</button>
    <span class="ck-brand">${brandMark()}<b>replotre<i>.</i></b></span>
    <div class="ck-bar"><span class="ck-bar-name">${esc(p.name)} · ${yearly?'Yearly':'Monthly'}</span><span class="ck-bar-price">${yearly?money(p.price.year)+'/yr':money(p.price.month)+'/mo'}</span></div>
-   <p class="ck-kicker">Subscribe to</p><h2>Replotre ${esc(p.name)}</h2>
-   <div class="ck-price"><b>${pr.main}</b><span>/mo</span></div><p class="ck-note">${esc(pr.note)}</p>
-   <ul class="ck-feat">${p.features.map(f=>`<li>${ico('check')}<span>${esc(f)}</span></li>`).join('')}</ul>
-   <div class="ck-total"><span>Due today</span><b>${yearly?money(p.price.year):money(p.price.month)}</b></div>
-   <p class="ck-fine">${ico('shield-check')}<span>Secure payment by Whop. Renews ${yearly?'yearly':'monthly'} until you cancel; cancel any time. Your bank may show the amount in your local currency.</span></p>
+   <div class="ck-plan"><span class="ck-plan-tag">${esc(p.name)} plan · ${yearly?'Yearly':'Monthly'}</span><div class="ck-price"><b>${pr.main}</b><span>/mo</span></div><p class="ck-note">${esc(pr.note)}${yearly?` · <em>${esc(String(Math.round((1-p.price.year/(p.price.month*12))*100)))}% off monthly</em>`:''}</p></div>
+   <p class="ck-label">Included</p>
+   <ul class="ck-feat">${p.features.slice(0,5).map(f=>`<li>${ico('check')}<span>${esc(f)}</span></li>`).join('')}</ul>
+   <div class="ck-foot"><div class="ck-total"><span>Due today</span><b>${yearly?money(p.price.year):money(p.price.month)} <small>USD</small></b></div>
+   <ul class="ck-trust"><li>${ico('shield-check')}<span>Secure checkout by Whop</span></li><li>${ico('zap')}<span>Studio opens right after payment</span></li><li>${ico('check')}<span>Cancel any time · renews ${yearly?'yearly':'monthly'}</span></li></ul>
+   <p class="ck-fine">Your bank may show the amount in your local currency.</p></div>
   </aside>
   <section class="ck-pay"><div class="ck-loading"><span class="acct-spin"></span>Loading secure checkout…</div><div id="ckWallets" class="ck-wallets" hidden></div><div class="ck-or" hidden><span>or pay with card</span></div><div id="ckMount" class="ck-mount"></div></section>
  </div>`;
  document.body.appendChild(el);el.addEventListener('click',e=>{if(e.target.closest('[data-ck=close]'))closeCheckout()});
  el._esc=e=>{if(e.key==='Escape')closeCheckout()};document.addEventListener('keydown',el._esc);
  try{
-  const whop=window.WhopElements({appearance:{theme:{appearance:'dark',accentColor:'bronze',grayColor:'sand'},variables:{'--radius':'10px'}}});
+  const whop=window.WhopElements({appearance:{theme:{appearance:'dark',accentColor:'bronze',grayColor:'sand'},variables:{'--radius':'10px'},classes:{'whop-CheckoutSummary':{display:'none'},'whop-CheckoutHeader':{display:'none'}}}});
   const returnUrl=location.origin.startsWith('https://')?`${location.origin}/studio?billing=success`:undefined;
   const group=whop.checkout.create({checkoutConfiguration:r.checkoutConfiguration,...(returnUrl?{returnUrl}:{}),
    onLoadingChange:({loading})=>el.querySelector('.ck-loading')?.toggleAttribute('hidden',!loading),
