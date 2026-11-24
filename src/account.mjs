@@ -170,7 +170,7 @@ export async function accountRoutes({req,res,pathname,method,db,authorized,origi
   const redirects=origin.startsWith('https://');
   const conf=await whop('POST','/checkout_configurations',{...(process.env.WHOP_ACCOUNT_ID?{account_id:process.env.WHOP_ACCOUNT_ID}:{}),variant_id:variant,metadata:{user_id:user.id,plan:planId,interval},...(redirects?{redirect_url:`${origin}/studio?billing=success`}:{})},{idempotencyKey:`checkout-${user.id}-${variant}-${Math.floor(now()/600000)}`});
   if(!conf.purchase_url)err(502,'Payments returned no checkout link. Try again.');
-  return json(res,200,{url:conf.purchase_url,redirects}),true;
+  return json(res,200,{url:conf.purchase_url,checkoutConfiguration:conf.id||null,redirects}),true;
  }
  if(pathname==='/api/billing/portal'&&method==='POST'){
   const s=subscriptionRow(db,user.id);if(billingMode()!=='whop'||s?.provider!=='whop'||!s.subscription_id)err(409,'No Whop membership yet');

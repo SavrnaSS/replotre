@@ -292,9 +292,9 @@ button.acct-chip.is-paid{border-color:#e2ab7755;background:linear-gradient(120de
  .ac-plan-hero .ac-btn{width:100%}
 }
 /* Account gate: hide the studio until the account check decides */
-html.rp-gate body>*:not(.ob){visibility:hidden}
+html.rp-gate body>*:not(.ob):not(.ck){visibility:hidden}
 /* Until the editor's styles load, its (unstyled) markup takes no space, so phones never zoom out to fit it */
-html.rp-bare body>*:not(.ob){display:none!important}
+html.rp-bare body>*:not(.ob):not(.ck){display:none!important}
 .ob-auth{display:flex;flex-direction:column;gap:18px;max-width:420px}
 .ob-pw{position:relative;display:flex}
 .ob-pw input{flex:1;padding-right:48px}
@@ -1456,3 +1456,52 @@ html.rp-bare body>*:not(.ob){display:none!important}
 .ob .au-card-wrap:before,.ob .au-card-wrap:after,.ob .au-card-wrap>.fx-vf{display:none!important}
 .ob .au-input input:focus{box-shadow:0 0 0 3px rgba(226,171,119,.22)}
 @media (max-width:640px){.ob .au-card-wrap,.ob:has(.au-wall) .au-card-wrap{background:var(--n1,#131416);border:1px solid var(--hair,rgba(242,238,231,.08));box-shadow:0 12px 32px rgba(0,0,0,.5)}}
+
+/* ===== Embedded checkout sheet (matches the site: dark, warm accent, flat surfaces) ===== */
+.ck{position:fixed;inset:0;z-index:400;display:grid;place-items:center;padding:24px;
+ --n0:#0c0d0f;--n1:#131416;--n2:#18191c;--t1:#f2eee7;--t2:#a8a49c;--t3:#77746e;--hair:rgba(242,238,231,.08);--acc:#e2ab77;animation:ckIn .22s ease both}
+.ck.is-out{animation:ckOut .2s ease both}
+@keyframes ckIn{from{opacity:0}}@keyframes ckOut{to{opacity:0}}
+.ck-scrim{position:absolute;inset:0;background:rgba(8,9,10,.78);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.ck-sheet{position:relative;display:grid;grid-template-columns:minmax(0,380px) minmax(0,480px);width:min(880px,100%);max-height:calc(100dvh - 48px);border-radius:20px;overflow:hidden;
+ background:var(--n1);border:1px solid var(--hair);box-shadow:0 30px 80px rgba(0,0,0,.6);animation:ckRise .28s cubic-bezier(.2,.7,.2,1) both}
+@keyframes ckRise{from{transform:translateY(10px);opacity:0}}
+.ck-sum{position:relative;padding:28px;background:var(--n0);border-right:1px solid var(--hair);overflow:auto;color:var(--t1);display:flex;flex-direction:column}
+.ck-brand{display:inline-flex;align-items:center;gap:8px;margin-bottom:28px;color:var(--t1)}
+.ck-brand svg{width:22px;height:auto;color:var(--acc)}
+.ck-brand b{font:800 17px/1 var(--font-display,inherit);letter-spacing:-.03em}.ck-brand i{color:var(--acc);font-style:normal}
+.ck-kicker{margin:0;font-size:13px;color:var(--t3)}
+.ck-sum h2{margin:4px 0 14px;font-size:22px;font-weight:600;letter-spacing:-.02em}
+.ck-price{display:flex;align-items:baseline;gap:4px}.ck-price b{font-size:40px;font-weight:600;letter-spacing:-.03em;font-variant-numeric:tabular-nums}.ck-price span{color:var(--t3);font-size:15px}
+.ck-note{margin:4px 0 20px;font-size:13px;color:var(--t3)}
+.ck-feat{list-style:none;margin:0 0 20px;padding:16px 0 0;border-top:1px solid var(--hair);display:flex;flex-direction:column;gap:10px}
+.ck-feat li{display:flex;gap:10px;align-items:flex-start;font-size:14px;color:var(--t2)}
+.ck-feat svg{flex-shrink:0;width:16px;height:16px;margin-top:2px;color:var(--acc)}
+.ck-total{margin-top:auto;display:flex;justify-content:space-between;align-items:baseline;padding:16px 0;border-top:1px solid var(--hair);font-size:15px}
+.ck-total span{color:var(--t2)}.ck-total b{font-weight:600;font-variant-numeric:tabular-nums}
+.ck-fine{display:flex;gap:8px;margin:0;font-size:12px;line-height:1.5;color:var(--t3)}
+.ck-fine svg{flex-shrink:0;width:14px;height:14px;margin-top:1px;color:#4cc48a}
+.ck button.ck-x{position:absolute;top:16px;right:16px;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:var(--t2);border:1px solid var(--hair);background:var(--n1)}
+.ck button.ck-x:hover{color:var(--t1);background:var(--n2)}
+.ck-x svg{width:16px;height:16px}
+.ck-pay{position:relative;min-height:420px;padding:20px;overflow:auto;background:var(--n1)}
+.ck-mount{min-height:380px}
+.ck-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:10px;color:var(--t3);font-size:14px;pointer-events:none}
+.ck-loading[hidden]{display:none}
+.ck-done{min-height:380px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;color:var(--t1)}
+.ck-done small{color:var(--t3)}
+/* phones: full-screen sheet, summary on top, compact */
+@media (max-width:760px){
+ .ck{padding:0;place-items:stretch}
+ .ck-sheet{grid-template-columns:1fr;width:100%;max-height:none;height:100dvh;border-radius:0;border:0;overflow:auto}
+ .ck-sum{padding:20px 16px 16px;border-right:0;border-bottom:1px solid var(--hair);overflow:visible}
+ .ck-brand{margin-bottom:16px}
+ .ck-sum h2{font-size:20px;margin-bottom:8px}
+ .ck-price b{font-size:32px}
+ .ck-note{margin-bottom:12px}
+ .ck-feat{display:none}
+ .ck-total{margin-top:0;padding:12px 0}
+ .ck-pay{padding:12px 8px 24px;overflow:visible}
+ .ck button.ck-x{top:14px;right:14px}
+}
+@media (prefers-reduced-motion:reduce){.ck,.ck-sheet{animation:none}}
