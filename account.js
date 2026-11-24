@@ -382,6 +382,9 @@ function readAuthReturn(){const u=new URL(location.href),e=u.searchParams.get('a
  ['auth_error','auth','new'].forEach(k=>u.searchParams.delete(k));history.replaceState(null,'',u.pathname+(u.search||'')+u.hash)}
 async function boot(){try{await bootInner()}catch(e){console.warn('[account] boot failed, opening the studio',e);ungate()}}
 async function bootInner(){readAuthReturn();let status=null,me=null,acct=null;const pre=window.__rpPre;
+ // The server includes the signed-in state in the page: signed-out visitors get the sign-up screen with no extra round trip.
+ let hint=null;try{hint=JSON.parse(document.documentElement.dataset.boot||'null')}catch{}
+ if(hint&&hint.cloud&&!hint.auth){S.status=hint;startGate();if(pre)pre.status.then(st=>{if(st&&JSON.stringify([st.signup,st.inviteRequired,st.google])!==JSON.stringify([hint.signup,hint.inviteRequired,hint.google])){S.status=st;if(S.ob?.gate)renderOb()}});return}
  try{[status,me,acct]=await Promise.all(pre?[pre.status,pre.me,pre.account]:[fetch('/api/status',{credentials:'same-origin'}).then(r=>r.ok?r.json():null),fetch('/api/auth/me',{credentials:'same-origin'}).then(r=>r.ok?r.json():null),null])}catch{}
  S.status=status;
  if(!status?.cloud){ungate();return} // no account server (static preview): open the local studio
