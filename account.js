@@ -5,8 +5,10 @@
 'use strict';
 const Cloud=()=>window.ReplotreCloud,E=()=>window.ReplotreEditor;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const ico=(n,s)=>window.ReplotreIco?window.ReplotreIco(n,s):'';
-const api=(u,o)=>Cloud().api(u,o);
+const ICO_FB={'alert-triangle':'<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/>','arrow-up':'<path d="m6 12 6-6 6 6M12 6v13"/>','captions':'<rect x="2" y="5" width="20" height="14" rx="3"/><path d="M6 10h4m4 0h4M6 14h8m2 0h2"/>','check':'<path d="m4 12 5 5L20 6"/>','chevron-down':'<path d="m6 9 6 6 6-6"/>','eye':'<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>','link':'<path d="M10 13a5 5 0 0 0 7 .2l3-3a5 5 0 0 0-7-7l-2 2M14 11a5 5 0 0 0-7-.2l-3 3a5 5 0 0 0 7 7l2-2"/>','shield-check':'<path d="M12 2 4 5v7c0 5 3 8 8 10 5-2 8-5 8-10V5l-8-3Zm-4 10 3 3 5-6"/>','sparkles':'<path d="m12 3 1.6 5.4L19 10l-5.4 1.6L12 17l-1.6-5.4L5 10l5.4-1.6L12 3ZM5 16l.8 2.2L8 19l-2.2.8L5 22l-.8-2.2L2 19l2.2-.8L5 16ZM19 2l.7 1.3L21 4l-1.3.7L19 6l-.7-1.3L17 4l1.3-.7L19 2Z"/>','wand-sparkles':'<path d="m4 20 13-13 3 3L7 23l-3-3ZM14 4l1-3 1 3 3 1-3 1-1 3-1-3-3-1 3-1ZM4 7l.5-2L5 7l2 .5L5 8l-.5 2L4 8l-2-.5 2-.5Z"/>','x':'<path d="M18 6 6 18M6 6l12 12"/>','zap':'<path d="m13 2-9 12h7l-1 8 10-12h-7V2Z"/>','grid':'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/>','play':'<path d="m7 4 13 8-13 8V4Z" fill="currentColor" stroke="none"/>','cloud-upload':'<path d="M12 16V8m-4 4 4-4 4 4M3 17a4.5 4.5 0 0 1 2-8 7 7 0 0 1 14 1 4 4 0 0 1-1 8H5"/>','image':'<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m3 17 5-5 4 4 3-3 6 6"/>','clapperboard':'<path d="M3 9h18v12H3V9ZM3 9V5l17-3 1 7M8 5l3 4m3-5 3 5"/>','sliders-horizontal':'<path d="M3 6h12m4 0h2M3 12h4m4 0h10M3 18h12m4 0h2"/><circle cx="17" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/>'};
+// Uses the studio's icon set when it's loaded; this script also runs first (before the editor) so sign-up shows sooner.
+const ico=(n,s)=>window.ReplotreIco?window.ReplotreIco(n,s):`<svg ${s?`width="${s}" height="${s}"`:''} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICO_FB[n]||ICO_FB.sparkles}</svg>`;
+const api=async(u,o={})=>{if(Cloud()?.api)return Cloud().api(u,o);const r=await fetch(u,{method:o.method||'GET',credentials:'same-origin',headers:{'X-Replotre-Client':'studio',...(o.body?{'Content-Type':'application/json'}:{})},body:o.body?JSON.stringify(o.body):undefined});let d={};try{d=await r.json()}catch{}if(!r.ok){const e=Error(d.error||`Request failed (${r.status})`);e.status=r.status;e.feature=d.feature;throw e}return d};
 const fmtBytes=b=>b>=1024**3?`${(b/1024**3).toFixed(b>=10*1024**3?0:1)} GB`:b>=1048576?`${Math.round(b/1048576)} MB`:`${Math.round(b/1024)} KB`;
 const fmtDate=t=>t?new Date(t).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'}):'';
 const money=(n,cur='usd')=>new Intl.NumberFormat(cur==='usd'?'en-US':undefined,{style:'currency',currency:cur.toUpperCase(),maximumFractionDigits:n%1?2:0}).format(n);
@@ -34,7 +36,7 @@ const STEPS=[
 
 /* ---------- Data ---------- */
 async function loadAccount(){try{S.account=await api('/api/account')}catch{S.account=null}renderChip();return S.account}
-async function loadPlans(){if(S.plans)return S.plans;try{const r=await fetch('/api/billing/plans',{credentials:'same-origin'}).then(r=>r.json());S.plans=r.plans;S.mode=r.mode}catch{S.plans=[]}return S.plans}
+async function loadPlans(){if(S.plans)return S.plans;const pre=window.__rpPre?.plans;if(pre){window.__rpPre.plans=null;const r=await pre;if(r?.plans){S.plans=r.plans;S.mode=r.mode;return S.plans}}try{const r=await fetch('/api/billing/plans',{credentials:'same-origin'}).then(r=>r.json());S.plans=r.plans;S.mode=r.mode}catch{S.plans=[]}return S.plans}
 let saveTimer=0;
 function saveProfile(patch,{step,complete}={}){S.ob&&Object.assign(S.ob.data,patch);clearTimeout(saveTimer);
  return new Promise(res=>{saveTimer=setTimeout(async()=>{try{S.account=await api('/api/account/profile',{method:'PUT',body:{profile:patch,step,complete}});renderChip()}catch(e){E()?.notify(e.message)}res()},complete?0:250)})}
@@ -359,21 +361,22 @@ async function onConnection(){const c=!!Cloud()?.isConnected?.();if(c===wasConne
  await loadAccount();if(!S.account)return;
  if(new URL(location.href).searchParams.get('billing'))return billingReturn();
  sessionStorage.removeItem('replotre_new_account');
- if(!S.account.profile.onboardedAt)startOnboarding();else ungate()}
+ if(!S.account.profile.onboardedAt){if(!(S.ob&&document.querySelector('.ob')))startOnboarding()}else ungate()}
 /* Studio entry: decide between the account gate, setup and the studio before the studio is shown. */
 const GOOGLE_ERR={google_cancelled:'Google sign-in was cancelled. Try again, or use your email.',google_expired:'That sign-in took too long. Try Google again.',google_unverified:'Your Google account email isn’t verified yet.',signup_closed:'New sign-ups are closed right now. Sign in if you already have an account.',invite_required:'Sign-ups need an invitation code. Create your account with email and the code.',capacity:'We’re at capacity for new accounts right now. Please try again later.',google_unavailable:'Google sign-in isn’t available right now. Use your email instead.'};
 function readAuthReturn(){const u=new URL(location.href),e=u.searchParams.get('auth_error'),g=u.searchParams.get('auth');if(!e&&!g)return;
  if(e)S.authError=GOOGLE_ERR[e]||'Google sign-in didn’t work. Try again, or use your email.';
  if(g==='google'&&u.searchParams.get('new')==='1')sessionStorage.setItem('replotre_new_account','1');
  ['auth_error','auth','new'].forEach(k=>u.searchParams.delete(k));history.replaceState(null,'',u.pathname+(u.search||'')+u.hash)}
-async function boot(){readAuthReturn();let status=null,me=null;
- try{[status,me]=await Promise.all([fetch('/api/status',{credentials:'same-origin'}).then(r=>r.ok?r.json():null),fetch('/api/auth/me',{credentials:'same-origin'}).then(r=>r.ok?r.json():null)])}catch{}
+async function boot(){readAuthReturn();let status=null,me=null,acct=null;const pre=window.__rpPre;
+ try{[status,me,acct]=await Promise.all(pre?[pre.status,pre.me,pre.account]:[fetch('/api/status',{credentials:'same-origin'}).then(r=>r.ok?r.json():null),fetch('/api/auth/me',{credentials:'same-origin'}).then(r=>r.ok?r.json():null),null])}catch{}
  S.status=status;
  if(!status?.cloud){ungate();return} // no account server (static preview): open the local studio
  if(!me?.user){startGate();return}
+ if(acct&&acct.profile&&!new URL(location.href).searchParams.get('billing')){S.account=acct;renderChip();if(acct.profile.onboardedAt)ungate();else startOnboarding()}
  setTimeout(()=>{if(document.documentElement.classList.contains('rp-gate'))onConnection()},4000)}
 window.addEventListener('replotre:cloud',onConnection);
 document.addEventListener('visibilitychange',async()=>{if(document.visibilityState!=='visible'||!sessionStorage.getItem('replotre_portal_open'))return;sessionStorage.removeItem('replotre_portal_open');try{S.account=(await api('/api/billing/refresh',{method:'POST'})).account;renderChip();renderCenter()}catch{}});
-if(window.ReplotreEditor?.ready)boot();else window.addEventListener('replotre:ready',boot,{once:true});
+boot();
 window.ReplotreAccount={open:openCenter,openPlans:reason=>openCenter('plans',reason),upgrade,startOnboarding,refresh:loadAccount,get:()=>S.account};
 })();

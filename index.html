@@ -8,6 +8,11 @@
 <title>Replotre Studio — Live Video Editor</title>
 <link rel="icon" type="image/svg+xml" href="./favicon.svg?v=3" />
 <link rel="apple-touch-icon" href="./assets/brand/apple-touch-icon.png" />
+<!-- Account check starts with the page, so sign-up / setup can show without waiting for the editor -->
+<link rel="preload" href="/api/auth/me" as="fetch" crossorigin="anonymous" />
+<link rel="preload" href="/api/status" as="fetch" crossorigin="anonymous" />
+<link rel="preload" href="/api/account" as="fetch" crossorigin="anonymous" />
+<link rel="preload" href="/api/billing/plans" as="fetch" crossorigin="anonymous" />
 <link rel="preload" href="/assets/fonts/inter-opsz.woff2" as="font" type="font/woff2" crossorigin />
 <link rel="preload" href="/assets/fonts/jakarta.woff2" as="font" type="font/woff2" crossorigin />
 <link rel="stylesheet" href="./styles.css?v=2.15.0" />
@@ -19,7 +24,7 @@
 <link rel="stylesheet" href="./account.css?v=4.8.1" />
 <link rel="stylesheet" href="./templates.css?v=2.7.2" />
 <link rel="stylesheet" href="./typography.css?v=1.0.0" />
-<script src="./landing-theme.js?v=2.19.0"></script>
+<script src="./landing-theme.js?v=2.20.0"></script>
 </head>
 <body>
 <div id="app" class="app">
@@ -65,14 +70,14 @@
 <input type="file" id="projectInput" accept="application/json,.json" hidden />
 
 <audio id="sourceAudio" preload="auto" style="display:none"></audio>
+<script src="./account.js?v=4.9.1" defer></script>
 <script src="./playback.js?v=2.15.0" defer></script>
 <script src="./workspace-state.js?v=1.0.0" defer></script>
 <script src="./templates-catalog.js?v=2.0.0" defer></script>
 <script src="./templates.js?v=2.7.2" defer></script>
 <script src="./intelligence.js?v=2.15.0" defer></script>
 <script src="./workspace.js?v=1.0.0" defer></script>
-<script src="./app.js?v=2.24.0" defer></script>
+<script src="./app.js?v=2.25.1" defer></script>
 <script src="./cloud.js?v=2.16.0" defer></script>
-<script src="./account.js?v=4.8.0" defer></script>
 </body>
 </html>

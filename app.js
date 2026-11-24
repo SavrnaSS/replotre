@@ -422,7 +422,15 @@ function drawDemo(context,demo,time,w,h){
 }
 
 const DEMO_SAMPLES=[{name:'First light',mood:'Dawn'},{name:'Golden hour',mood:'Sunset'},{name:'Blue hour',mood:'Dusk'}];
-const demoCardPosters=[0,1,2].map(index=>{const c=document.createElement('canvas');c.width=384;c.height=240;drawDemo(c.getContext('2d',{alpha:false}),index,1,c.width,c.height);return c.toDataURL('image/jpeg',.88)});
+// Sample-clip thumbnails are drawn after the studio is on screen (drawing + JPEG-encoding all three up front blocked startup for ~2 s).
+const BLANK_POSTER='data:image/gif;base64,R0lGODlhAQABAAAAACw=';
+const demoCardPosters=[BLANK_POSTER,BLANK_POSTER,BLANK_POSTER];
+let demoPostersQueued=false;
+function queueDemoPosters(){if(demoPostersQueued)return;demoPostersQueued=true;const idle=window.requestIdleCallback?cb=>requestIdleCallback(cb,{timeout:1500}):cb=>setTimeout(cb,200);
+ const make=i=>{if(i>2){if(state.clips.some(c=>c.kind==='demo'))refreshAll();return}
+  const c=document.createElement("canvas");c.width=256;c.height=160;drawDemo(c.getContext("2d",{alpha:false}),i,1,c.width,c.height);
+  c.toBlob(b=>{if(b){demoCardPosters[i]=URL.createObjectURL(b);document.querySelectorAll(`[data-action="add-demo"][data-index="${i}"] img.poster`).forEach(img=>img.src=demoCardPosters[i])}idle(()=>make(i+1))},'image/jpeg',.85)};
+ idle(()=>make(0))}
 function addDemo(idx){const sample=DEMO_SAMPLES[idx]||DEMO_SAMPLES[0];applyMutation(()=>{const c={id:uid('demo'),kind:'demo',demo:idx,name:sample.name,in:0,out:5,speed:1,volume:1,brightness:100,saturation:100};state.clips.push(c);state.selectedClipId=c.id;state.selectedTextId=null},`Added ${sample.name}`)}
 function demoCardMarkup(i){const sample=DEMO_SAMPLES[i],used=state.clips.filter(c=>c.kind==='demo'&&(c.demo||0)===i).length;
  return `<button class="asset-card kind-sample ${used?'in-use':''}" data-action="add-demo" data-index="${i}" draggable="true" title="${escapeHTML(sample.name)}: click to add, or drag onto the timeline">`+
@@ -1675,5 +1683,5 @@ window.ReplotreTemplates?.restoreWorkspace?.(bootWorkspace.templates);
 refreshAll();restore().then(()=>{loadChat();syncMedia(true);
  // A prompt typed on the landing page (/studio?q=...) lands in the Director composer, ready to send.
  try{const u=new URL(location.href),q=(u.searchParams.get('q')||'').replace(/\s+/g,' ').trim().slice(0,140);if(u.searchParams.has('q')){u.searchParams.delete('q');history.replaceState(history.state,'',u.pathname+u.search+u.hash)}if(q){state.chatDraft=q;state.rightTab='ai';refreshAll();requestAnimationFrame(()=>{const ta=$('#chatInput');if(ta&&!ta.disabled){ta.focus();ta.setSelectionRange(q.length,q.length)}})}}catch(e){}
- window.ReplotreEditor.ready=true;checkAI();window.dispatchEvent(new Event('replotre:ready'))});
+ window.ReplotreEditor.ready=true;checkAI();window.dispatchEvent(new Event('replotre:ready'));queueDemoPosters()});
 })();
