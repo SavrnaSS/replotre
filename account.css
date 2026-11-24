@@ -1560,3 +1560,24 @@ html.rp-bare body>*:not(.ob):not(.ck){display:none!important}
  .ck .ck-sum button.ck-x{order:2;position:static;transform:none;flex:0 0 36px;width:36px;height:36px;margin-left:4px}
 }
 @media (max-width:360px){.ck-bar-txt small{display:none}}
+/* ===== Checkout loading: instant sheet, skeleton of the form, fade in when Whop's form is ready ===== */
+.ck-pay{position:relative}
+.ck-mount{opacity:0;transition:opacity .28s ease}
+.ck-pay.is-ready .ck-mount{opacity:1}
+.ck-skel{position:absolute;inset:20px 24px auto;display:flex;flex-direction:column;gap:12px;pointer-events:none;transition:opacity .2s ease}
+.ck-pay.is-ready .ck-skel,.ck-pay.is-ready .ck-status{opacity:0;visibility:hidden;transition:opacity .2s ease,visibility 0s .2s}
+.ck-skel i{display:block;border-radius:10px;background:var(--n2);animation:skPulse 1.4s ease-in-out infinite}
+.ck-skel .sk-btn{height:48px}
+.ck-skel .sk-btn+.sk-btn{animation-delay:.1s}
+.ck-skel .sk-or{display:flex;align-items:center;gap:12px;margin:4px 0;font-size:12px;color:var(--t3)}
+.ck-skel .sk-or i{flex:1;height:1px;border-radius:0;background:var(--hair);animation:none}
+.ck-skel .sk-lbl{width:72px;height:10px;border-radius:5px;margin-top:6px}
+.ck-skel .sk-in{height:44px;background:var(--n0);border:1px solid var(--hair)}
+.ck-skel .sk-tall{height:88px}
+.ck-skel .sk-card{display:flex;flex-direction:column;gap:10px;padding:16px;margin-top:6px;border-radius:14px;border:1px solid var(--hair)}
+.ck-skel .sk-cta{margin-top:6px;background:var(--n3,#202124)}
+.ck-status{position:absolute;left:0;right:0;bottom:16px;display:flex;align-items:center;justify-content:center;gap:8px;margin:0;font-size:12.5px;color:var(--t3);pointer-events:none}
+.ck-status .acct-spin{width:12px;height:12px}
+@keyframes skPulse{50%{opacity:.55}}
+@media (max-width:760px){.ck-skel{inset:12px 16px auto}.ck-status{position:fixed;bottom:calc(16px + env(safe-area-inset-bottom))}.ck-pay{min-height:calc(100dvh - 60px)}}
+@media (prefers-reduced-motion:reduce){.ck-skel i{animation:none}.ck-mount{transition:none}}

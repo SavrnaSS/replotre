@@ -313,7 +313,7 @@ async function onAuthSubmit(e){e.preventDefault();const f=e.target,btn=f.querySe
 
 /* ---------- Plans ---------- */
 function planPrice(p){const yearly=S.interval==='year';if(!p.price.month)return {main:money(0),note:'Free forever'};const per=yearly?p.price.year/12:p.price.month;return {main:money(Math.round(per*100)/100),note:yearly?`${money(p.price.year)} billed yearly`:'Billed monthly'}}
-function plansMarkup({recommended,context,reason,why}={}){const plans=S.plans||[],cur=S.account?.plan?.id||'free',sub=S.account?.subscription;if(recommended===cur)recommended=null;const recName=recommended&&plans.find(x=>x.id===recommended)?.name;const save=plans.filter(p=>p.price.month).map(p=>Math.round((1-p.price.year/(p.price.month*12))*100));const maxSave=save.length?Math.max(...save):0;
+function plansMarkup({recommended,context,reason,why}={}){queueMicrotask(warmCheckout);const plans=S.plans||[],cur=S.account?.plan?.id||'free',sub=S.account?.subscription;if(recommended===cur)recommended=null;const recName=recommended&&plans.find(x=>x.id===recommended)?.name;const save=plans.filter(p=>p.price.month).map(p=>Math.round((1-p.price.year/(p.price.month*12))*100));const maxSave=save.length?Math.max(...save):0;
  return `<div class="pl" data-context="${context}">
   ${reason?`<div class="pl-reason">${ico('zap')}<span>${esc(reason)}</span></div>`:''}
   ${why&&recName?`<div class="pl-why">${ico('sparkles')}<span>We recommend <b>${esc(recName)}</b> because ${esc(why)}.</span></div>`:''}
@@ -331,14 +331,17 @@ function plansMarkup({recommended,context,reason,why}={}){const plans=S.plans||[
 const planIndex=id=>(S.plans||[]).findIndex(p=>p.id===id);
 /* ---------- Embedded checkout: Whop's checkout element inside our own page, themed to match ---------- */
 let whopLoader=null;
+let whopWarm=false;
+function warmCheckout(){if(whopWarm||S.mode!=='whop')return;whopWarm=true;
+ for(const h of['https://cdn.whop.com','https://api.whop.com']){const l=document.createElement('link');l.rel='preconnect';l.href=h;l.crossOrigin='';document.head.appendChild(l)}
+ (window.requestIdleCallback||(f=>setTimeout(f,600)))(()=>loadWhopElements())}
 function loadWhopElements(){if(window.WhopElements)return Promise.resolve(true);if(whopLoader)return whopLoader;
  whopLoader=new Promise(res=>{const sc=document.createElement('script');sc.src='https://cdn.whop.com/elements/amber/elements.js';sc.async=true;sc.setAttribute('data-whop-elements','');
   const t=setTimeout(()=>res(false),12000);sc.onload=()=>{clearTimeout(t);res(!!window.WhopElements)};sc.onerror=()=>{clearTimeout(t);res(false)};document.head.appendChild(sc)});
  return whopLoader}
-function closeCheckout(){const el=document.querySelector('.ck');if(!el)return;try{el._checkout?.unmount?.();el._wallets?.unmount?.()}catch{}el.classList.add('is-out');setTimeout(()=>el.remove(),220);document.removeEventListener('keydown',el._esc)}
-async function openEmbeddedCheckout(planId,r,context){
- if(!await loadWhopElements())return false;
- const p=(S.plans||[]).find(x=>x.id===planId);if(!p)return false;const pr=planPrice(p),yearly=S.interval==='year';
+function closeCheckout(){const el=document.querySelector('.ck');if(!el)return;el._offMsg?.();try{el._checkout?.unmount?.();el._wallets?.unmount?.()}catch{}el.classList.add('is-out');setTimeout(()=>el.remove(),220);document.removeEventListener('keydown',el._esc)}
+function openCheckoutSheet(planId){
+ const p=(S.plans||[]).find(x=>x.id===planId);if(!p)return null;const pr=planPrice(p),yearly=S.interval==='year';
  const el=document.createElement('div');el.className='ck';el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.setAttribute('aria-label',`Subscribe to ${p.name}`);
  el.innerHTML=`<div class="ck-scrim" data-ck="close"></div><div class="ck-sheet">
   <aside class="ck-sum"><button type="button" class="ck-x" data-ck="close" aria-label="Close checkout">${ico('x')}</button>
@@ -351,15 +354,19 @@ async function openEmbeddedCheckout(planId,r,context){
    <ul class="ck-trust"><li>${ico('shield-check')}<span>Secure checkout by Whop</span></li><li>${ico('zap')}<span>Studio opens right after payment</span></li><li>${ico('check')}<span>Cancel any time · renews ${yearly?'yearly':'monthly'}</span></li></ul>
    <p class="ck-fine">Your bank may show the amount in your local currency.</p></div>
   </aside>
-  <section class="ck-pay"><div class="ck-loading"><span class="acct-spin"></span>Loading secure checkout…</div><div id="ckWallets" class="ck-wallets" hidden></div><div class="ck-or" hidden><span>or pay with card</span></div><div id="ckMount" class="ck-mount"></div></section>
+  <section class="ck-pay" aria-busy="true"><div class="ck-skel" aria-hidden="true"><i class="sk-btn"></i><i class="sk-btn"></i><span class="sk-or"><i></i>Or pay another way<i></i></span><i class="sk-lbl"></i><i class="sk-in"></i><div class="sk-card"><i class="sk-lbl"></i><i class="sk-in sk-tall"></i><i class="sk-lbl"></i><i class="sk-in"></i></div><i class="sk-btn sk-cta"></i></div><p class="ck-status" role="status"><span class="acct-spin"></span><span>Preparing secure checkout</span></p><div id="ckMount" class="ck-mount"></div></section>
  </div>`;
  document.body.appendChild(el);el.addEventListener('click',e=>{if(e.target.closest('[data-ck=close]'))closeCheckout()});
  el._esc=e=>{if(e.key==='Escape')closeCheckout()};document.addEventListener('keydown',el._esc);
+ el.querySelector('.ck-x')?.focus({preventScroll:true});
+ return el}
+function checkoutReady(el){if(!el||el._ready)return;el._ready=true;const pay=el.querySelector('.ck-pay');pay?.removeAttribute('aria-busy');pay?.classList.add('is-ready')}
+function mountCheckout(el,r,context){
  try{
   const whop=window.WhopElements({appearance:{theme:{appearance:'dark',accentColor:'bronze',grayColor:'sand'},variables:{'--radius':'10px'},classes:{'whop-CheckoutSummary':{display:'none'},'whop-CheckoutHeader':{display:'none'}}}});
   const returnUrl=location.origin.startsWith('https://')?`${location.origin}/studio?billing=success`:undefined;
   const group=whop.checkout.create({checkoutConfiguration:r.checkoutConfiguration,...(returnUrl?{returnUrl}:{}),
-   onLoadingChange:({loading})=>el.querySelector('.ck-loading')?.toggleAttribute('hidden',!loading),
+   onLoadingChange:x=>{if((x?.loading??x)===false)setTimeout(()=>checkoutReady(el),120)},
    onComplete:el._onDone=async()=>{if(el._completed)return;el._completed=true;el.querySelector('.ck-pay').innerHTML=`<div class="ck-done"><span class="acct-spin"></span><strong>Payment received</strong><small>Activating your plan…</small></div>`;
     sessionStorage.setItem('replotre_billing_ctx',context);
     for(let i=0;i<20&&!S.account?.subscribed;i++){try{S.account=(await api('/api/billing/refresh',{method:'POST'})).account}catch{}if(!S.account?.subscribed)await new Promise(x=>setTimeout(x,2000))}
@@ -368,19 +375,33 @@ async function openEmbeddedCheckout(planId,r,context){
     else showPaywall('Your payment is processing. The studio opens as soon as Whop confirms it')}});
   const node=group.create('checkout');node.mount('#ckMount');el._checkout=node;
   // Wallet buttons (Google Pay, Apple Pay) come from the checkout element itself now that replotre.com is a verified Whop payment domain.
-  setTimeout(()=>el.querySelector('.ck-loading')?.setAttribute('hidden',''),9000);
+  // Whop's frame posts a 'resize' for the checkout as soon as it has drawn the form; reveal on that instead of waiting for the frame's load event.
+  const onMsg=e=>{const d=e.data;if(/(^|\.)whop\.com$/.test(new URL(e.origin).hostname)&&d&&d.whop==='resize'&&d.type==='checkout'&&d.height>0){window.removeEventListener('message',onMsg);setTimeout(()=>checkoutReady(el),180)}};
+  window.addEventListener('message',onMsg);el._offMsg=()=>window.removeEventListener('message',onMsg);
+  setTimeout(()=>checkoutReady(el),7000);
   return true}
- catch(err){console.warn('[checkout] embed failed, using hosted checkout',err);el.remove();document.removeEventListener('keydown',el._esc);return false}}
+ catch(err){console.warn('[checkout] embed failed, using hosted checkout',err);return false}}
+let pendingCheckout=null;
+function startCheckoutRequest(planId){const key=planId+'|'+S.interval;if(pendingCheckout?.key===key&&Date.now()-pendingCheckout.at<60000)return pendingCheckout.p;
+ const p=api('/api/billing/checkout',{method:'POST',body:{plan:planId,interval:S.interval}});p.catch(()=>{});pendingCheckout={key,at:Date.now(),p};return p}
+function takeCheckoutRequest(planId){const p=startCheckoutRequest(planId);pendingCheckout=null;return p}
+document.addEventListener('pointerdown',e=>{const b=e.target.closest?.('button.pl-cta[data-plan]');if(b&&!b.disabled&&S.mode==='whop'&&!b.closest('.is-current'))startCheckoutRequest(b.dataset.plan)},{capture:true,passive:true});
 async function choosePlan(planId,context){const btns=document.querySelectorAll(`[data-plan="${planId}"]`);btns.forEach(b=>{b.disabled=true;b.dataset.label=b.innerHTML;b.innerHTML='<span class="acct-spin"></span>'});
- try{const r=await api('/api/billing/checkout',{method:'POST',body:{plan:planId,interval:S.interval}});
+ const restore=()=>btns.forEach(b=>{b.disabled=false;b.innerHTML=b.dataset.label||'Choose'});
+ // Live payments: open the sheet immediately and load the session and Whop's script side by side.
+ const sheet=S.mode==='whop'&&location.protocol==='https:'||S.mode==='whop'&&location.hostname==='localhost'?openCheckoutSheet(planId):null;
+ const scriptP=sheet?loadWhopElements():null;
+ try{const r=await takeCheckoutRequest(planId);
   if(r.url){sessionStorage.setItem('replotre_billing_ctx',context);
-   if(r.checkoutConfiguration&&await openEmbeddedCheckout(planId,r,context)){btns.forEach(b=>{b.disabled=false;b.innerHTML=b.dataset.label||'Choose'});return}
+   if(sheet){if(!document.body.contains(sheet)){restore();return}
+    if(r.checkoutConfiguration&&await scriptP&&document.body.contains(sheet)&&mountCheckout(sheet,r,context)){restore();return}
+    sheet.remove();document.removeEventListener('keydown',sheet._esc)}
    if(r.redirects!==false){location.assign(r.url);return}
    // Local/http: Whop can't send the buyer back, so checkout opens in a new tab and we watch for the membership.
    window.open(r.url,'_blank','noopener');btns.forEach(b=>{b.innerHTML='<span class="acct-spin"></span>Waiting for payment…'});awaitCheckout(context);return}
   if(r.account){S.account=r.account;renderChip();E()?.notify(`${S.account.plan.name} is active${r.test?' (test mode)':''}`);
    if(context==='onboarding'||document.querySelector('.ob'))await enterStudio();else renderCenter()}}
- catch(e){E()?.notify(e.message);btns.forEach(b=>{b.disabled=false;b.innerHTML=b.dataset.label||'Choose'})}}
+ catch(e){if(sheet){sheet.remove();document.removeEventListener('keydown',sheet._esc)}E()?.notify(e.message);restore()}}
 
 /* ---------- Account centre ---------- */
 const TABS=[['overview','Overview','grid'],['plans','Plans','sparkles'],['billing','Billing','file-json'],['profile','Profile','pencil'],['security','Security','shield-check']];
