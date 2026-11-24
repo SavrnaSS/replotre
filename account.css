@@ -1154,3 +1154,85 @@ html.rp-bare body>*:not(.ob){display:none!important}
 .ob .au-card-wrap>*,.ob .obx-main[data-step=about] .obx-content>*{position:relative}
 .ob .au-card-wrap>.fx-vf,.ob .obx-main[data-step=about] .obx-content>.fx-vf{position:absolute}
 @media (max-width:640px){.ob .au-card-wrap:before,.ob .obx-main[data-step=about] .obx-content:before{background-size:48px 48px;background-position:50% -24px}}
+
+/* ======================================================================
+   HUD v2: camera-monitor card for setup (and sign-up card frame)
+   ====================================================================== */
+@property --fx-a{syntax:'<angle>';inherits:false;initial-value:0deg}
+.ob{--teal:#5ec8d8;--acc2:#f0c08f}
+/* card: deep glass + slowly sweeping gradient edge */
+.ob .au-card-wrap,.ob .obx-main[data-step=about] .obx-content{
+ background:radial-gradient(140% 60% at 50% -10%,rgba(94,200,216,.10),transparent 60%),radial-gradient(90% 50% at 100% 100%,rgba(226,171,119,.08),transparent 60%),linear-gradient(170deg,#16191d 0%,#111316 55%,#151214 100%);
+ border:1px solid transparent;box-shadow:0 30px 80px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.05)}
+.ob .au-card-wrap:after,.ob .obx-main[data-step=about] .obx-content:after{content:'';display:block;position:absolute;inset:-1px;z-index:-1;border-radius:inherit;padding:1px;pointer-events:none;opacity:1;
+ background:conic-gradient(from var(--fx-a),rgba(226,171,119,.9),rgba(226,171,119,.08) 22%,rgba(94,200,216,.75) 48%,rgba(94,200,216,.06) 72%,rgba(226,171,119,.9));
+ -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:fxSpin 9s linear infinite;
+ left:-1px;right:-1px;top:-1px;height:auto;transform:none}
+@keyframes fxSpin{to{--fx-a:360deg}}
+/* grid only in the header band */
+.ob .au-card-wrap:before,.ob .obx-main[data-step=about] .obx-content:before{
+ -webkit-mask-image:linear-gradient(180deg,#000 0,rgba(0,0,0,.6) 90px,transparent 170px);mask-image:linear-gradient(180deg,#000 0,rgba(0,0,0,.6) 90px,transparent 170px)}
+/* HUD strip */
+.fx-hud{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:-8px -8px 20px;padding:8px 12px;border-radius:10px;
+ background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.07);font:500 11px/1 var(--font-mono,ui-monospace,monospace);letter-spacing:.08em;color:var(--t2);font-variant-numeric:tabular-nums}
+.fx-hud-l,.fx-hud-r{display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
+.fx-hud .fx-rec{width:7px;height:7px}
+.fx-hud-l span:first-of-type{color:#e5534b;font-weight:700}
+.fx-tc{color:var(--t1);min-width:11ch}
+.fx-steps{display:inline-flex;gap:3px;margin-right:4px}
+.fx-steps i{width:14px;height:3px;border-radius:2px;background:rgba(255,255,255,.14)}
+.fx-steps i.on{background:linear-gradient(90deg,var(--acc),var(--teal));width:22px}
+.fx-steps i.done{background:rgba(226,171,119,.55)}
+.ob .obx-dots{display:none}
+/* heading */
+.ob .obx-main[data-step=about] h1{font-size:30px;letter-spacing:-.025em;background:none}
+.ob .obx-main[data-step=about] .ob-sub{color:var(--t3)}
+/* slate labels: mono, tracked, HUD */
+.ob .obx-main[data-step=about] .ob-label,.ob .obx-main[data-step=about] .ob-name>span{font:600 11px/1 var(--font-mono,ui-monospace,monospace);letter-spacing:.12em;text-transform:uppercase;color:var(--t2);display:flex;align-items:center}
+.ob .obx-main[data-step=about] .ob-label small,.ob .obx-main[data-step=about] .ob-name>span small{font:500 10.5px/1 var(--font-mono,ui-monospace,monospace);letter-spacing:.06em;text-transform:uppercase;color:var(--t3)}
+.ob .obx-main[data-step=about] .fx-idx{border-color:rgba(226,171,119,.4);color:var(--acc);background:rgba(226,171,119,.08)}
+.ob .obx-main[data-step=about] .ob-label:after,.ob .obx-main[data-step=about] .ob-name>span:after{content:'';flex:1;height:1px;margin-left:12px;background:linear-gradient(90deg,rgba(255,255,255,.12),transparent)}
+/* name input: monitor field */
+.ob .obx-main[data-step=about] .ob-field input{background:rgba(0,0,0,.45);border-color:rgba(255,255,255,.09);font-size:15px;letter-spacing:.01em}
+.ob .obx-main[data-step=about] .ob-field input:focus{border-color:rgba(94,200,216,.6);box-shadow:0 0 0 3px rgba(94,200,216,.14),0 0 22px rgba(94,200,216,.12)}
+/* tiles */
+.ob .obx-main[data-step=about] button.ob-chip,.ob .obx-main[data-step=about] .ob-aspects button.ob-aspect{background-image:none;background-color:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.08);
+ transition:border-color .2s var(--ease),background-color .2s var(--ease),transform .15s var(--ease),box-shadow .2s var(--ease)}
+.ob .obx-main[data-step=about] button.ob-chip:hover,.ob .obx-main[data-step=about] .ob-aspects button.ob-aspect:hover{background-color:rgba(255,255,255,.05);border-color:rgba(255,255,255,.18);transform:translateY(-1px)}
+.ob .obx-main[data-step=about] button.ob-chip.is-on,.ob .obx-main[data-step=about] .ob-aspects button.ob-aspect.is-on{
+ border:1px solid transparent;
+ background:linear-gradient(180deg,#1f1b18,#171517) padding-box,linear-gradient(135deg,var(--acc),rgba(94,200,216,.85)) border-box;
+ box-shadow:0 0 0 3px rgba(226,171,119,.10),0 10px 28px rgba(226,171,119,.14);transform:none}
+.ob .obx-main[data-step=about] button.ob-chip.is-on .ob-chip-ico{color:var(--acc2);filter:drop-shadow(0 0 6px rgba(226,171,119,.5))}
+.ob .obx-main[data-step=about] .ob-chips[data-set=role] .ob-chip-ico{width:30px;height:30px;display:grid;place-items:center;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06)}
+.ob .obx-main[data-step=about] .ob-chips[data-set=role] button.ob-chip.is-on .ob-chip-ico{background:rgba(226,171,119,.12);border-color:rgba(226,171,119,.35)}
+.ob .obx-main[data-step=about] .ob-chips[data-set=role] button.ob-chip{min-height:72px;gap:7px}
+/* frame tiles: little monitors with safe-area guides */
+.ob .obx-main[data-step=about] .ob-aspects button.ob-aspect{padding:14px 6px 10px}
+.ob .obx-main[data-step=about] .ob-aspects button.ob-aspect i{position:relative;border:1.5px solid rgba(255,255,255,.35);border-radius:4px;background:rgba(0,0,0,.35);transform:scale(1.25);margin:4px 0 10px}
+.ob .obx-main[data-step=about] .ob-aspects button.ob-aspect i:after{content:'';position:absolute;inset:3px;border:1px dashed rgba(255,255,255,.18);border-radius:2px}
+.ob .obx-main[data-step=about] .ob-aspects button.ob-aspect.is-on i{border-color:var(--acc);background:linear-gradient(160deg,rgba(94,200,216,.22),rgba(226,171,119,.22));box-shadow:0 0 14px rgba(226,171,119,.35)}
+.ob .obx-main[data-step=about] .ob-aspects button.ob-aspect.is-on i:after{border-color:rgba(255,255,255,.45)}
+.ob .obx-main[data-step=about] .ob-aspects button.ob-aspect strong{font-family:var(--font-mono,ui-monospace,monospace);letter-spacing:.02em}
+/* Continue: lit, gradient, with a moving sheen on hover */
+.ob .obx-inline button.ob-next:not(:disabled){position:relative;overflow:hidden;background:linear-gradient(90deg,#e8b07a,#f3c79a 50%,#e2ab77);color:#1a1410;box-shadow:0 0 0 1px rgba(255,255,255,.18) inset,0 10px 30px rgba(226,171,119,.28),0 0 40px rgba(94,200,216,.08)}
+.ob .obx-inline button.ob-next:not(:disabled):before{content:'';position:absolute;top:0;bottom:0;left:-40%;width:30%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.55),transparent);transform:skewX(-20deg);transition:left .8s var(--ease)}
+.ob .obx-inline button.ob-next:not(:disabled):hover:before{left:120%}
+.ob .obx-inline button.ob-next:not(:disabled) svg{transition:transform .2s var(--ease)}
+.ob .obx-inline button.ob-next:not(:disabled):hover svg{transform:rotate(90deg) translateY(-3px)}
+.ob .obx-inline button.ob-next:disabled{background:rgba(255,255,255,.04);border:1px dashed rgba(255,255,255,.14);color:var(--t3)}
+/* viewfinder brackets tinted to match */
+.fx-vf b{border-color:var(--acc)}
+.fx-vf b:nth-child(2),.fx-vf b:nth-child(3){border-color:var(--teal)}
+/* phones */
+@media (max-width:640px){
+ .fx-hud{margin:-4px -4px 16px;padding:7px 10px;font-size:10px;letter-spacing:.06em}
+ .fx-steps{display:none}
+ .ob .obx-main[data-step=about] h1{font-size:25px}
+ .ob .obx-main[data-step=about] .ob-chips[data-set=role] button.ob-chip{min-height:64px;gap:5px}
+ .ob .obx-main[data-step=about] .ob-chips[data-set=role] .ob-chip-ico{width:26px;height:26px}
+ .ob .obx-main[data-step=about] .ob-aspects button.ob-aspect i{transform:scale(1.1);margin:2px 0 8px}
+}
+@media (max-width:360px){.fx-hud-l span:first-of-type{display:none}}
+@media (prefers-reduced-motion:reduce){.ob .au-card-wrap:after,.ob .obx-main[data-step=about] .obx-content:after{animation:none}}
+.ob .au-card-wrap:before,.ob .obx-main[data-step=about] .obx-content:before{-webkit-mask-image:linear-gradient(180deg,#000 0,rgba(0,0,0,.5) 40px,transparent 78px);mask-image:linear-gradient(180deg,#000 0,rgba(0,0,0,.5) 40px,transparent 78px)}

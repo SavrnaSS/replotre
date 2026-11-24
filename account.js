@@ -77,7 +77,11 @@ function ensureEditor(){if(editorP)return editorP;
  return editorP}
 const editorReady=()=>ensureEditor().then(()=>E()?.ready?null:new Promise(r=>addEventListener('replotre:ready',r,{once:true})));
 function ungate(){ensureEditor().then(()=>document.documentElement.classList.remove('rp-gate'))}
-function closeOnboarding(){const el=document.querySelector('.ob');ungate();if(!el)return;for(const n of el._inert||[])n.inert=false;document.body.style.overflow='';el.remove();S.ob=null;renderChip()}
+let tcTimer=0;
+function runTimecode(){clearInterval(tcTimer);const t0=performance.now();const tick=()=>{const el=document.querySelector('.fx-tc');if(!el){clearInterval(tcTimer);return}
+ const f=Math.floor((performance.now()-t0)/1000*24),p=n=>String(n).padStart(2,'0');el.textContent=`${p(Math.floor(f/86400))}:${p(Math.floor(f/1440)%60)}:${p(Math.floor(f/24)%60)}:${p(f%24)}`};
+ if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;tick();tcTimer=setInterval(tick,1000/12)}
+function closeOnboarding(){clearInterval(tcTimer);const el=document.querySelector('.ob');ungate();if(!el)return;for(const n of el._inert||[])n.inert=false;document.body.style.overflow='';el.remove();S.ob=null;renderChip()}
 const sel=(k,v)=>Array.isArray(S.ob.data[k])?S.ob.data[k].includes(v):S.ob.data[k]===v;
 function valid(step){const d=S.ob.data;switch(STEPS[step].id){case 'about':return !!d.role&&!!d.aspect&&(d.role!=='other'||!!(d.roleOther||'').trim());case 'work':return (d.goals||[]).length>0;case 'style':return !!d.aspect;case 'experience':return !!d.experience&&!!d.team;default:return true}}
 function recommendWhy(){const d=S.ob?.data||S.account?.profile||{},p=recommend(),cad={daily:'every day',weekly:'every week'}[d.cadence];
@@ -221,7 +225,7 @@ function renderOb(){const el=document.querySelector('.ob');if(!el||!S.ob)return;
   ${last?'<span class="obx-spacer"></span>':`<button type="button" class="ob-skip obx-signout" data-ob="signout">${ico('link')}<span>Sign out</span></button>`}</header>
  <main class="ob-main obx-main${anim?` ob-dir-${S.ob.dir>0?'next':'prev'} is-anim`:''}" data-step="${st.id}">
   <div class="obx-grid${side?' has-side':''}">
-   <section class="ob-content obx-content"><i class="fx-vf" aria-hidden="true"><b></b><b></b><b></b><b></b></i>${['about','plan'].includes(st.id)?`<div class="obx-dots" aria-label="Step ${i} of ${STEPS.length-1}"><span aria-hidden="true">${STEPS.slice(1).map((x,k)=>`<i class="${k+1<i?'done':k+1===i?'on':''}"></i>`).join('')}</span><span class="tc"><b class="fx-rec" aria-hidden="true"></b>0${i} / 0${STEPS.length-1}</span></div>`:''}${last?`<div class="rd-mark${anim?' is-anim':''}" aria-hidden="true">${ico('check')}${'<i></i>'.repeat(10)}</div>`:''}<p class="obx-kicker">${esc(st.label)}</p><h1 id="obTitle" tabindex="-1">${esc(last?((S.ob.data.name||'').trim()?`You’re all set, ${S.ob.data.name.trim()}.`:'You’re all set.'):st.title)}</h1>${last?`<p class="ob-sub">Your studio is tuned to how you work. Change anything here, or later in Settings.</p>`:st.sub?`<p class="ob-sub">${esc(st.sub)}</p>`:''}
+   <section class="ob-content obx-content"><i class="fx-vf" aria-hidden="true"><b></b><b></b><b></b><b></b></i>${['about','plan'].includes(st.id)?`<div class="fx-hud" aria-label="Step ${i} of ${STEPS.length-1}"><span class="fx-hud-l"><b class="fx-rec" aria-hidden="true"></b><span aria-hidden="true">REC</span><span class="fx-tc" aria-hidden="true">00:00:00:00</span></span><span class="fx-hud-r" aria-hidden="true"><span class="fx-steps">${STEPS.slice(1).map((x,k)=>`<i class="${k+1<i?'done':k+1===i?'on':''}"></i>`).join('')}</span>STEP 0${i}/0${STEPS.length-1}</span></div>`:''}${last?`<div class="rd-mark${anim?' is-anim':''}" aria-hidden="true">${ico('check')}${'<i></i>'.repeat(10)}</div>`:''}<p class="obx-kicker">${esc(st.label)}</p><h1 id="obTitle" tabindex="-1">${esc(last?((S.ob.data.name||'').trim()?`You’re all set, ${S.ob.data.name.trim()}.`:'You’re all set.'):st.title)}</h1>${last?`<p class="ob-sub">Your studio is tuned to how you work. Change anything here, or later in Settings.</p>`:st.sub?`<p class="ob-sub">${esc(st.sub)}</p>`:''}
     <div class="ob-body">${stepBody(st.id)}</div>${st.id==='about'?`<div class="obx-inline"><button type="button" class="ob-next" data-ob="next" ${valid(i)?'':'disabled'}><span>${valid(i)?'Continue':'Pick your role to continue'}</span>${ico('arrow-up')}</button><span class="ob-hint" aria-hidden="true">or press <kbd>Enter ↵</kbd></span></div>`:''}</section>
    ${side?obPreview():''}
   </div></main>
@@ -231,6 +235,7 @@ function renderOb(){const el=document.querySelector('.ob');if(!el||!S.ob)return;
    ${!last&&st.id!=='plan'?`<span class="ob-hint" aria-hidden="true">${valid(i)?'Press':'Choose an option, then press'} <kbd>Enter ↵</kbd></span>`:''}
    ${st.id==='plan'?`<button type="button" class="ob-link ob-recheck" data-ob="recheck">Already subscribed? Check again</button>`:`<button type="button" class="ob-next" data-ob="next" ${valid(i)?'':'disabled'}><span>${last?'Open the studio':'Continue'}</span>${ico('arrow-up')}</button>`}
   </div></div></footer>`}`;
+ if(!tcTimer||!document.querySelector('.fx-tc'))runTimecode();else runTimecode._keep=1;
  if(anim)requestAnimationFrame(()=>{el.querySelector('#obTitle')?.focus({preventScroll:true});el.querySelector('.ob-main')?.scrollTo?.(0,0)});
  if(st.id==='plan')planCarousel(el,anim)}
 /* Phones: plans become a swipeable row that opens on the recommended plan. */
