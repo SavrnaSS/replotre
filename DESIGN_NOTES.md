@@ -1,7 +1,5 @@
 # Replotre — Cutroom UI redline (v0.2)
 
-Design guidance adapted from **Unslop** by Damir Sokolovsky, licensed under **CC BY 4.0**: https://github.com/heydamir/unslop. Changes are specific to Replotre and do not reproduce another product's UI.
-
 ## Direction
 
 - **Product:** A timeline-first video editor where creators can revise footage manually or through structured commands.

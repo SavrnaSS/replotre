@@ -982,8 +982,7 @@ html.rp-bare body>*:not(.ob){display:none!important}
 .ob-stage{display:contents}
 
 /* ======================================================================
-   Sign-up + setup design pass following the "unslop" skill
-   (https://github.com/heydamir/unslop by Damir Sokolovsky @heydamir, CC BY 4.0).
+   Sign-up + setup design pass.
    Direction: editorial, warm, precise. One neutral ramp, one accent, hairlines,
    4px spacing, sentence case, weights 400-600, quiet controls, timecode step counter.
    ====================================================================== */

@@ -1724,7 +1724,7 @@ section[id]{scroll-margin-top:72px}
 @media (max-width:700px){.nav-prog{gap:2px}.np-head{width:6px;height:6px;margin:-3px 0 0 -3px}}
 
 /* =====================================================================
-   HERO v7 (unslop pass): fewer competing effects, plain controls.
+   HERO v7: fewer competing effects, plain controls.
    - no rotating rainbow ring on the prompt; a quiet border + clear focus
    - footage wall steps back behind the copy and the HUD row
    - chips use real icons; on small phones they shorten instead of clipping
