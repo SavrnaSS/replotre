@@ -56,8 +56,20 @@ async function startOnboarding(fromStep){await Promise.all([S.account?null:loadA
  const p=S.account.profile||{};const first=fromStep??Math.min(STEPS.length-1,Math.max(1,p.onboardedAt?1:(p.step||1)));
  S.ob={step:first,data:{...p},dir:1,anim:true};ensureOb();renderOb();ungate()}
 /* Account gate: the studio is for signed-in creators. Step 0 of the same flow is sign up / sign in. */
-function startGate(){try{const e=localStorage.getItem('replotre_last_email'),m=localStorage.getItem('replotre_last_method');if(m==='google')S.authMode='login';else if(e&&!S.authEmail){S.authEmail=e;S.authMode='login'}}catch{}S.ob={step:0,data:{},dir:1,gate:true};ensureOb();renderOb();ungate()}
-function ungate(){document.documentElement.classList.remove('rp-gate')}
+function startGate(){try{const e=localStorage.getItem('replotre_last_email'),m=localStorage.getItem('replotre_last_method');if(m==='google')S.authMode='login';else if(e&&!S.authEmail){S.authEmail=e;S.authMode='login'}}catch{}S.ob={step:0,data:{},dir:1,gate:true};ensureOb();renderOb();document.documentElement.classList.remove('rp-gate')}// the full-screen sign-up covers the page; no editor needed
+/* The editor (7 stylesheets, 8 scripts) is preloaded by the page but only applied/executed here, when it's needed:
+   signed-in users get it right away; people on the sign-up screen never pay for it (it's cached for after they sign in). */
+let editorP=null;
+function ensureEditor(){if(editorP)return editorP;
+ editorP=new Promise(res=>requestAnimationFrame(()=>setTimeout(res,0))).then(()=>{// let the current screen paint first
+  const css=[...document.querySelectorAll('link[rel="stylesheet"][data-editor]')].map(l=>{l.media='all';return l.sheet?null:new Promise(r=>{l.addEventListener('load',r,{once:true});l.addEventListener('error',r,{once:true})})});
+  const srcs=[...document.querySelectorAll('link[rel="preload"][as="script"][data-editor]')].map(l=>l.getAttribute('href'));
+  const js=new Promise(r=>{if(!srcs.length)return r();let last;for(const src of srcs){const el=document.createElement('script');el.src=src;el.async=false;document.body.appendChild(el);last=el}
+   last.addEventListener('load',r,{once:true});last.addEventListener('error',r,{once:true})});
+  return Promise.all([...css,js])});
+ return editorP}
+const editorReady=()=>ensureEditor().then(()=>E()?.ready?null:new Promise(r=>addEventListener('replotre:ready',r,{once:true})));
+function ungate(){ensureEditor().then(()=>document.documentElement.classList.remove('rp-gate'))}
 function closeOnboarding(){const el=document.querySelector('.ob');ungate();if(!el)return;for(const n of el._inert||[])n.inert=false;document.body.style.overflow='';el.remove();S.ob=null;renderChip()}
 const sel=(k,v)=>Array.isArray(S.ob.data[k])?S.ob.data[k].includes(v):S.ob.data[k]===v;
 function valid(step){const d=S.ob.data;switch(STEPS[step].id){case 'about':return !!d.role&&(d.role!=='other'||!!(d.roleOther||'').trim());case 'work':return (d.goals||[]).length>0;case 'style':return !!d.aspect;case 'experience':return !!d.experience&&!!d.team;default:return true}}
@@ -140,8 +152,8 @@ function readyBody(){const d=S.ob.data,C=window.ReplotreTemplateCatalog,[w,h]=(d
    </div>
   </div></div>
  </div>`}
-function finishOnboarding(start){saveProfile({},{step:STEPS.length-1,complete:true});applyPrefs();closeOnboarding();
- const q=sel=>document.querySelector(sel);
+async function finishOnboarding(start){saveProfile({},{step:STEPS.length-1,complete:true});applyPrefs();closeOnboarding();
+ await editorReady();const q=sel=>document.querySelector(sel);
  if(start==='upload')q('[data-action="upload"]')?.click();
  else if(start==='sample')q('[data-action="add-demo"][data-index="0"]')?.click();
  else if(start==='templates')q('.rail-item[data-tab="templates"]')?.click();
@@ -368,12 +380,14 @@ function readAuthReturn(){const u=new URL(location.href),e=u.searchParams.get('a
  if(e)S.authError=GOOGLE_ERR[e]||'Google sign-in didn’t work. Try again, or use your email.';
  if(g==='google'&&u.searchParams.get('new')==='1')sessionStorage.setItem('replotre_new_account','1');
  ['auth_error','auth','new'].forEach(k=>u.searchParams.delete(k));history.replaceState(null,'',u.pathname+(u.search||'')+u.hash)}
-async function boot(){readAuthReturn();let status=null,me=null,acct=null;const pre=window.__rpPre;
+async function boot(){try{await bootInner()}catch(e){console.warn('[account] boot failed, opening the studio',e);ungate()}}
+async function bootInner(){readAuthReturn();let status=null,me=null,acct=null;const pre=window.__rpPre;
  try{[status,me,acct]=await Promise.all(pre?[pre.status,pre.me,pre.account]:[fetch('/api/status',{credentials:'same-origin'}).then(r=>r.ok?r.json():null),fetch('/api/auth/me',{credentials:'same-origin'}).then(r=>r.ok?r.json():null),null])}catch{}
  S.status=status;
  if(!status?.cloud){ungate();return} // no account server (static preview): open the local studio
  if(!me?.user){startGate();return}
  if(acct&&acct.profile&&!new URL(location.href).searchParams.get('billing')){S.account=acct;renderChip();if(acct.profile.onboardedAt)ungate();else startOnboarding()}
+ else ensureEditor(); // billing return or account not known yet: the editor's cloud sync takes it from here
  setTimeout(()=>{if(document.documentElement.classList.contains('rp-gate'))onConnection()},4000)}
 window.addEventListener('replotre:cloud',onConnection);
 document.addEventListener('visibilitychange',async()=>{if(document.visibilityState!=='visible'||!sessionStorage.getItem('replotre_portal_open'))return;sessionStorage.removeItem('replotre_portal_open');try{S.account=(await api('/api/billing/refresh',{method:'POST'})).account;renderChip();renderCenter()}catch{}});

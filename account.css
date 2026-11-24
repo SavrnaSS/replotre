@@ -1,3 +1,6 @@
+/* Base for the sign-up/setup screens, which now render before the editor's stylesheets apply.
+   In a cascade layer, so any normal (unlayered) editor rule still wins once the editor loads. */
+@layer gate-base{*{box-sizing:border-box}html,body{margin:0;height:100%;background:#0b0c11;color:#f4f2fc;font-size:13px}button,input,textarea,select{font:inherit}button{cursor:pointer;color:inherit;border:0;background:none}button:disabled{cursor:default}svg{width:18px;height:18px;flex-shrink:0;vertical-align:middle}h1,h2,h3,p{margin:0}}
 /* Replotre account: onboarding, plans, account centre, header chip. Brand: tan #e2ab77 on near-black. */
 .ob,.ac,.acct-chip{--a-bg:#0c0d0f;--a-card:#151618;--a-card2:#1b1c1f;--a-line:#2a2c2f;--a-line2:#222326;--a-text:#f1eee7;--a-muted:#a3a09a;--a-faint:#6f6d68;--a-acc:#e2ab77;--a-acc2:#efbd8e;--a-acc-ink:#1a1410;--a-ease:cubic-bezier(.22,1,.36,1)}
 .acct-spin{display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:acctspin .7s linear infinite;vertical-align:-2px}
