@@ -165,7 +165,7 @@ function stepBody(id){const d=S.ob.data;
  if(id==='account')return authBody();
  if(id==='about'){const frames=Object.entries(LABEL.aspect).map(([v,l])=>{const [w,h]=v.split(':').map(Number),k=26/Math.max(w,h);return `<button type="button" class="ob-aspect${sel('aspect',v)?' is-on':''}" role="radio" aria-checked="${sel('aspect',v)}" data-ob-pick="aspect" data-value="${v}"><i style="width:${(w*k).toFixed(1)}px;height:${(h*k).toFixed(1)}px"></i><strong>${v}</strong><small>${l}</small></button>`}).join('');
   return `<label class="ob-field ob-name"><span>Your name <small>Optional</small></span><input type="text" maxlength="60" autocomplete="given-name" data-ob-text="name" value="${esc(d.name||'')}" placeholder="First name"></label>
-  <div class="ob-group"><span class="ob-label">I'm a…</span>${chips('role')}</div>
+  <div class="ob-group"><span class="ob-label">I'm a…</span>${chips('role',{icons:{creator:'clapperboard',social:'sparkles',agency:'grid',freelance:'wand-sparkles',business:'shield-check',hobbyist:'image',student:'captions',other:'sliders-horizontal'}})}</div>
   ${d.role==='other'?`<label class="ob-field ob-field-inline"><span>Tell us more</span><input type="text" maxlength="60" data-ob-text="roleOther" value="${esc(d.roleOther||'')}" placeholder="e.g. Teacher, musician, nonprofit"></label>`:''}
   <div class="ob-group"><span class="ob-label">Default frame <small>Change any time</small></span><div class="ob-aspects" role="radiogroup" aria-label="Default frame">${frames}</div></div>`}
  if(id==='work')return `<div class="ob-group">${chips('goals',{multi:true,icons:{shorts:'monitor-play',youtube:'film',ads:'zap',podcast:'volume-2',tutorial:'captions',realestate:'layout',events:'sparkles',brand:'palette'}})}</div>`;
@@ -202,10 +202,10 @@ function obPreview(){const d=S.ob.data,i=S.ob.step,id=STEPS[i].id;
    ${row('Look',d.aspect?`<span>${esc(d.aspect)} ${esc(LABEL.aspect[d.aspect])}</span>${d.captionStyle?`<span>${esc(LABEL.captionStyle[d.captionStyle])}</span>`:''}${tpls.length?`<span>${esc(tpls.length)} favourite${tpls.length>1?'s':''}</span>`:''}`:'',id==='about')}
   </dl>${obSummary(d)}</div>
   <p class="obp-note">${ico('sparkles')}Everything here becomes your studio’s defaults. Change it any time.</p></aside>`}
-function renderOb(){const el=document.querySelector('.ob');if(!el||!S.ob)return;const i=S.ob.step,st=STEPS[i],total=STEPS.length-1;const last=i===total;
+function renderOb(){const el=document.querySelector('.ob');if(!el||!S.ob)return;const i=S.ob.step,st=STEPS[i],total=STEPS.length-1;const last=st.id==='ready';// the old celebration screen; setup now ends on the plan step
  if(i===0)return renderAuth(el);
  const anim=S.ob.anim!==false;S.ob.anim=false;const side=false;// the live-preview card is gone: setup is one short screen now
- el.innerHTML=`<div class="ob-bg obx-bg" aria-hidden="true"></div>
+ el.innerHTML=`<div class="ob-bg obx-bg au-bg" aria-hidden="true"><i class="au-orb a"></i><i class="au-orb b"></i></div>${wall()}
  <header class="ob-top obx-top"><span class="ob-brand" aria-hidden="true">${brandMark()}</span>
   <div class="obx-progress" role="progressbar" aria-valuemin="1" aria-valuemax="${total}" aria-valuenow="${i}" aria-label="Setup progress">
    <div class="obx-label"><span>Step ${i} of ${total}</span><b>${esc(st.label)}</b></div>
@@ -213,7 +213,7 @@ function renderOb(){const el=document.querySelector('.ob');if(!el||!S.ob)return;
   ${last?'<span class="obx-spacer"></span>':`<button type="button" class="ob-skip obx-signout" data-ob="signout">${ico('link')}<span>Sign out</span></button>`}</header>
  <main class="ob-main obx-main${anim?` ob-dir-${S.ob.dir>0?'next':'prev'} is-anim`:''}" data-step="${st.id}">
   <div class="obx-grid${side?' has-side':''}">
-   <section class="ob-content obx-content">${last?`<div class="rd-mark${anim?' is-anim':''}" aria-hidden="true">${ico('check')}${'<i></i>'.repeat(10)}</div>`:''}<p class="obx-kicker">${esc(st.label)}</p><h1 id="obTitle" tabindex="-1">${esc(last?((S.ob.data.name||'').trim()?`You’re all set, ${S.ob.data.name.trim()}.`:'You’re all set.'):st.title)}</h1>${last?`<p class="ob-sub">Your studio is tuned to how you work. Change anything here, or later in Settings.</p>`:st.sub?`<p class="ob-sub">${esc(st.sub)}</p>`:''}
+   <section class="ob-content obx-content">${['about','plan'].includes(st.id)?`<div class="obx-dots" aria-label="Step ${i+1} of ${STEPS.length}"><span aria-hidden="true">${STEPS.map((x,k)=>`<i class="${k<i?'done':k===i?'on':''}"></i>`).join('')}</span>Step ${i+1} of ${STEPS.length}</div>`:''}${last?`<div class="rd-mark${anim?' is-anim':''}" aria-hidden="true">${ico('check')}${'<i></i>'.repeat(10)}</div>`:''}<p class="obx-kicker">${esc(st.label)}</p><h1 id="obTitle" tabindex="-1">${esc(last?((S.ob.data.name||'').trim()?`You’re all set, ${S.ob.data.name.trim()}.`:'You’re all set.'):st.title)}</h1>${last?`<p class="ob-sub">Your studio is tuned to how you work. Change anything here, or later in Settings.</p>`:st.sub?`<p class="ob-sub">${esc(st.sub)}</p>`:''}
     <div class="ob-body">${stepBody(st.id)}</div>${st.id==='about'?`<div class="obx-inline"><button type="button" class="ob-next" data-ob="next" ${valid(i)?'':'disabled'}><span>Continue</span>${ico('arrow-up')}</button><span class="ob-hint" aria-hidden="true">or press <kbd>Enter ↵</kbd></span></div>`:''}</section>
    ${side?obPreview():''}
   </div></main>

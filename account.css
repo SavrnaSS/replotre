@@ -943,3 +943,37 @@ html.rp-bare body>*:not(.ob){display:none!important}
 }
 @media (max-height:760px) and (min-width:641px){.obx-main[data-step=about] .obx-content{padding:22px 28px 18px}.obx-main[data-step=about] .ob-body{margin-top:16px;gap:14px}.obx-inline{margin-top:16px}}
 .ob .obx-inline button.ob-next{flex:none;min-height:50px}
+
+/* ===== Setup v4: same backdrop and glass card as sign-up, in-card progress, icon role tiles ===== */
+.ob:has(.obx-main) .au-wall{z-index:0}
+.obx-top{background:transparent;border-bottom:0;backdrop-filter:none;-webkit-backdrop-filter:none;position:relative;z-index:2}
+.obx-main[data-step=about]~* .obx-progress,.ob:has(.obx-main[data-step=about]) .obx-progress{visibility:hidden}
+.obx-main{position:relative;z-index:1}
+.obx-main[data-step=about] .obx-content{background:linear-gradient(180deg,#191a1dcc,#121315e6);backdrop-filter:blur(22px) saturate(1.2);-webkit-backdrop-filter:blur(22px) saturate(1.2);border:1px solid #ffffff14;box-shadow:0 40px 120px #000c,0 0 0 1px #ffffff0d,0 1px 0 #ffffff14 inset}
+.obx-dots{display:flex;align-items:center;justify-content:center;gap:10px;margin:0 0 14px;font-size:11.5px;font-weight:700;color:var(--a-faint);letter-spacing:.04em}
+.obx-dots span{display:flex;gap:4px}
+.obx-dots i{width:12px;height:4px;border-radius:2px;background:var(--a-line)}
+.obx-dots i.done{background:#e2ab7780}
+.obx-dots i.on{width:20px;background:var(--a-acc)}
+.obx-main[data-step=about] .ob-chips[data-set=role] button.ob-chip{flex-direction:column;gap:5px;min-height:62px;padding:8px 6px;font-size:12.5px;justify-content:center}
+.obx-main[data-step=about] .ob-chips[data-set=role] .ob-chip-ico svg{width:17px;height:17px}
+.obx-main[data-step=about] .ob-chips[data-set=role] button.ob-chip.is-on .ob-chip-ico{color:var(--a-acc-ink)}
+/* plan step on the same backdrop: solid cards keep prices readable */
+.obx-main[data-step=plan] .pl-card{background:linear-gradient(180deg,#17181bf2,#131416f2)}
+.obx-main[data-step=plan] .pl-card.is-featured{background:linear-gradient(180deg,#221c16f5,#141315f2 55%)}
+@media (max-width:640px){
+ .obx-top{background:#0c0d0fd9;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+ .obx-main[data-step=about] .obx-content{background:#101113c7;border:1px solid #ffffff12;border-radius:22px;box-shadow:0 24px 60px #0009;margin:0 12px;width:calc(100% - 24px);padding:16px 14px 14px}
+ .obx-main[data-step=about] .ob-chips[data-set=role]{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+ .obx-main[data-step=about] .ob-chips[data-set=role] button.ob-chip{min-height:58px;font-size:11px;padding:6px 3px;white-space:normal;line-height:1.15;text-align:center}
+}
+@media (max-width:360px){.obx-main[data-step=about] .ob-chips[data-set=role]{grid-template-columns:repeat(2,minmax(0,1fr))}.obx-main[data-step=about] .ob-chips[data-set=role] button.ob-chip{flex-direction:row;min-height:42px;font-size:12px}}
+/* Plan step: same in-card progress and centred heading as "Make it yours" */
+.ob:has(.obx-main[data-step=plan]) .obx-progress{visibility:hidden}
+.obx-main[data-step=plan] .obx-kicker{display:none}
+.obx-main[data-step=plan] h1,.obx-main[data-step=plan] .ob-sub{text-align:center;margin-left:auto;margin-right:auto}
+.obx-main[data-step=plan] h1{font-size:clamp(26px,1.4vw + 12px,32px)}
+.obx-main[data-step=plan] .obx-grid{max-width:1040px}
+.ob:has(.obx-main[data-step=plan]) .au-wall:after{background:#0c0d0fe0}
+.obx-main[data-step=plan] .pl-why{background:linear-gradient(90deg,#2a2018f2,#18171af2)}
+.obx-main[data-step=plan] .pl-toggle,.obx-main[data-step=plan] .pl-test{background-color:#121315e6}
