@@ -34,7 +34,8 @@ test('Continue with Google: PKCE + state, verified claims, sign up, link and sig
   assert.equal(loc.searchParams.get('redirect_uri'),`${base}/api/auth/google/callback`);
   return {state:loc.searchParams.get('state'),flow:r.headers.get('set-cookie').split(';')[0]}};
  const callback=async({state,flow},code='good-code')=>{const r=await fetch(`${base}/api/auth/google/callback?code=${code}&state=${encodeURIComponent(state)}`,{redirect:'manual',headers:{Cookie:flow}});
-  const cookies=r.headers.getSetCookie?.()||[];return {status:r.status,location:r.headers.get('location'),session:cookies.find(c=>c.startsWith('rp_session=')&&!c.startsWith('rp_session=;'))?.split(';')[0]}};
+  const cookies=r.headers.getSetCookie?.()||[];const body=r.status===200?await r.text():'';const meta=/url=([^"]+)"/.exec(body)?.[1]?.replace(/&amp;/g,'&');
+  return {status:r.status,location:r.headers.get('location')||meta,session:cookies.find(c=>c.startsWith('rp_session=')&&!c.startsWith('rp_session=;'))?.split(';')[0]}};
  const me=async session=>(await (await fetch(base+'/api/auth/me',{headers:{Cookie:session}})).json()).user;
 
  // 1. Tampered state and missing flow cookie are rejected
@@ -50,7 +51,7 @@ test('Continue with Google: PKCE + state, verified claims, sign up, link and sig
 
  // 4. New user: account created, session started, first name pre-filled, PKCE verifier sent
  f=await start();next={sub:'g-1',email:'Maya@Example.org',given_name:'Maya'};
- let r=await callback(f);assert.equal(r.status,302);assert.match(r.location,/\/studio\?auth=google&new=1$/);assert.ok(r.session,'session cookie set');
+ let r=await callback(f);assert.equal(r.status,200,'success lands on a same-site hop page');assert.match(r.location,/\/studio\?auth=google&new=1$/);assert.ok(r.session,'session cookie set');
  assert.ok(lastBody.get('code_verifier').length>=43);
  assert.equal((await me(r.session)).email,'maya@example.org');
  const acct=await (await fetch(base+'/api/account',{headers:{Cookie:r.session,'X-Replotre-Client':'studio'}})).json();assert.equal(acct.profile.name,'Maya');assert.equal(acct.profile.onboardedAt,null);

@@ -25,7 +25,13 @@ export function googleRoutes({db,origin,production,rate,cookies,createSessionCoo
  const clientId=()=>process.env.GOOGLE_CLIENT_ID,secret=()=>process.env.GOOGLE_CLIENT_SECRET;
  const redirectUri=()=>`${origin}/api/auth/google/callback`;
  const flowCookie=(v,clear=false)=>`rp_gflow=${clear?'':v}; HttpOnly; Path=/api/auth/google; SameSite=Lax; Max-Age=${clear?0:FLOW_TTL}${production?'; Secure':''}`;
- const back=(res,query,extra=[])=>{res.writeHead(302,{Location:`${origin}/studio${query?`?${query}`:''}`,'Cache-Control':'no-store','Set-Cookie':[flowCookie('',true),...extra]});res.end()};
+ // After a successful sign-in we hop through a tiny same-site page: the return from Google is a cross-site navigation, and the
+ // SameSite=Strict session cookie isn't sent on the rest of that redirect chain, so a plain 302 would land on /studio "signed out".
+ const back=(res,query,extra=[])=>{const to=`${origin}/studio${query?`?${query}`:''}`;
+  if(!extra.length){res.writeHead(302,{Location:to,'Cache-Control':'no-store','Set-Cookie':[flowCookie('',true)]});return res.end()}
+  const safe=to.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+  const html=`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="refresh" content="0;url=${safe}"><title>Signing you in… · Replotre</title><style>html{background:#0c0d0f;color:#a19e96;font:15px/1.5 system-ui,sans-serif;height:100%;display:grid;place-items:center}a{color:#e2ab77}</style></head><body><p>Signing you in… <a href="${safe}">Continue</a></p></body></html>`;
+  res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store','Referrer-Policy':'no-referrer','Set-Cookie':[flowCookie('',true),...extra]});res.end(html)};
  const fail=(res,code)=>back(res,`auth_error=${encodeURIComponent(code)}`);
 
  return async function handle(req,res,pathname,method,url){
