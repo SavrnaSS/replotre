@@ -1137,3 +1137,20 @@ html.rp-bare body>*:not(.ob){display:none!important}
 .ob .obx-main .ob-field input:focus,.ob .au-input input:focus{box-shadow:0 0 0 3px rgba(226,171,119,.18),0 0 18px rgba(226,171,119,.12)}
 @media (max-width:640px){.fx-vf{inset:-4px}.fx-vf b{width:14px;height:14px}.fx-idx{min-width:20px;height:16px;font-size:10px;margin-right:6px}}
 @media (prefers-reduced-motion:reduce){.fx-rec{animation:none}.ob .obx-main button.ob-chip.is-on:after,.ob .obx-main .ob-aspects button.ob-aspect.is-on:after{animation:none;display:none}}
+/* Card surface: the landing hero's dashed grid with warm nodes, over a soft cool-to-warm gradient */
+.ob .au-card-wrap,.ob .obx-main[data-step=about] .obx-content{
+ background:
+  url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><path d='M20 0V40M0 20H40' stroke='%23f2eee7' stroke-opacity='.10' stroke-width='1' stroke-dasharray='3 2.5'/><circle cx='20' cy='20' r='2' fill='%23e2ab77' fill-opacity='.55'/></svg>") 50% 0/40px 40px,
+  radial-gradient(120% 70% at 50% 0%,rgba(130,160,180,.10),transparent 60%),
+  linear-gradient(165deg,#191d21 0%,#141619 48%,#19161a 100%);
+ box-shadow:inset 0 1px 0 rgba(226,171,119,.55),0 16px 40px rgba(0,0,0,.45)}
+@media (max-width:640px){.ob .au-card-wrap,.ob .obx-main[data-step=about] .obx-content{background-size:32px 32px,auto,auto}}
+/* grid lives on its own faded layer behind the content (wide spacing, fades out downward) */
+.ob .au-card-wrap,.ob .obx-main[data-step=about] .obx-content{
+ background:radial-gradient(120% 70% at 50% 0%,rgba(130,160,180,.10),transparent 60%),linear-gradient(165deg,#191d21 0%,#141619 48%,#19161a 100%)}
+.ob .au-card-wrap:before,.ob .obx-main[data-step=about] .obx-content:before{content:'';display:block;position:absolute;inset:0;z-index:-1;border-radius:inherit;pointer-events:none;
+ background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64'><path d='M32 0V64M0 32H64' stroke='%23f2eee7' stroke-opacity='.14' stroke-width='1' stroke-dasharray='3 3'/><circle cx='32' cy='32' r='2.4' fill='%23e2ab77' fill-opacity='.7'/></svg>") 50% -32px/64px 64px;
+ -webkit-mask-image:radial-gradient(90% 55% at 50% 0%,#000 0%,rgba(0,0,0,.45) 55%,transparent 100%);mask-image:radial-gradient(90% 55% at 50% 0%,#000 0%,rgba(0,0,0,.45) 55%,transparent 100%)}
+.ob .au-card-wrap>*,.ob .obx-main[data-step=about] .obx-content>*{position:relative}
+.ob .au-card-wrap>.fx-vf,.ob .obx-main[data-step=about] .obx-content>.fx-vf{position:absolute}
+@media (max-width:640px){.ob .au-card-wrap:before,.ob .obx-main[data-step=about] .obx-content:before{background-size:48px 48px;background-position:50% -24px}}
