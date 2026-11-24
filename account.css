@@ -1609,3 +1609,38 @@ html[data-theme="light"] .brand-name .wm-r{color:#b8834f}
  #planChip.acct-chip{padding:0;width:34px;min-width:34px;justify-content:center;gap:0}
  #planChip.acct-chip>span:not(.acct-ring),#planChip.acct-chip>b,#planChip.acct-chip>small{display:none}
 }
+/* ===== Password recovery (forgot · sent · reset · expired) ===== */
+.ob button.au-forgot{color:var(--a-acc,#e2ab77)}
+.ob button.au-forgot:hover{text-decoration:underline;text-underline-offset:3px}
+.au-rec{display:flex;flex-direction:column;gap:14px}
+.au-rec .au-submit{display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none}
+.au-rec-ico{width:52px;height:52px;margin:0 auto 2px;display:grid;place-items:center;border-radius:14px;background:rgba(226,171,119,.1);border:1px solid rgba(226,171,119,.28);color:var(--a-acc,#e2ab77)}
+.au-rec-ico svg{width:24px;height:24px}
+.au-rec-ico.is-warn{background:rgba(242,238,231,.05);border-color:rgba(242,238,231,.12);color:var(--a-dim,#a8a49c)}
+.au-rec-ico.is-ok{background:rgba(76,196,138,.1);border-color:rgba(76,196,138,.3);color:#4cc48a}
+.au-rec-lead{margin:0;text-align:center;font-size:14.5px;line-height:1.55;color:var(--a-dim,#a8a49c)}
+.au-rec-lead b{color:var(--a-text,#f2eee7);font-weight:600;word-break:break-all}
+.au-rec-tips{margin:0;padding:12px 14px;list-style:none;display:flex;flex-direction:column;gap:6px;border-radius:12px;background:rgba(242,238,231,.03);border:1px solid rgba(242,238,231,.07);font-size:13px;color:var(--a-dim,#a8a49c)}
+.au-rec-tips li{position:relative;padding-left:14px}.au-rec-tips li:before{content:'';position:absolute;left:2px;top:.6em;width:4px;height:4px;border-radius:50%;background:currentColor;opacity:.6}
+.au-rec-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:6px 10px;font-size:13.5px;color:var(--a-faint,#77746e)}
+.ob button.au-link{padding:4px 2px;border:0;background:none;font:inherit;font-size:13.5px;font-weight:500;color:var(--a-text,#f2eee7);cursor:pointer;text-decoration:underline;text-decoration-color:rgba(242,238,231,.3);text-underline-offset:3px}
+.ob button.au-link:hover:not(:disabled){text-decoration-color:currentColor}
+.ob button.au-link:disabled{color:var(--a-faint,#77746e);text-decoration:none;cursor:default;font-variant-numeric:tabular-nums}
+.au-rec-alt{margin:0;text-align:center;font-size:13.5px;line-height:1.5;color:var(--a-dim,#a8a49c)}
+.au-rec-note{display:flex;gap:10px;margin:0;padding:12px 14px;border-radius:12px;background:rgba(242,238,231,.03);border:1px solid rgba(242,238,231,.07);font-size:14px;line-height:1.5;color:var(--a-dim,#a8a49c)}
+.au-rec-note svg{flex-shrink:0;width:18px;height:18px;margin-top:1px;color:var(--a-acc,#e2ab77)}
+.au-rec-for{display:flex;align-items:center;gap:8px;margin:0;padding:10px 12px;border-radius:10px;background:rgba(242,238,231,.03);border:1px solid rgba(242,238,231,.07);font-size:13.5px;color:var(--a-dim,#a8a49c)}
+.au-rec-for svg{width:16px;height:16px;color:#4cc48a;flex-shrink:0}.au-rec-for b{color:var(--a-text,#f2eee7);font-weight:600}
+.ob button.au-back{align-self:center;display:inline-flex;align-items:center;gap:4px;margin-top:2px;padding:6px 10px;border:0;border-radius:8px;background:none;font:inherit;font-size:13.5px;font-weight:500;color:var(--a-dim,#a8a49c);cursor:pointer}
+.ob button.au-back:hover{color:var(--a-text,#f2eee7);background:rgba(242,238,231,.05)}
+.ob button.au-back svg{width:16px;height:16px}
+.au-main[data-mode=sent] .ob-sub,.au-main[data-mode=reset-done] .ob-sub{display:none}
+@media (max-width:480px){.au-rec{gap:12px}.au-rec-ico{width:46px;height:46px}}
+.ob a.au-btn-a{display:flex;align-items:center;justify-content:center;gap:8px;height:46px;border-radius:10px;background:var(--acc,#e2ab77);color:var(--acc-ink,#1a1410);font-size:15px;font-weight:600;text-decoration:none;transition:background-color .15s}
+.ob a.au-btn-a:hover{background:var(--acc-hover,#e9b98a)}
+.ob a.au-btn-a svg{width:16px;height:16px;transform:rotate(45deg)}
+.ob a.au-btn-a:focus-visible{outline:2px solid var(--acc,#e2ab77);outline-offset:3px}
+.au-rec[data-form=forgot],.au-rec[data-form=reset]{margin-top:6px}
+.au-main[data-mode=sent] .au-rec-ico,.au-main[data-mode=reset-bad] .au-rec-ico{order:-1}
+.au-main[data-mode=sent] h1,.au-main[data-mode=reset-bad] h1,.au-main[data-mode=reset-done] h1{margin-top:0}
+.ob .au-rec button.ob-next{height:46px;min-height:46px}

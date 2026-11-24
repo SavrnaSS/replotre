@@ -5,7 +5,7 @@
 'use strict';
 const Cloud=()=>window.ReplotreCloud,E=()=>window.ReplotreEditor;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const ICO_FB={'alert-triangle':'<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/>','arrow-up':'<path d="m6 12 6-6 6 6M12 6v13"/>','captions':'<rect x="2" y="5" width="20" height="14" rx="3"/><path d="M6 10h4m4 0h4M6 14h8m2 0h2"/>','check':'<path d="m4 12 5 5L20 6"/>','chevron-down':'<path d="m6 9 6 6 6-6"/>','eye':'<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>','link':'<path d="M10 13a5 5 0 0 0 7 .2l3-3a5 5 0 0 0-7-7l-2 2M14 11a5 5 0 0 0-7-.2l-3 3a5 5 0 0 0 7 7l2-2"/>','shield-check':'<path d="M12 2 4 5v7c0 5 3 8 8 10 5-2 8-5 8-10V5l-8-3Zm-4 10 3 3 5-6"/>','sparkles':'<path d="m12 3 1.6 5.4L19 10l-5.4 1.6L12 17l-1.6-5.4L5 10l5.4-1.6L12 3ZM5 16l.8 2.2L8 19l-2.2.8L5 22l-.8-2.2L2 19l2.2-.8L5 16ZM19 2l.7 1.3L21 4l-1.3.7L19 6l-.7-1.3L17 4l1.3-.7L19 2Z"/>','wand-sparkles':'<path d="m4 20 13-13 3 3L7 23l-3-3ZM14 4l1-3 1 3 3 1-3 1-1 3-1-3-3-1 3-1ZM4 7l.5-2L5 7l2 .5L5 8l-.5 2L4 8l-2-.5 2-.5Z"/>','x':'<path d="M18 6 6 18M6 6l12 12"/>','zap':'<path d="m13 2-9 12h7l-1 8 10-12h-7V2Z"/>','grid':'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/>','play':'<path d="m7 4 13 8-13 8V4Z" fill="currentColor" stroke="none"/>','cloud-upload':'<path d="M12 16V8m-4 4 4-4 4 4M3 17a4.5 4.5 0 0 1 2-8 7 7 0 0 1 14 1 4 4 0 0 1-1 8H5"/>','image':'<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m3 17 5-5 4 4 3-3 6 6"/>','clapperboard':'<path d="M3 9h18v12H3V9ZM3 9V5l17-3 1 7M8 5l3 4m3-5 3 5"/>','sliders-horizontal':'<path d="M3 6h12m4 0h2M3 12h4m4 0h10M3 18h12m4 0h2"/><circle cx="17" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/>'};
+const ICO_FB={'chevron-left':'<path d="m15 18-6-6 6-6"/>','clock':'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>','mail':'<rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 7 8 6 8-6"/>','alert-triangle':'<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/>','arrow-up':'<path d="m6 12 6-6 6 6M12 6v13"/>','captions':'<rect x="2" y="5" width="20" height="14" rx="3"/><path d="M6 10h4m4 0h4M6 14h8m2 0h2"/>','check':'<path d="m4 12 5 5L20 6"/>','chevron-down':'<path d="m6 9 6 6 6-6"/>','eye':'<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>','link':'<path d="M10 13a5 5 0 0 0 7 .2l3-3a5 5 0 0 0-7-7l-2 2M14 11a5 5 0 0 0-7-.2l-3 3a5 5 0 0 0 7 7l2-2"/>','shield-check':'<path d="M12 2 4 5v7c0 5 3 8 8 10 5-2 8-5 8-10V5l-8-3Zm-4 10 3 3 5-6"/>','sparkles':'<path d="m12 3 1.6 5.4L19 10l-5.4 1.6L12 17l-1.6-5.4L5 10l5.4-1.6L12 3ZM5 16l.8 2.2L8 19l-2.2.8L5 22l-.8-2.2L2 19l2.2-.8L5 16ZM19 2l.7 1.3L21 4l-1.3.7L19 6l-.7-1.3L17 4l1.3-.7L19 2Z"/>','wand-sparkles':'<path d="m4 20 13-13 3 3L7 23l-3-3ZM14 4l1-3 1 3 3 1-3 1-1 3-1-3-3-1 3-1ZM4 7l.5-2L5 7l2 .5L5 8l-.5 2L4 8l-2-.5 2-.5Z"/>','x':'<path d="M18 6 6 18M6 6l12 12"/>','zap':'<path d="m13 2-9 12h7l-1 8 10-12h-7V2Z"/>','grid':'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/>','play':'<path d="m7 4 13 8-13 8V4Z" fill="currentColor" stroke="none"/>','cloud-upload':'<path d="M12 16V8m-4 4 4-4 4 4M3 17a4.5 4.5 0 0 1 2-8 7 7 0 0 1 14 1 4 4 0 0 1-1 8H5"/>','image':'<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m3 17 5-5 4 4 3-3 6 6"/>','clapperboard':'<path d="M3 9h18v12H3V9ZM3 9V5l17-3 1 7M8 5l3 4m3-5 3 5"/>','sliders-horizontal':'<path d="M3 6h12m4 0h2M3 12h4m4 0h10M3 18h12m4 0h2"/><circle cx="17" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/>'};
 // Uses the studio's icon set when it's loaded; this script also runs first (before the editor) so sign-up shows sooner.
 const ico=(n,s)=>window.ReplotreIco?window.ReplotreIco(n,s):`<svg ${s?`width="${s}" height="${s}"`:''} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICO_FB[n]||ICO_FB.sparkles}</svg>`;
 const api=async(u,o={})=>{if(Cloud()?.api)return Cloud().api(u,o);const r=await fetch(u,{method:o.method||'GET',credentials:'same-origin',headers:{'X-Replotre-Client':'studio',...(o.body?{'Content-Type':'application/json'}:{})},body:o.body?JSON.stringify(o.body):undefined});let d={};try{d=await r.json()}catch{}if(!r.ok){const e=Error(d.error||`Request failed (${r.status})`);e.status=r.status;e.feature=d.feature;throw e}return d};
@@ -103,7 +103,54 @@ function checkEmailField(inp,final){const v=inp.value.trim();if(!v){fieldMsg('em
  if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)){if(final)fieldMsg('email','Enter a full email address, like name@example.com.');else fieldMsg('email','');return}
  const sug=emailSuggestion(v);if(sug)fieldMsg('email',`Did you mean <button type="button" class="au-fix" data-ob="fix-email" data-v="${esc(sug)}">${esc(sug.split('@')[0])}@<b>${esc(sug.split('@')[1])}</b></button>?`,'tip',true);else fieldMsg('email','')}
 const lastMethod=()=>{try{return localStorage.getItem('replotre_last_method')}catch{return null}};
-function authBody(){const reg=S.authMode==='register',st=S.status||{},closed=reg&&st.signup===false;
+const RECOVERY=['forgot','sent','reset','reset-bad','reset-done'];
+const isRecovery=()=>RECOVERY.includes(S.authMode);
+const RECOVERY_COPY={forgot:['Reset your password','Enter your account email. We’ll send you a link to choose a new password'],
+ sent:['Check your email',''],reset:['Choose a new password',''],'reset-bad':['This link has expired','Reset links work once and last 30 minutes. Ask for a new one and use the latest email'],
+ 'reset-done':['Password updated','You’re signed in. Opening your studio…']};
+function inboxFor(email){const d=String(email).split('@')[1]?.toLowerCase()||'';
+ if(/^(gmail|googlemail)\.com$/.test(d))return ['Open Gmail','https://mail.google.com/mail/u/0/#search/from%3Areplotre'];
+ if(/^(outlook|hotmail|live|msn)\.[a-z.]+$/.test(d))return ['Open Outlook','https://outlook.live.com/mail/'];
+ if(/^(yahoo|ymail)\.[a-z.]+$/.test(d))return ['Open Yahoo Mail','https://mail.yahoo.com/'];
+ if(/^(icloud|me|mac)\.com$/.test(d))return ['Open iCloud Mail','https://www.icloud.com/mail'];
+ if(/^proton(mail)?\.(me|com)$/.test(d))return ['Open Proton Mail','https://mail.proton.me/'];return null}
+function pwNewField(){return `<div class="ob-field au-f" data-f="password"><span class="au-row"><label for="auPw">New password</label><small class="au-caps" hidden>Caps Lock is on</small><button type="button" class="au-suggest" data-ob="suggest">${AU_I.wand}Suggest strong password</button></span>
+   <span class="ob-pw au-input has-ico">${AU_I.lock}<input id="auPw" type="password" name="password" autocomplete="new-password" required minlength="12" maxlength="128" placeholder="At least 12 characters" aria-describedby="auPwMsg auReqs"><button type="button" class="ob-pw-toggle" data-ob="pw" aria-label="Show password" aria-pressed="false">${ico('eye')}</button></span>
+   <div class="au-meter"><span class="ob-strength" aria-hidden="true"><i></i><i></i><i></i><i></i></span><small class="ob-strength-label" aria-live="polite"></small></div>
+   <ul class="au-reqs" id="auReqs" aria-label="Password requirements"><li data-r="len">${ico('check')}12+ chars</li><li data-r="case">${ico('check')}Upper &amp; lower</li><li data-r="mix">${ico('check')}Number or symbol</li></ul>
+   <p class="au-msg" id="auPwMsg" aria-live="polite"></p></div>`}
+function recoveryBody(){const st=S.status||{},m=S.authMode,back=`<button type="button" class="au-back" data-ob="auth-mode" data-mode="login">${ico('chevron-left')}Back to sign in</button>`;
+ if(m==='forgot'){
+  if(st.passwordReset===false)return `<div class="au-rec">
+   <p class="au-rec-note">${ico('mail')}<span>Email us from the address on your account and we’ll reset your password, usually within a day.</span></p>
+   <a class="au-btn-a" href="mailto:hello@replotre.com?subject=${encodeURIComponent('Password reset')}&body=${encodeURIComponent('Please reset the password for my Replotre account: '+(S.authEmail||''))}"><span>Email hello@replotre.com</span>${ico('arrow-up')}</a>
+   ${st.google?`<p class="au-rec-alt">Signed up with Google? <button type="button" class="au-link" data-ob="google">Continue with Google</button></p>`:''}${back}</div>`;
+  return `<form class="ob-auth au-rec" data-form="forgot" novalidate>
+   <div class="ob-field au-f" data-f="email"><label for="auEmail">Email</label><span class="au-input has-ico">${AU_I.mail}<input id="auEmail" type="email" name="email" autocomplete="username" inputmode="email" autocapitalize="off" spellcheck="false" required maxlength="254" placeholder="you@studio.com" aria-describedby="auEmailMsg" value="${esc(S.authEmail||'')}"><i class="au-ok" aria-hidden="true">${ico('check')}</i></span><p class="au-msg" id="auEmailMsg" aria-live="polite"></p></div>
+   <p class="ob-auth-error" role="alert" hidden></p>
+   <button type="submit" class="ob-next au-submit"><span>Send reset link</span>${ico('arrow-up')}</button>
+   ${st.google?`<p class="au-rec-alt">Signed up with Google? You don’t need a password. <button type="button" class="au-link" data-ob="google">Continue with Google</button></p>`:''}
+   ${back}</form>`}
+ if(m==='sent'){const inbox=inboxFor(S.authEmail),left=Math.max(0,Math.ceil(((S.resendAt||0)-Date.now())/1000));
+  return `<div class="au-rec au-sent">
+   <span class="au-rec-ico" aria-hidden="true">${ico('mail')}</span>
+   <p class="au-rec-lead">If an account exists for <b>${esc(S.authEmail||'')}</b>, a reset link is on its way. It works once and expires in ${S.resetTtl||30} minutes.</p>
+   ${inbox?`<a class="au-btn-a" href="${inbox[1]}" target="_blank" rel="noopener"><span>${inbox[0]}</span>${ico('arrow-up')}</a>`:''}
+   <ul class="au-rec-tips"><li>Check spam or promotions if it isn’t there in a minute</li><li>Only the newest link works</li></ul>
+   <div class="au-rec-row"><button type="button" class="au-link" data-ob="resend" ${left?'disabled':''}>${left?`Resend in ${left}s`:'Resend link'}</button><span aria-hidden="true">·</span><button type="button" class="au-link" data-ob="forgot">Use a different email</button></div>
+   ${back}</div>`}
+ if(m==='reset')return `<form class="ob-auth au-rec" data-form="reset" novalidate>
+   <p class="au-rec-for">${ico('shield-check')}<span>For <b>${esc(S.resetMasked||'your account')}</b></span></p>
+   <input type="email" name="username" autocomplete="username" value="${esc(S.resetEmail||'')}" hidden>
+   ${pwNewField()}
+   <p class="ob-auth-error" role="alert" hidden></p>
+   <button type="submit" class="ob-next au-submit"><span>Update password and sign in</span>${ico('arrow-up')}</button>
+   <p class="ob-legal au-legal">${AU_I.lock}<span>This signs you out on your other devices</span></p></form>`;
+ if(m==='reset-bad')return `<div class="au-rec"><span class="au-rec-ico is-warn" aria-hidden="true">${ico('clock')}</span>
+   <button type="button" class="ob-next au-submit" data-ob="forgot"><span>Send a new link</span>${ico('arrow-up')}</button>${back}</div>`;
+ if(m==='reset-done')return `<div class="au-rec"><span class="au-rec-ico is-ok" aria-hidden="true">${ico('check')}</span><p class="au-rec-lead"><span class="acct-spin"></span></p></div>`;
+ return ''}
+function authBody(){if(isRecovery())return recoveryBody();const reg=S.authMode==='register',st=S.status||{},closed=reg&&st.signup===false;
  return `<div class="au-tabs" role="tablist" aria-label="Account">
    <button type="button" role="tab" aria-selected="${reg}" class="${reg?'is-on':''}" data-ob="auth-mode" data-mode="register">Create account</button>
    <button type="button" role="tab" aria-selected="${!reg}" class="${reg?'':'is-on'}" data-ob="auth-mode" data-mode="login">Sign in</button><i aria-hidden="true"></i></div>
@@ -112,7 +159,7 @@ function authBody(){const reg=S.authMode==='register',st=S.status||{},closed=reg
  <form class="ob-auth" novalidate>
   ${closed?`<p class="ob-auth-note">${ico('shield-check')}<span>New sign-ups are paused right now. If you already have an account, sign in.</span></p>`:''}
   <div class="ob-field au-f" data-f="email"><label for="auEmail">Email</label><span class="au-input has-ico">${AU_I.mail}<input id="auEmail" type="email" name="email" autocomplete="${reg?'email':'username'}" inputmode="email" autocapitalize="off" spellcheck="false" required maxlength="254" placeholder="you@studio.com" aria-describedby="auEmailMsg" value="${esc(S.authEmail||'')}"><i class="au-ok" aria-hidden="true">${ico('check')}</i></span><p class="au-msg" id="auEmailMsg" aria-live="polite"></p></div>
-  <div class="ob-field au-f" data-f="password"><span class="au-row"><label for="auPw">Password</label><small class="au-caps" hidden>Caps Lock is on</small>${reg?`<button type="button" class="au-suggest" data-ob="suggest">${AU_I.wand}Suggest strong password</button>`:''}</span>
+  <div class="ob-field au-f" data-f="password"><span class="au-row"><label for="auPw">Password</label><small class="au-caps" hidden>Caps Lock is on</small>${reg?`<button type="button" class="au-suggest" data-ob="suggest">${AU_I.wand}Suggest strong password</button>`:`<button type="button" class="au-suggest au-forgot" data-ob="forgot">Forgot password?</button>`}</span>
    <span class="ob-pw au-input has-ico">${AU_I.lock}<input id="auPw" type="password" name="password" autocomplete="${reg?'new-password':'current-password'}" required minlength="${reg?12:1}" maxlength="128" placeholder="${reg?'At least 12 characters':'Your password'}" aria-describedby="auPwMsg${reg?' auReqs':''}"><button type="button" class="ob-pw-toggle" data-ob="pw" aria-label="Show password" aria-pressed="false">${ico('eye')}</button></span>
    ${reg?`<div class="au-meter"><span class="ob-strength" aria-hidden="true"><i></i><i></i><i></i><i></i></span><small class="ob-strength-label" aria-live="polite"></small></div>
    <ul class="au-reqs" id="auReqs" aria-label="Password requirements"><li data-r="len">${ico('check')}12+ chars</li><li data-r="case">${ico('check')}Upper &amp; lower</li><li data-r="mix">${ico('check')}Number or symbol</li></ul>`:''}
@@ -120,7 +167,7 @@ function authBody(){const reg=S.authMode==='register',st=S.status||{},closed=reg
   ${reg&&st.inviteRequired?`<label class="ob-field"><span>Invitation code</span><span class="au-input"><input type="text" name="invite" autocomplete="off" required maxlength="120" placeholder="From your invite email"></span></label>`:''}
   <p class="ob-auth-error" role="alert" hidden></p>
   <button type="submit" class="ob-next au-submit" ${closed?'disabled':''}><span>${reg?'Create account':'Sign in'}</span>${ico('arrow-up')}</button>
-  ${reg?`<p class="ob-legal au-legal">${AU_I.lock}<span>Encrypted · by continuing you agree to our <a href="/terms" target="_blank" rel="noopener">Terms</a> and <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>.</span></p>`:`<p class="ob-legal au-legal">Forgot your password? <a href="mailto:hello@replotre.com?subject=Password%20reset">Email us</a> and we'll reset it.</p>`}
+  ${reg?`<p class="ob-legal au-legal">${AU_I.lock}<span>Encrypted · by continuing you agree to our <a href="/terms" target="_blank" rel="noopener">Terms</a> and <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>.</span></p>`:''}
  </form>`}
 const WALL=['crimson','editorial','neon-pulse','candlelit','pop-captions','documentary','hero-float','field-journal','beat-keyword','cinematic-wide','motion-deck','quote-card'];
 function wall(){if(document.documentElement.classList.contains('lite'))return '';const phone=!matchMedia('(min-width:721px)').matches;
@@ -137,15 +184,16 @@ function renderAuth(el){const reg=S.authMode==='register';
   <a class="au-brand" href="/" aria-label="Replotre home"><span class="au-word"><em class="wm-r">R</em>eplotre<b>.</b></span></a>
   <div class="au-center">
    <section class="au-card-wrap ob-content"><i class="fx-vf" aria-hidden="true"><b></b><b></b><b></b><b></b></i>
-    <h1 id="obTitle" tabindex="-1">${reg?'Create your account':'Welcome back'}</h1>
-    <p class="ob-sub">${reg?'Start editing in minutes':'Sign in to pick up where you left off'}</p>
+    <h1 id="obTitle" tabindex="-1">${isRecovery()?RECOVERY_COPY[S.authMode][0]:reg?'Create your account':'Welcome back'}</h1>
+    ${isRecovery()?(RECOVERY_COPY[S.authMode][1]?`<p class="ob-sub">${RECOVERY_COPY[S.authMode][1]}</p>`:''):`<p class="ob-sub">${reg?'Start editing in minutes':'Sign in to pick up where you left off'}</p>`}
     ${authBody()}
    </section>
 
   </div>
  </main>`;
  if(S.authError){const er=el.querySelector('.ob-auth-error');if(er){er.textContent=S.authError;er.hidden=false}S.authError=''}
- requestAnimationFrame(()=>{const em=el.querySelector('input[name=email]');(em&&!em.value?em:el.querySelector('input[name=password]'))?.focus({preventScroll:true});validateEmail(em)})}
+ requestAnimationFrame(()=>{const em=el.querySelector('input[name=email]');const target=['sent','reset-bad','reset-done'].includes(S.authMode)?el.querySelector('#obTitle'):S.authMode==='forgot'?em:(em&&!em.value?em:el.querySelector('input[name=password]'));target?.focus({preventScroll:true});validateEmail(em)});
+ if(S.authMode==='sent')tickResend()}
 function validateEmail(inp){if(!inp)return;inp.closest('.au-input')?.classList.toggle('is-ok',/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(inp.value.trim()))}
 const stepOf=id=>STEPS.findIndex(s=>s.id===id);
 function readyBody(){const d=S.ob.data,C=window.ReplotreTemplateCatalog,[w,h]=(d.aspect||'9:16').split(':').map(Number),k=150/Math.max(w,h),cs=d.captionStyle||'box';
@@ -272,14 +320,16 @@ function applyPrefs(){const d=S.account?.profile||S.ob?.data||{};try{localStorag
 async function onObClick(e){const b=e.target.closest('button');if(!b)return;
  const o=S.ob;
  if(b.dataset.ob==='next')return STEPS[o.step]?.id==='ready'?finishOnboarding():go(1);
- if(b.dataset.ob==='google'){b.disabled=true;b.classList.add('is-busy');b.querySelector('.au-g-label').textContent='Redirecting to Google…';try{localStorage.setItem('replotre_last_method','google')}catch{}location.href='/api/auth/google/start?mode='+(S.authMode==='login'?'login':'register');return}
+ if(b.dataset.ob==='forgot'){const em=document.querySelector('.ob-auth input[name=email]')?.value;if(em)S.authEmail=em.trim();S.authMode='forgot';renderOb();return}
+ if(b.dataset.ob==='resend'){b.disabled=true;b.textContent='Sending…';await requestReset(S.authEmail,true);return}
+ if(b.dataset.ob==='google'){b.disabled=true;b.classList.add('is-busy');b.querySelector('.au-g-label').textContent='Redirecting to Google…';try{localStorage.setItem('replotre_last_method','google')}catch{}location.href='/api/auth/google/start?mode='+(S.authMode==='register'?'register':'login');return}
  if(b.dataset.ob==='suggest'){const i=document.getElementById('auPw');i.value=strongPassword();i.type='text';const t=document.querySelector('[data-ob=pw]');t?.setAttribute('aria-pressed','true');t?.classList.add('is-on');i.dispatchEvent(new Event('input',{bubbles:true}));fieldMsg('password','Strong password added. Save it in your password manager before you continue.','tip');i.focus();i.select();return}
  if(b.dataset.ob==='fix-email'){const i=document.getElementById('auEmail');i.value=b.dataset.v;i.dispatchEvent(new Event('input',{bubbles:true}));clearTimeout(S.emT);fieldMsg('email','');document.getElementById('auPw')?.focus();return}
  if(b.dataset.ob==='recheck'){b.disabled=true;b.textContent='Checking…';try{S.account=(await api('/api/billing/refresh',{method:'POST'})).account;renderChip()}catch{}if(S.account?.subscribed){await enterStudio();return}b.disabled=false;b.textContent='No active plan found yet. Check again';return}
  if(b.dataset.ob==='finish')return finishOnboarding(b.dataset.start);
  if(b.dataset.ob==='edit'){o.dir=-1;o.anim=true;o.step=Math.max(1,+b.dataset.step);renderOb();return}if(b.dataset.ob==='back')return go(-1);
  if(b.dataset.ob==='signout'){b.disabled=true;try{await Cloud()?.saveNow?.()}catch{}try{await api('/api/auth/logout',{method:'POST'})}catch{}sessionStorage.removeItem('replotre_new_account');location.reload();return}
- if(b.dataset.ob==='auth-mode'){const m=b.dataset.mode||(S.authMode==='register'?'login':'register');if(m===S.authMode)return;S.authEmail=document.querySelector('.ob-auth input[name=email]')?.value||S.authEmail;S.authMode=m;renderOb();return}
+ if(b.dataset.ob==='auth-mode'){const m=b.dataset.mode||(S.authMode==='register'?'login':'register');if(m===S.authMode)return;S.authEmail=document.querySelector('.ob-auth input[name=email]')?.value||S.authEmail;clearTimeout(S.resendT);S.authMode=m;renderOb();return}
  if(b.dataset.ob==='pw'){const inp=b.parentElement.querySelector('input');const show=inp.type==='password';inp.type=show?'text':'password';b.setAttribute('aria-label',show?'Hide password':'Show password');b.setAttribute('aria-pressed',String(show));b.classList.toggle('is-on',show);inp.focus();return}
  if(b.dataset.obPick){const k=b.dataset.obPick,v=b.dataset.value;if(b.dataset.multi==='true'){const set=new Set(o.data[k]||[]);set.has(v)?set.delete(v):set.add(v);o.data[k]=[...set];saveProfile({[k]:o.data[k]})}else{o.data[k]=v;saveProfile({[k]:v})}
   const y=document.querySelector('.ob-main')?.scrollTop;renderOb();const m=document.querySelector('.ob-main');if(m&&y)m.scrollTop=y;document.querySelector(`[data-ob-pick="${k}"][data-value="${CSS.escape(v)}"]`)?.focus({preventScroll:true});
@@ -288,7 +338,7 @@ async function onObClick(e){const b=e.target.closest('button');if(!b)return;
  if(b.dataset.plan)return choosePlan(b.dataset.plan,'onboarding');
  if(b.dataset.interval){S.interval=b.dataset.interval;const y=document.querySelector('.ob-main')?.scrollTop;renderOb();const m=document.querySelector('.ob-main');if(m&&y)m.scrollTop=y}}
 function strength(pw){let n=0;if(pw.length>=12)n++;if(pw.length>=16)n++;if(/[a-z]/.test(pw)&&/[A-Z]/.test(pw))n++;if(/\d/.test(pw)&&/[^A-Za-z0-9]/.test(pw))n++;return pw.length<12?Math.min(n,1):Math.max(1,n)}
-function onObInput(e){if(e.target.name==='password'&&S.authMode==='register'){const n=strength(e.target.value),m=e.target.closest('.ob-field');m?.querySelectorAll('.ob-strength i').forEach((x,i)=>x.classList.toggle('on',i<n));m?.querySelector('.ob-strength')?.setAttribute('data-n',String(n));const l=m?.querySelector('.ob-strength-label');if(l)l.textContent=e.target.value?(e.target.value.length<12?`${12-e.target.value.length} more character${12-e.target.value.length===1?'':'s'}`:['','Okay','Good','Strong','Excellent'][n]):'';m?.querySelector('.au-meter')?.classList.toggle('is-on',!!e.target.value)}
+function onObInput(e){if(e.target.name==='password'&&(S.authMode==='register'||S.authMode==='reset')){const n=strength(e.target.value),m=e.target.closest('.ob-field');m?.querySelectorAll('.ob-strength i').forEach((x,i)=>x.classList.toggle('on',i<n));m?.querySelector('.ob-strength')?.setAttribute('data-n',String(n));const l=m?.querySelector('.ob-strength-label');if(l)l.textContent=e.target.value?(e.target.value.length<12?`${12-e.target.value.length} more character${12-e.target.value.length===1?'':'s'}`:['','Okay','Good','Strong','Excellent'][n]):'';m?.querySelector('.au-meter')?.classList.toggle('is-on',!!e.target.value)}
  if(e.target.name==='email'){validateEmail(e.target);clearTimeout(S.emT);const t=e.target;S.emT=setTimeout(()=>checkEmailField(t,false),450)}
  if(e.target.name==='password'){const c=pwChecks(e.target.value);document.querySelectorAll('.au-reqs li').forEach(li=>li.classList.toggle('is-ok',!!c[li.dataset.r]));document.querySelector('.au-f[data-f=password]')?.classList.toggle('is-typing',!!e.target.value);fieldMsg('password','')}
  const err=document.querySelector('.ob-auth-error');if(err&&e.target.closest('.ob-auth'))err.hidden=true;
@@ -298,7 +348,27 @@ function onObKey(e){if(e.target.name==='password'&&e.getModifierState){const c=d
  if(['about','frame'].includes(STEPS[S.ob?.step]?.id)&&!/^(INPUT|TEXTAREA)$/.test(e.target.tagName)&&!e.metaKey&&!e.ctrlKey&&!e.altKey){
   if(/^[1-9]$/.test(e.key)){const b=document.querySelectorAll('.q-opt')[+e.key-1];if(b){e.preventDefault();b.click()}return}
   if(e.key==='ArrowLeft'||e.key==='ArrowRight'){const list=[...document.querySelectorAll('[data-ob-pick=aspect]')],cur=list.findIndex(b=>b.classList.contains('is-on')),n=list[(cur+(e.key==='ArrowRight'?1:-1)+list.length)%list.length];if(n){e.preventDefault();n.click()}}}}
-async function onAuthSubmit(e){e.preventDefault();const f=e.target,btn=f.querySelector('[type=submit]'),err=f.querySelector('.ob-auth-error'),fd=new FormData(f),reg=S.authMode==='register';
+function tickResend(){clearTimeout(S.resendT);const b=document.querySelector('[data-ob=resend]');if(!b)return;const left=Math.ceil(((S.resendAt||0)-Date.now())/1000);
+ if(left>0){b.disabled=true;b.textContent=`Resend in ${left}s`;S.resendT=setTimeout(tickResend,1000)}else{b.disabled=false;b.textContent='Resend link'}}
+async function requestReset(email,again){try{const r=await api('/api/auth/forgot',{method:'POST',body:{email}});
+  if(r.available===false){S.status={...(S.status||{}),passwordReset:false};S.authMode='forgot';renderOb();return}
+  S.resetTtl=r.ttlMinutes||30;S.resendAt=Date.now()+45000;S.authMode='sent';renderOb();if(again)E()?.notify?.('New link sent. Use the newest email');return true}
+ catch(ex){if(again){S.authMode='sent';renderOb();const b=document.querySelector('[data-ob=resend]');if(b){b.disabled=false;b.textContent=ex.status===429?'Too many requests. Try later':'Couldn’t send. Retry'}}else throw ex}}
+async function onRecoverySubmit(f){const btn=f.querySelector('[type=submit]'),errEl=f.querySelector('.ob-auth-error'),label=btn.innerHTML;
+ const fail=m=>{errEl.textContent=m;errEl.hidden=false;btn.disabled=false;btn.innerHTML=label};errEl.hidden=true;
+ if(f.dataset.form==='forgot'){const email=String(f.email.value||'').trim();S.authEmail=email;
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)){fieldMsg('email','Enter a full email address, like name@example.com.');f.email.focus();return}
+  btn.disabled=true;btn.innerHTML='<span class="acct-spin"></span><span>Sending link…</span>';
+  try{await requestReset(email,false)}catch(ex){fail(ex.status===429?'Too many requests. Wait a few minutes and try again.':ex.message||'Something went wrong. Try again.')}return}
+ if(f.dataset.form==='reset'){const pw=String(f.password.value||'');
+  if(pw.length<12){fieldMsg('password',`Add ${12-pw.length} more character${12-pw.length===1?'':'s'}. Passwords need at least 12.`);f.password.focus();return}
+  if(S.resetEmail&&pw.trim().toLowerCase()===S.resetEmail.toLowerCase()){fieldMsg('password','Choose a password that isn’t your email address.');f.password.focus();return}
+  btn.disabled=true;btn.innerHTML='<span class="acct-spin"></span><span>Updating password…</span>';
+  try{await api('/api/auth/reset',{method:'POST',body:{token:S.resetToken,password:pw}});S.resetToken=null;
+   try{if(S.resetEmail)localStorage.setItem('replotre_last_email',S.resetEmail);localStorage.setItem('replotre_last_method','email')}catch{}
+   S.authMode='reset-done';renderOb();setTimeout(()=>location.replace('/studio'),900)}
+  catch(ex){if(ex.status===410){S.authMode='reset-bad';renderOb();return}fail(ex.status===429?'Too many attempts. Wait a few minutes and try again.':ex.message||'Something went wrong. Try again.')}}}
+async function onAuthSubmit(e){e.preventDefault();if(e.target.dataset?.form)return onRecoverySubmit(e.target);const f=e.target,btn=f.querySelector('[type=submit]'),err=f.querySelector('.ob-auth-error'),fd=new FormData(f),reg=S.authMode==='register';
  const email=String(fd.get('email')||'').trim(),password=String(fd.get('password')||'');S.authEmail=email;
  const reset=()=>{btn.disabled=false;btn.innerHTML=`<span>${reg?'Create account':'Sign in'}</span>${ico('arrow-up')}`};
  const fail=(m,action)=>{err.innerHTML=esc(m)+(action||'');err.hidden=false;reset()};
@@ -483,7 +553,13 @@ function readAuthReturn(){const u=new URL(location.href),e=u.searchParams.get('a
  if(g==='google'&&u.searchParams.get('new')==='1')sessionStorage.setItem('replotre_new_account','1');
  ['auth_error','auth','new'].forEach(k=>u.searchParams.delete(k));history.replaceState(null,'',u.pathname+(u.search||'')+u.hash)}
 async function boot(){try{await bootInner()}catch(e){console.warn('[account] boot failed, opening the studio',e);ungate()}}
-async function bootInner(){readAuthReturn();let status=null,me=null,acct=null;const pre=window.__rpPre;
+async function startReset(){const u=new URL(location.href),token=u.searchParams.get('reset');if(!token)return false;
+ u.searchParams.delete('reset');history.replaceState(null,'',u.pathname+(u.search||'')+u.hash); // keep the token out of history and referrers
+ S.resetToken=token;let hint=null;try{hint=JSON.parse(document.documentElement.dataset.boot||'null')}catch{}S.status=hint||S.status||{};
+ let r=null;try{r=await api('/api/auth/reset/check',{method:'POST',body:{token}})}catch{}
+ if(r?.valid){S.authMode='reset';S.resetMasked=r.email;S.resetEmail=r.fullEmail||''}else S.authMode='reset-bad';
+ S.ob={step:0,data:{},dir:1,gate:true};ensureOb();renderOb();document.documentElement.classList.remove('rp-gate');return true}
+async function bootInner(){if(await startReset())return;readAuthReturn();let status=null,me=null,acct=null;const pre=window.__rpPre;
  // The server includes the signed-in state in the page: signed-out visitors get the sign-up screen with no extra round trip.
  let hint=null;try{hint=JSON.parse(document.documentElement.dataset.boot||'null')}catch{}
  const justSignedIn=/[?&](auth|billing)=/.test(location.search);
