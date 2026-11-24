@@ -1088,3 +1088,7 @@ html.rp-bare body>*:not(.ob){display:none!important}
 @media (max-width:520px){.ob:not(:has(.au-wall)) .au-card-wrap{background:none;border:0;box-shadow:none}}
 @media (prefers-reduced-motion:reduce){.ob .au-card-wrap,.ob .obx-main.is-anim .obx-content{animation:none}}
 .obx-main[data-step=plan]{padding-bottom:150px}
+/* Plan step: renewal notice readable above the action bar */
+.obx-main[data-step=plan] .pl-foot{max-width:640px;margin:16px auto 0;text-align:center;font-size:12px;line-height:1.5;color:var(--t3,#77746e)}
+.pl-foot a{color:inherit;text-decoration:underline;text-underline-offset:2px}
+.pl-foot a:hover{color:var(--t1,#f2eee7)}
