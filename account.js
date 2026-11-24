@@ -38,8 +38,11 @@ const STEPS=[
 async function loadAccount(){try{S.account=await api('/api/account')}catch{S.account=null}renderChip();return S.account}
 async function loadPlans(){if(S.plans)return S.plans;const pre=window.__rpPre?.plans;if(pre){window.__rpPre.plans=null;const r=await pre;if(r?.plans){S.plans=r.plans;S.mode=r.mode;return S.plans}}try{const r=await fetch('/api/billing/plans',{credentials:'same-origin'}).then(r=>r.json());S.plans=r.plans;S.mode=r.mode}catch{S.plans=[]}return S.plans}
 let saveTimer=0;
-function saveProfile(patch,{step,complete}={}){S.ob&&Object.assign(S.ob.data,patch);clearTimeout(saveTimer);
- return new Promise(res=>{saveTimer=setTimeout(async()=>{try{S.account=await api('/api/account/profile',{method:'PUT',body:{profile:patch,step,complete}});renderChip()}catch(e){E()?.notify(e.message)}res()},complete?0:250)})}
+// Answers are batched: quick picks + Continue merge into one save (a newer call used to cancel an unsent pick, losing the answer).
+let pendingPatch={},pendingStep,pendingWaiters=[];
+function saveProfile(patch,{step,complete}={}){S.ob&&Object.assign(S.ob.data,patch);Object.assign(pendingPatch,patch);if(Number.isInteger(step))pendingStep=Math.max(pendingStep??0,step);clearTimeout(saveTimer);
+ return new Promise(res=>{pendingWaiters.push(res);saveTimer=setTimeout(async()=>{const body={profile:complete&&S.ob?{...S.ob.data}:pendingPatch,step:pendingStep,complete},waiters=pendingWaiters;pendingPatch={};pendingStep=undefined;pendingWaiters=[];
+  try{S.account=await api('/api/account/profile',{method:'PUT',body});renderChip()}catch(e){if(!complete)E()?.notify(e.message)}waiters.forEach(r=>r())},complete?0:250)})}
 
 /* ---------- Header chip ---------- */
 function renderChip(){let chip=document.getElementById('planChip');const a=S.account;
@@ -53,7 +56,9 @@ function renderChip(){let chip=document.getElementById('planChip');const a=S.acc
 function ensureOb(){let el=document.querySelector('.ob');if(!el){el=document.createElement('div');el.className='ob';el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.setAttribute('aria-labelledby','obTitle');document.body.appendChild(el);el.addEventListener('click',onObClick);el.addEventListener('input',onObInput);el.addEventListener('keydown',onObKey);el.addEventListener('submit',onAuthSubmit);el.addEventListener('focusout',e=>{if(e.target.id==='auEmail'&&!e.relatedTarget?.matches?.('[data-ob=fix-email]'))checkEmailField(e.target,true)});
   el._inert=[...document.body.children].filter(n=>n!==el&&!n.inert);for(const n of el._inert)n.inert=true;document.body.style.overflow='hidden'}return el}
 async function startOnboarding(fromStep){await Promise.all([S.account?null:loadAccount(),loadPlans()]);if(!S.account)return;
- const p=S.account.profile||{};const first=fromStep??Math.min(STEPS.length-1,Math.max(1,p.onboardedAt?1:(p.step||1)));
+ const p=S.account.profile||{};const miss=p.setupMissing||[],gap=miss.includes('role')?'about':miss.includes('goals')?'work':miss.includes('aspect')?'style':null;
+ // resume at the first unanswered step (an older account marked done but missing answers starts there, not at step 1)
+ const first=fromStep??(gap&&p.step>=STEPS.findIndex(x=>x.id===gap)?STEPS.findIndex(x=>x.id===gap):Math.min(STEPS.length-1,Math.max(1,p.onboardedAt?1:(p.step||1))));
  S.ob={step:first,data:{...p},dir:1,anim:true};ensureOb();renderOb();ungate()}
 /* Account gate: the studio is for signed-in creators. Step 0 of the same flow is sign up / sign in. */
 function startGate(){try{const e=localStorage.getItem('replotre_last_email'),m=localStorage.getItem('replotre_last_method');if(m==='google')S.authMode='login';else if(e&&!S.authEmail){S.authEmail=e;S.authMode='login'}}catch{}S.ob={step:0,data:{},dir:1,gate:true};ensureOb();renderOb();document.documentElement.classList.remove('rp-gate')}// the full-screen sign-up covers the page; no editor needed
@@ -232,7 +237,8 @@ function planCarousel(el,first){const g=el.querySelector('.pl[data-context=onboa
 async function go(delta){const o=S.ob;if(!o)return;const next=o.step+delta;if(delta>0&&!valid(o.step))return;
  if(delta>0)await saveProfile({},{step:next});
  if(next>=STEPS.length){await saveProfile({},{step:STEPS.length-1,complete:true});applyPrefs();closeOnboarding();E()?.notify('Welcome to Replotre');return}
- if(STEPS[next].id==='ready')await saveProfile({},{step:next,complete:true});
+ if(STEPS[next].id==='ready'){await saveProfile({},{step:next,complete:true});const miss=S.account?.profile?.setupMissing||[];
+  if(miss.length){const id=miss.includes('role')?'about':miss.includes('goals')?'work':'style';o.dir=-1;o.anim=true;o.step=STEPS.findIndex(x=>x.id===id);renderOb();E()?.notify('One more answer needed to finish setup');return}}
  o.dir=delta;o.anim=true;o.step=Math.max(1,next);renderOb()}
 function applyPrefs(){const d=S.account?.profile||S.ob?.data||{};try{localStorage.setItem('replotre_prefs',JSON.stringify({aspect:d.aspect,captionStyle:d.captionStyle,favoriteTemplates:d.favoriteTemplates||[]}))}catch{}
  const snap=E()?.snapshot?.();if(d.aspect&&snap&&!snap.clips?.length&&snap.aspect!==d.aspect)E().loadSavedEdit({...snap,aspect:d.aspect});window.ReplotreTemplates?.rerender?.()}

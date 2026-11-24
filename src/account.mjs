@@ -1,6 +1,8 @@
 /** Accounts: onboarding profile, plans, entitlements and Whop billing. */
 import {createHmac,timingSafeEqual} from 'node:crypto';
 import {json,bodyJSON,err,now,uuid} from './core.mjs';
+// Setup is finished only when the answers the steps ask for are present (role, what they make, default frame).
+export const setupMissing=d=>[!d?.role&&'role',!(Array.isArray(d?.goals)&&d.goals.length)&&'goals',!d?.aspect&&'aspect'].filter(Boolean);
 
 /* ---------- Plans ----------
    Every limit listed here is enforced by the server (AI requests, storage, upload size, export resolution, render length).
@@ -102,7 +104,7 @@ export function accountView(db,user){
  const prof=db.prepare('SELECT * FROM user_profiles WHERE user_id=?').get(user.id),sub=subscriptionRow(db,user.id),plan=effectivePlan(db,user.id),ent=entitlements(db,user.id);
  const day=now()-86400000,month=now()-30*86400000;
  return {user:{id:user.id,email:user.email,createdAt:user.created_at},
-  profile:prof?{...JSON.parse(prof.data_json),step:prof.step,onboardedAt:prof.onboarded_at}:{step:0,onboardedAt:null},
+  profile:prof?(()=>{const d=JSON.parse(prof.data_json),missing=setupMissing(d);return {...d,step:prof.step,onboardedAt:missing.length?null:prof.onboarded_at,setupMissing:missing}})():{step:0,onboardedAt:null,setupMissing:setupMissing({})},
   plan:{id:plan.id,name:plan.name},
   subscription:sub?{plan:sub.plan,status:sub.status,interval:sub.interval,provider:sub.provider,currentPeriodEnd:sub.current_period_end,cancelAtPeriodEnd:!!sub.cancel_at_period_end}:null,
   entitlements:ent,
@@ -145,6 +147,7 @@ export async function accountRoutes({req,res,pathname,method,db,authorized,origi
  if(pathname==='/api/account/profile'&&method==='PUT'){
   rate(`profile:${user.id}`,120,60000);const b=await bodyJSON(req,6000);const row=db.prepare('SELECT * FROM user_profiles WHERE user_id=?').get(user.id);
   const data=cleanProfile(b.profile,row?JSON.parse(row.data_json):{}),step=Math.max(row?.step||0,Math.min(20,Math.max(0,Number.isInteger(b.step)?b.step:0)));
+  if(b.complete===true&&setupMissing(data).length)err(400,'Finish setup first: '+setupMissing(data).join(', '));
   const done=b.complete===true?(row?.onboarded_at||now()):(row?.onboarded_at||null);
   db.prepare(`INSERT INTO user_profiles(user_id,data_json,step,onboarded_at,updated_at) VALUES(?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET data_json=excluded.data_json,step=excluded.step,onboarded_at=excluded.onboarded_at,updated_at=excluded.updated_at`).run(user.id,JSON.stringify(data),step,done,now());
   return json(res,200,accountView(db,user)),true;
