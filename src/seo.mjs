@@ -1,6 +1,8 @@
 import {publicPages, getPublicPage, breadcrumbs, escapeHtml} from './public-pages.mjs';
 
 // IndexNow: public key served at /<key>.txt so Bing and other engines accept change notifications from this site.
+// Google Search Console ownership file for https://replotre.com/ (keep it: removing it un-verifies the property).
+export const GOOGLE_VERIFY_FILE = 'googleaed48d3c73c4187d.html';
 export const INDEXNOW_KEY = 'b5bfcdd61ec118107965c033df4b17f9';
 export const INDEX_ROBOTS = 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1';
 export const NOINDEX_ROBOTS = 'noindex, follow';
