@@ -17,6 +17,7 @@ import {applyOperations,planDirector,subtitleFile} from './src/director.mjs';
 import {initAccountSchema,accountRoutes,entitlements,planById,subscribed} from './src/account.mjs';
 import {initGoogleSchema,googleRoutes,googleConfigured} from './src/google-auth.mjs';
 import {initResetSchema,resetRoutes,resetConfigured} from './src/password-reset.mjs';
+import {inboundRoutes} from './src/inbound-mail.mjs';
 import {claudeConfigured,claudeTemplate,localTemplate,timelineContext,CLAUDE_MODEL} from './src/template-ai.mjs';
 import {readActiveWorkspace,readProjectWorkspace,saveWorkspace} from './src/workspace.mjs';
 import {getPublicPage,renderPublicPage,renderNotFound} from './src/public-pages.mjs';
@@ -62,7 +63,7 @@ function ownAsset(id,projectId,user){const a=db.prepare('SELECT * FROM assets WH
 function upgradeErr(message,feature){const e=new ApiError(402,message);e.feature=feature;throw e}
 function aiQuota(user){const limit=entitlements(db,user.id).aiDaily,count=db.prepare('SELECT COUNT(*) n FROM ai_usage WHERE user_id=? AND created_at>?').get(user.id,now()-86400000).n;if(count>=limit)upgradeErr(`You've used today's ${limit} AI requests. Upgrade for more, or try again tomorrow.`,'ai');db.prepare('INSERT INTO ai_usage(id,user_id,created_at) VALUES(?,?,?)').run(uuid(),user.id,now())}
 function createSessionCookie(user){const token=randomToken(),t=now();db.prepare('INSERT INTO sessions(token_hash,user_id,created_at,expires_at) VALUES(?,?,?,?)').run(hashToken(token),user.id,t,t+authTTL);return cookieHeaders(token)['Set-Cookie']}
-let googleHandler=null,resetHandler=null;
+let googleHandler=null,resetHandler=null,inboundHandler=null;
 async function startSession(res,user){const token=randomToken(),t=now();db.prepare('INSERT INTO sessions(token_hash,user_id,created_at,expires_at) VALUES(?,?,?,?)').run(hashToken(token),user.id,t,t+authTTL);return json(res,200,{user:publicUser(user)},cookieHeaders(token))}
 async function aiPlan(prompt,project){
  const actions=['set_aspect','add_text','set_text_color','set_text_position','remove_text','trim_clip','split_clip','set_speed','set_volume','remove_music','generate_script_captions'];
@@ -78,6 +79,7 @@ const server=http.createServer(async(req,res)=>{
   // One canonical host in production: www., studio. and any other alias redirect to APP_ORIGIN.
   // Health checks and the billing webhook answer on every host (Railway probes internally; Whop does not follow redirects).
   if(production&&canonicalHost&&req.headers.host&&req.headers.host.toLowerCase()!==canonicalHost&&pathname!=='/api/healthz'&&pathname!=='/api/billing/webhook'&&(method==='GET'||method==='HEAD')){res.writeHead(301,{Location:origin+(canonicalRedirect(pathname)||pathname)+u.search,'Cache-Control':'public, max-age=3600'});return res.end()}
+  if(pathname==='/api/email/inbound'){const r=await (inboundHandler||=inboundRoutes())(req,res,method,pathname);if(r!==false)return r}
   if(pathname.startsWith('/api/')&&pathname!=='/api/billing/webhook')csrf(req);
   if(pathname.startsWith('/api/auth/google/')&&await (googleHandler||=googleRoutes({db,origin,production,rate,cookies,createSessionCookie,maxUsers}))(req,res,pathname,method,u))return;
   if((pathname.startsWith('/api/account')||pathname.startsWith('/api/billing/'))&&await accountRoutes({req,res,pathname,method,db,authorized,origin,rate}))return;
