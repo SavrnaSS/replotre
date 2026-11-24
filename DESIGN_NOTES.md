@@ -1,14 +1,12 @@
 # Replotre — Cutroom UI redline (v0.2)
 
-## Direction
+## What Replotre should feel like
 
-- **Product:** A timeline-first video editor where creators can revise footage manually or through structured commands.
-- **Character:** Precise, tactile, editorial.
-- **World:** A post-production cutroom: subdued graphite, film contact sheets, warm timecode ink, calibrated controls.
-- **Moments:** The portrait film preview and synchronized sample-footage thumbnails; timeline selection provides the only other strong accent.
-- **Signature:** The warm cut-line, carried consistently into selection and time readouts.
+Replotre is a timeline-first video editor: creators change footage by hand or by describing the edit. The interface should feel like a calm post-production room, precise and warm, with the footage always louder than the controls.
 
-## Initial audit
+The colour comes from graphite surfaces and a single warm timecode orange. That orange marks what matters right now: the selected clip, the cut point, the current step and the main button. The portrait preview and the sample-footage thumbnails are the only places allowed to be visually rich.
+
+## Problems we fixed
 
 - Violet glow, gradient primary buttons and gradient logo tile made the chrome louder than the film itself.
 - Many nearby purple tints competed for emphasis, particularly on timeline clips and assistant suggestions.
