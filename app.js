@@ -432,6 +432,17 @@ function queueDemoPosters(){if(demoPostersQueued)return;demoPostersQueued=true;c
   const c=document.createElement("canvas");c.width=256;c.height=160;drawDemo(c.getContext("2d",{alpha:false}),i,1,c.width,c.height);
   c.toBlob(b=>{if(b){demoCardPosters[i]=URL.createObjectURL(b);document.querySelectorAll(`[data-action="add-demo"][data-index="${i}"] img.poster`).forEach(img=>img.src=demoCardPosters[i])}idle(()=>make(i+1))},'image/jpeg',.85)};
  idle(()=>make(0))}
+/* Real sample footage (Mixkit free licence, see assets/demo/CREDITS.md). It goes through the normal import path, so
+   it behaves exactly like the user's own upload: real frames, trimming, thumbnails, cloud sync and AI analysis. */
+const REAL_SAMPLES=[{file:'vlog.mp4',name:'Sample · Talking to camera.mp4'},{file:'friends.mp4',name:'Sample · Dance duo.mp4'},{file:'looks.mp4',name:'Sample · Creator setup.mp4'}];
+let sampleBusy=false;
+async function addSample(idx){if(sampleBusy)return;const smp=REAL_SAMPLES[idx]||REAL_SAMPLES[0];
+ const existing=state.media.find(m=>m.name===smp.name);if(existing){addExistingMedia(existing.id);return}
+ sampleBusy=true;document.querySelectorAll('[data-action="add-demo"]').forEach(b=>{b.disabled=true;b.dataset.label=b.innerHTML;b.innerHTML='<span>Loading sample…</span>'});
+ try{const r=await fetch('/assets/demo/'+smp.file,{credentials:'same-origin'});if(!r.ok)throw new Error('Sample unavailable');
+  const blob=await r.blob();await importFiles([new File([blob],smp.name,{type:'video/mp4'})])}
+ catch(e){toast(`Couldn’t load the sample: ${e.message}`)}
+ finally{sampleBusy=false;document.querySelectorAll('[data-action="add-demo"]').forEach(b=>{b.disabled=false;if(b.dataset.label)b.innerHTML=b.dataset.label})}}
 function addDemo(idx){const sample=DEMO_SAMPLES[idx]||DEMO_SAMPLES[0];applyMutation(()=>{const c={id:uid('demo'),kind:'demo',demo:idx,name:sample.name,in:0,out:5,speed:1,volume:1,brightness:100,saturation:100};state.clips.push(c);state.selectedClipId=c.id;state.selectedTextId=null},`Added ${sample.name}`)}
 function demoCardMarkup(i){const sample=DEMO_SAMPLES[i],used=state.clips.filter(c=>c.kind==='demo'&&(c.demo||0)===i).length;
  return `<button class="asset-card kind-sample ${used?'in-use':''}" data-action="add-demo" data-index="${i}" draggable="true" title="${escapeHTML(sample.name)}: click to add, or drag onto the timeline">`+
@@ -1237,7 +1248,7 @@ function templateTileMarkup(t){const tEsc=v=>String(v??'').replace(/[&<>"']/g,c=
  return `<button type="button" class="mt-tile${cur?' is-current':''}" data-action="open-template" data-id="${tEsc(t.id)}" aria-label="${tEsc(t.name)} template: ${tEsc(t.desc||'')}"><span class="mt-thumb"><img src="/assets/templates/${tEsc(t.preview?.poster||t.id+'.jpg')}" alt="" loading="lazy" decoding="async" width="360" height="640"><video class="mt-vid" data-src="/assets/templates/${tEsc(t.preview?.video||t.id+'.mp4')}" muted loop playsinline preload="none" disablepictureinpicture disableremoteplayback aria-hidden="true" tabindex="-1"></video>${cur?`<em class="mt-cur">In use</em>`:''}</span><strong>${tEsc(t.name)}</strong><small>${ratio}</small></button>`}
 function setMobileNav(section){if(section!=='ai'&&!workspaceRestoring)directorFirst=false;workspaceMobileSection=section;$$('.mobile-bottom-nav button').forEach(b=>b.classList.remove('mobile-nav-active'));if(section==='assets')$('#mobileAssets').classList.add('mobile-nav-active');else if(section==='ai')$('#mobileAI').classList.add('mobile-nav-active');else $('#mobileStudio').classList.add('mobile-nav-active')}
 function handleAction(action,el,event){const id=el.dataset.id;switch(action){case 'upload':$('#mediaInput').click();break;
- case 'add-demo':addDemo(Number(el.dataset.index));break;
+ case 'add-demo':addSample(Number(el.dataset.index)||0);break;
  case 'see-templates':chooseTool('templates');break;
  case 'open-template':chooseTool('templates');requestAnimationFrame(()=>window.ReplotreTemplates?.openDetail?.(el.dataset.id));break;
  case 'add-media':addExistingMedia(id);break;
