@@ -536,6 +536,7 @@ function renderAssetPanel(){const headings={media:'Media library',intelligence:'
   const cards=state.media.map(assetCardMarkup).join('');
   const tplCards=featuredTemplates().map(templateTileMarkup).join('');
   body.innerHTML=`<div class="upload-zone" data-action="upload"><span class="upload-icon">${ico('cloud-upload')}</span><strong>Drop your footage here</strong><small>Or <em>browse files</em> to upload<br/>MP4, MOV, WebM, images & audio</small></div><div class="section-heading"><span>Your uploads <span class="section-count">${state.media.length}</span></span><button class="section-add" data-action="upload">${ico('plus')}<span>Add new</span></button></div>${state.media.length?`<div class="media-grid">${cards}</div>`:`<div class="asset-placeholder">Imported footage appears here. ${uploadInfo}</div>`}${tplCards?`<div class="section-heading"><span>Templates</span><button class="section-add" data-action="see-templates">${ico('grid')}<span>See all</span></button></div><div class="mt-grid">${tplCards}</div><p class="mt-note">Pick a look: it fits itself to your clips, speech and beats.</p>`:''}<div class="section-heading"><span>Project file</span></div><button class="mini-action" data-action="download-project">${ico('file-json')} Download project JSON</button><button class="mini-action" data-action="open-project" style="margin-top:8px">${ico('upload-cloud')} Open saved project</button>`;
+  playTemplateTiles(body);
  }else if(state.tab==='templates'){
   if(window.ReplotreTemplates){window.ReplotreTemplates.render(body);return}body.innerHTML='<p class="panel-intro">Templates are loading…</p>';
  }else if(state.tab==='text'){
@@ -1219,10 +1220,21 @@ function applyTransitionStyle(style,idxs){const d=clamp(state.trDur??.6,.2,2);fo
 function railSelect(tab){const wide=innerWidth>980;if(tab===state.tab){if(wide){setAssetsCollapsed(!assetsCollapsed);return}if($('#assetPanel').classList.contains('is-open')){$('#assetPanel').classList.remove('is-open');return}}chooseTool(tab)}
 function chooseTool(tab){if(!RAIL_TABS.includes(tab))return;if(assetsCollapsed&&innerWidth>980)setAssetsCollapsed(false);state.tab=tab;renderAssetPanel();if(innerWidth<=980)$('#assetPanel').classList.add('is-open');if(innerWidth<=700){$('#rightPanel').classList.remove('is-open');setMobileNav('assets')}window.ReplotreWorkspace?.schedule()}
 // Media tab: a few templates in place of the old sample clips. Favourites from setup first, then the catalog order.
+/* Template tiles loop their preview while on screen. Videos load only when visible, pause off screen or when the tab is
+   hidden, and stay as still posters with reduced motion or data saver. */
+let tileObserver=null;
+function playTemplateTiles(root){const vids=[...root.querySelectorAll('.mt-vid')];if(!vids.length)return;
+ if(matchMedia('(prefers-reduced-motion: reduce)').matches||navigator.connection?.saveData)return;
+ tileObserver?.disconnect();
+ tileObserver=new IntersectionObserver(entries=>{for(const e of entries){const v=e.target;
+  if(e.isIntersecting&&document.visibilityState==='visible'){if(!v.src){v.src=v.dataset.src;v.addEventListener('playing',()=>v.classList.add('is-on'),{once:true})}v.play().catch(()=>{})}
+  else if(!v.paused)v.pause()}},{rootMargin:'80px 0px',threshold:.25});
+ vids.forEach(v=>tileObserver.observe(v))}
+document.addEventListener('visibilitychange',()=>{document.querySelectorAll('.mt-vid').forEach(v=>{if(document.visibilityState!=='visible')v.pause();else if(v.src&&v.getBoundingClientRect().height&&v.closest('.mt-grid')?.offsetParent)v.play().catch(()=>{})})});
 function featuredTemplates(){const C=window.ReplotreTemplateCatalog;if(!C?.TEMPLATES)return [];let fav=[];try{fav=JSON.parse(localStorage.getItem('replotre_prefs')||'{}').favoriteTemplates||[]}catch{}
  const all=C.TEMPLATES.filter(t=>t.id!=='custom'),pick=[...fav.map(id=>all.find(t=>t.id===id)).filter(Boolean),...all];return [...new Set(pick)].slice(0,6)}
 function templateTileMarkup(t){const tEsc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const cur=window.ReplotreEditor?.template?.get?.()?.id===t.id;const ratio=t.ratio==='16:9'?'Landscape':t.ratio==='4:5'?'Portrait':t.ratio==='1:1'?'Square':'Vertical';
- return `<button type="button" class="mt-tile${cur?' is-current':''}" data-action="open-template" data-id="${tEsc(t.id)}" aria-label="${tEsc(t.name)} template: ${tEsc(t.desc||'')}"><span class="mt-thumb"><img src="/assets/templates/${tEsc(t.preview?.poster||t.id+'.jpg')}" alt="" loading="lazy" decoding="async" width="360" height="640">${cur?`<em class="mt-cur">In use</em>`:''}</span><strong>${tEsc(t.name)}</strong><small>${ratio}</small></button>`}
+ return `<button type="button" class="mt-tile${cur?' is-current':''}" data-action="open-template" data-id="${tEsc(t.id)}" aria-label="${tEsc(t.name)} template: ${tEsc(t.desc||'')}"><span class="mt-thumb"><img src="/assets/templates/${tEsc(t.preview?.poster||t.id+'.jpg')}" alt="" loading="lazy" decoding="async" width="360" height="640"><video class="mt-vid" data-src="/assets/templates/${tEsc(t.preview?.video||t.id+'.mp4')}" muted loop playsinline preload="none" disablepictureinpicture disableremoteplayback aria-hidden="true" tabindex="-1"></video>${cur?`<em class="mt-cur">In use</em>`:''}</span><strong>${tEsc(t.name)}</strong><small>${ratio}</small></button>`}
 function setMobileNav(section){if(section!=='ai'&&!workspaceRestoring)directorFirst=false;workspaceMobileSection=section;$$('.mobile-bottom-nav button').forEach(b=>b.classList.remove('mobile-nav-active'));if(section==='assets')$('#mobileAssets').classList.add('mobile-nav-active');else if(section==='ai')$('#mobileAI').classList.add('mobile-nav-active');else $('#mobileStudio').classList.add('mobile-nav-active')}
 function handleAction(action,el,event){const id=el.dataset.id;switch(action){case 'upload':$('#mediaInput').click();break;
  case 'add-demo':addDemo(Number(el.dataset.index));break;
