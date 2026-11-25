@@ -70,6 +70,7 @@ const defaultClips=()=>[
 {id:'demo_03',name:'Blue hour',kind:'demo',demo:2,in:0,out:5,speed:1,volume:1,brightness:100,saturation:100}];
 const bootWorkspace=window.ReplotreWorkspace?.initial()||{};
 let workspaceMobileSection=bootWorkspace.mobileSection||'studio',workspaceRestoreVersion=0;
+let directorFirst=innerWidth<=980,workspaceRestoring=false;setTimeout(()=>{directorFirst=false},10000);// opening /studio on a phone lands on the AI Director
 const state = {
  projectName:'Untitled project',aspect:'9:16', zoom:bootWorkspace.zoom||1,playhead:0,playing:false,lastFrame:0,clips:[],
  texts:[],media:[],music:null,brandColor:'#e2ab77',brandFont:'Georgia',
@@ -1217,7 +1218,7 @@ function applyTransitionStyle(style,idxs){const d=clamp(state.trDur??.6,.2,2);fo
   if(style==='dip'){p.fadeOut=clamp(d/2,.1,Math.min(3,clipDuration(p)/2));c.fadeIn=clamp(d/2,.1,Math.min(3,clipDuration(c)/2))}else if(transitionAtCut(i)==='dip'||style==='cut'){if(style!=='dip'){p.fadeOut=0;c.fadeIn=0}}}}
 function railSelect(tab){const wide=innerWidth>980;if(tab===state.tab){if(wide){setAssetsCollapsed(!assetsCollapsed);return}if($('#assetPanel').classList.contains('is-open')){$('#assetPanel').classList.remove('is-open');return}}chooseTool(tab)}
 function chooseTool(tab){if(!RAIL_TABS.includes(tab))return;if(assetsCollapsed&&innerWidth>980)setAssetsCollapsed(false);state.tab=tab;renderAssetPanel();if(innerWidth<=980)$('#assetPanel').classList.add('is-open');if(innerWidth<=700){$('#rightPanel').classList.remove('is-open');setMobileNav('assets')}window.ReplotreWorkspace?.schedule()}
-function setMobileNav(section){workspaceMobileSection=section;$$('.mobile-bottom-nav button').forEach(b=>b.classList.remove('mobile-nav-active'));if(section==='assets')$('#mobileAssets').classList.add('mobile-nav-active');else if(section==='ai')$('#mobileAI').classList.add('mobile-nav-active');else $('#mobileStudio').classList.add('mobile-nav-active')}
+function setMobileNav(section){if(section!=='ai'&&!workspaceRestoring)directorFirst=false;workspaceMobileSection=section;$$('.mobile-bottom-nav button').forEach(b=>b.classList.remove('mobile-nav-active'));if(section==='assets')$('#mobileAssets').classList.add('mobile-nav-active');else if(section==='ai')$('#mobileAI').classList.add('mobile-nav-active');else $('#mobileStudio').classList.add('mobile-nav-active')}
 function handleAction(action,el,event){const id=el.dataset.id;switch(action){case 'upload':$('#mediaInput').click();break;
  case 'add-demo':addDemo(Number(el.dataset.index));break;
  case 'add-media':addExistingMedia(id);break;
@@ -1648,7 +1649,7 @@ window.ReplotreEditor={ready:false,
    assetsCollapsed,rightCollapsed:$('.workspace').classList.contains('right-collapsed'),playhead:state.playhead,zoom:state.zoom,viewerZoom:state.viewerZoom,
    selectedClipId:state.selectedClipId,selectedTextId:state.selectedTextId,selectedCutId:state.selectedCutId,
    scroll:{assets:$('#assetContent').scrollTop,timeline:timelineScrollEl().scrollLeft,filters:$('#assetContent .tpl-filters')?.scrollLeft||0},templates:window.ReplotreTemplates?.workspace?.()}),
-  restore:settings=>{const s=window.ReplotreWorkspaceState.sanitize(settings),restoreVersion=++workspaceRestoreVersion;pause();state.tab=s.tool;state.rightTab=s.rightTab;state.zoom=s.zoom;state.viewerZoom=s.viewerZoom;workspaceMobileSection=s.mobileSection;
+  restore:settings=>{const s=window.ReplotreWorkspaceState.sanitize(settings),restoreVersion=++workspaceRestoreVersion;if(directorFirst&&innerWidth<=980){s.mobileSection='ai';s.rightTab='ai'}pause();state.tab=s.tool;state.rightTab=s.rightTab;state.zoom=s.zoom;state.viewerZoom=s.viewerZoom;workspaceMobileSection=s.mobileSection;
    state.selectedTextId=state.texts.some(t=>t.id===s.selectedTextId)?s.selectedTextId:null;state.selectedCutId=state.clips.slice(1).some(c=>c.id===s.selectedCutId)?s.selectedCutId:null;
    state.selectedClipId=!state.selectedTextId&&!state.selectedCutId?(state.clips.some(c=>c.id===s.selectedClipId)?s.selectedClipId:state.clips[0]?.id||null):null;
    state.playhead=clamp(s.playhead,0,totalDuration());window.ReplotreTemplates?.restoreWorkspace?.(s.templates);setAssetsCollapsed(s.assetsCollapsed);setRightCollapsed(s.rightCollapsed);refreshAll();syncMedia(true);
@@ -1683,5 +1684,5 @@ window.ReplotreTemplates?.restoreWorkspace?.(bootWorkspace.templates);
 refreshAll();restore().then(()=>{loadChat();syncMedia(true);
  // A prompt typed on the landing page (/studio?q=...) lands in the Director composer, ready to send.
  try{const u=new URL(location.href),q=(u.searchParams.get('q')||'').replace(/\s+/g,' ').trim().slice(0,140);if(u.searchParams.has('q')){u.searchParams.delete('q');history.replaceState(history.state,'',u.pathname+u.search+u.hash)}if(q){state.chatDraft=q;state.rightTab='ai';refreshAll();requestAnimationFrame(()=>{const ta=$('#chatInput');if(ta&&!ta.disabled){ta.focus();ta.setSelectionRange(q.length,q.length)}})}}catch(e){}
- window.ReplotreEditor.ready=true;checkAI();window.dispatchEvent(new Event('replotre:ready'));queueDemoPosters()});
+ window.ReplotreEditor.ready=true;checkAI();if(directorFirst&&innerWidth<=980&&!$('#rightPanel').classList.contains('is-open'))$('#mobileAI')?.click();window.dispatchEvent(new Event('replotre:ready'));queueDemoPosters()});
 })();
