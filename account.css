@@ -1644,3 +1644,19 @@ html[data-theme="light"] .brand-name .wm-r{color:#b8834f}
 .au-main[data-mode=sent] .au-rec-ico,.au-main[data-mode=reset-bad] .au-rec-ico{order:-1}
 .au-main[data-mode=sent] h1,.au-main[data-mode=reset-bad] h1,.au-main[data-mode=reset-done] h1{margin-top:0}
 .ob .au-rec button.ob-next{height:46px;min-height:46px}
+/* Setup progress v2: "1/3 About you" + segments that fill in */
+.ob .q-prog{display:flex;align-items:center;gap:12px;margin-left:auto}
+.q-step{display:inline-flex;align-items:baseline;gap:0;font-size:12.5px;line-height:1;color:var(--t3,#77746e);font-variant-numeric:tabular-nums;white-space:nowrap}
+.q-step b{font-weight:600;color:var(--t1,#f2eee7)}
+.q-step .q-of{margin-right:8px}
+.q-step .q-name{color:var(--t2,#a8a49c);font-weight:500}
+.q-bars{display:flex;gap:4px}
+.ob .q-bars i,.ob .q-bars i.on,.ob .q-bars i.done{position:relative;overflow:hidden;width:24px;height:4px;border-radius:2px;background:var(--n4,#2a2b2f);transition:width .3s cubic-bezier(.2,.7,.2,1)}
+.ob .q-bars i.on{width:40px}
+.q-bars i>b{position:absolute;inset:0;border-radius:inherit;background:var(--acc,#e2ab77);transform:scaleX(0);transform-origin:left center}
+.q-bars i.done>b{transform:none;opacity:.55}
+.q-bars i.on>b{transform:none}
+.q-bars i.is-fill>b{animation:qFill .5s cubic-bezier(.2,.7,.2,1) .1s both}
+@keyframes qFill{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@media (max-width:380px){.q-step .q-name{display:none}.q-step .q-of{margin-right:0}}
+@media (prefers-reduced-motion:reduce){.q-bars i.is-fill>b{animation:none}.ob .q-bars i{transition:none}}
