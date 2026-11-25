@@ -66,11 +66,3 @@ Original media URLs:
 
 - Interview Glow: https://v1.pinimg.com/videos/iht/expMp4/dc/f0/2e/dcf02ee741ba5cc918440febaecd2879_720w.mp4
 - Property Reel: https://v1.pinimg.com/videos/iht/expMp4/f2/76/08/f276087b6609a176eee91110b677ffe0_720w.mp4
-
-## Studio sample: dialogue scene
-
-`talking-scene.mp4` (854×356, 24 fps, H.264 + AAC stereo, 11.3 s) and `talking-scene.jpg` (a frame at 2 s) come from **"Tears of Steel"**, © Blender Foundation | mango.blender.org, licensed under Creative Commons Attribution 3.0 (https://creativecommons.org/licenses/by/3.0/).
-
-- Source: https://download.blender.org/demo/movies/ToS/tears_of_steel_720p.mov, fetched 2026-11-25.
-- Section: 00:24.98 → 00:36.28, the bridge scene ("Look Celia, we have to follow our passions…" through "I'm not freaked out by- it's…"). Scaled to 854 px wide, with 80 ms fade-in and 200 ms fade-out on the audio.
-- Used as a "Try a sample" clip in the studio because it has real speech, so captions and silence removal can be demoed on it. The studio shows the credit next to the sample.

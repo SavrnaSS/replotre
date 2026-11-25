@@ -434,20 +434,8 @@ function queueDemoPosters(){if(demoPostersQueued)return;demoPostersQueued=true;c
  idle(()=>make(0))}
 /* Real sample footage (Mixkit free licence, see assets/demo/CREDITS.md). It goes through the normal import path, so
    it behaves exactly like the user's own upload: real frames, trimming, thumbnails, cloud sync and AI analysis. */
-const REAL_SAMPLES=[{key:'vlog',file:'vlog.mp4',name:'Sample · Talking to camera.mp4'},{key:'friends',file:'friends.mp4',name:'Sample · Dance duo.mp4'},{key:'looks',file:'looks.mp4',name:'Sample · Creator setup.mp4'},{key:'talk',file:'talking-scene.mp4',name:'Sample · Dialogue scene (Tears of Steel).mp4'}];
-// Shown in the sample picker: [index, title, details, poster, credit]
-const SAMPLE_PICKS=[[0,'Creator talking','Vertical · 9 s · no sound','/assets/demo/vlog-poster.jpg',''],[3,'Dialogue scene','Landscape · 11 s · with speech for captions','/assets/demo/talking-scene.jpg','“Tears of Steel” © Blender Foundation · CC BY 3.0']];
+const REAL_SAMPLES=[{key:'vlog',file:'vlog.mp4',name:'Sample · Talking to camera.mp4'},{key:'friends',file:'friends.mp4',name:'Sample · Dance duo.mp4'},{key:'looks',file:'looks.mp4',name:'Sample · Creator setup.mp4'}];
 let sampleBusy=false;
-function closeSamplePicker(){document.querySelector('.sample-pop')?.remove();document.removeEventListener('pointerdown',samplePopOutside,true)}
-function samplePopOutside(e){if(!e.target.closest('.sample-pop,[data-action="sample-menu"]'))closeSamplePicker()}
-function toggleSamplePicker(anchor){if(document.querySelector('.sample-pop')){closeSamplePicker();return}
- const pop=document.createElement('div');pop.className='sample-pop';pop.setAttribute('role','menu');pop.setAttribute('aria-label','Sample clips');
- pop.innerHTML=`<p class="sp-head">Try a sample clip</p>${SAMPLE_PICKS.map(([i,t,d,img,cr])=>`<button type="button" role="menuitem" class="sp-item" data-action="add-demo" data-index="${i}"><img src="${img}" alt="" width="96" height="54" loading="lazy"><span><strong>${t}</strong><small>${d}</small>${cr?`<em>${cr}</em>`:''}</span></button>`).join('')}`;
- document.body.appendChild(pop);const r=anchor.getBoundingClientRect(),w=Math.min(320,innerWidth-24);pop.style.width=w+'px';
- const left=Math.max(12,Math.min(innerWidth-w-12,r.left+r.width/2-w/2));pop.style.left=left+'px';
- const below=r.bottom+8,h=pop.offsetHeight;pop.style.top=(below+h>innerHeight-12?Math.max(12,r.top-h-8):below)+'px';
- document.addEventListener('pointerdown',samplePopOutside,true);pop.querySelector('.sp-item')?.focus({preventScroll:true});
- pop.addEventListener('keydown',e=>{if(e.key==='Escape'){closeSamplePicker();anchor.focus()}})}
 async function addSample(idx){if(sampleBusy)return;const smp=REAL_SAMPLES[idx]||REAL_SAMPLES[0];
  const existing=state.media.find(m=>m.name===smp.name);if(existing){addExistingMedia(existing.id);return}
  sampleBusy=true;document.querySelectorAll('[data-action="add-demo"]').forEach(b=>{b.disabled=true;b.dataset.label=b.innerHTML;b.innerHTML='<span>Loading sample…</span>'});
@@ -1265,8 +1253,7 @@ function templateTileMarkup(t){const tEsc=v=>String(v??'').replace(/[&<>"']/g,c=
  return `<button type="button" class="mt-tile${cur?' is-current':''}" data-action="open-template" data-id="${tEsc(t.id)}" aria-label="${tEsc(t.name)} template: ${tEsc(t.desc||'')}"><span class="mt-thumb"><img src="/assets/templates/${tEsc(t.preview?.poster||t.id+'.jpg')}" alt="" loading="lazy" decoding="async" width="360" height="640"><video class="mt-vid" data-src="/assets/templates/${tEsc(t.preview?.video||t.id+'.mp4')}" muted loop playsinline preload="none" disablepictureinpicture disableremoteplayback aria-hidden="true" tabindex="-1"></video>${cur?`<em class="mt-cur">In use</em>`:''}</span><strong>${tEsc(t.name)}</strong><small>${ratio}</small></button>`}
 function setMobileNav(section){if(section!=='ai'&&!workspaceRestoring)directorFirst=false;workspaceMobileSection=section;$$('.mobile-bottom-nav button').forEach(b=>b.classList.remove('mobile-nav-active'));if(section==='assets')$('#mobileAssets').classList.add('mobile-nav-active');else if(section==='ai')$('#mobileAI').classList.add('mobile-nav-active');else $('#mobileStudio').classList.add('mobile-nav-active')}
 function handleAction(action,el,event){const id=el.dataset.id;switch(action){case 'upload':$('#mediaInput').click();break;
- case 'add-demo':closeSamplePicker();addSample(Number(el.dataset.index)||0);break;
- case 'sample-menu':toggleSamplePicker(el);break;
+ case 'add-demo':addSample(Number(el.dataset.index)||0);break;
  case 'see-templates':chooseTool('templates');break;
  case 'open-template':chooseTool('templates');requestAnimationFrame(()=>window.ReplotreTemplates?.openDetail?.(el.dataset.id));break;
  case 'add-media':addExistingMedia(id);break;

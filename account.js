@@ -219,7 +219,7 @@ function readyBody(){const d=S.ob.data,C=window.ReplotreTemplateCatalog,[w,h]=(d
 async function finishOnboarding(start){saveProfile({},{step:STEPS.length-1,complete:true});applyPrefs();closeOnboarding();
  await editorReady();const q=sel=>document.querySelector(sel);
  if(start==='upload')q('[data-action="upload"]')?.click();
- else if(start==='sample')q('[data-action="sample-menu"]')?.click();
+ else if(start==='sample')q('[data-action="add-demo"][data-index="0"]')?.click();
  else if(start==='templates')q('.rail-item[data-tab="templates"]')?.click();
  E()?.notify(S.ob?.data?.name?`Welcome to Replotre, ${S.ob.data.name}`:'Welcome to Replotre')}
 const ROLE_INFO={creator:['clapperboard','Videos for my own channels'],social:['sparkles','Accounts for a brand or clients'],agency:['grid','Client videos, as a team'],freelance:['wand-sparkles','Editing for clients'],business:['shield-check','Promoting my own business'],hobbyist:['image','For fun, learning or school projects','Personal use'],other:['sliders-horizontal','Something else']};
