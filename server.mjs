@@ -142,6 +142,15 @@ const server=http.createServer(async(req,res)=>{
    }
    if(method==='DELETE'){const assets=db.prepare('SELECT id,stored_name FROM assets WHERE project_id=?').all(p.id);const renders=db.prepare('SELECT stored_name FROM renders WHERE project_id=?').all(p.id);queue.cancelProject(p.id);analysisQueue.cancelProject(p.id);db.prepare('DELETE FROM projects WHERE id=?').run(p.id);for(const f of [...assets,...renders])if(f.stored_name)await rm(path.join(dataDir,f.stored_name),{force:true}).catch(()=>{});for(const a of assets)await rm(path.join(dataDir,'analysis',a.id),{recursive:true,force:true}).catch(()=>{});hub.publish(user.id,'project.deleted',{projectId:p.id},p.id);return json(res,200,{ok:true})}
   }
+  // Sample footage: copied server-side from assets/demo (no upload from the browser), then treated like any upload.
+  const sampleRoute=pathname.match(new RegExp(`^/api/projects/(${idRegex})/assets/sample$`));
+  if(sampleRoute&&method==='POST'){const user=authorized(req),p=ownProject(sampleRoute[1],user);rate(`sample:${user.id}`,30,3600000);
+   const b=await bodyJSON(req,500),SAMPLES={vlog:['vlog.mp4','Sample · Talking to camera.mp4'],friends:['friends.mp4','Sample · Dance duo.mp4'],looks:['looks.mp4','Sample · Creator setup.mp4']},smp=SAMPLES[b.sample];if(!smp)err(400,'Unknown sample');
+   const existing=db.prepare('SELECT * FROM assets WHERE project_id=? AND user_id=? AND name=?').get(p.id,user.id,smp[1]);if(existing)return json(res,200,{asset:assetPublic(existing),reused:true});
+   const ent=entitlements(db,user.id),src=path.join(root,'assets','demo',smp[0]),stream=fs.createReadStream(src);
+   stream.headers={'content-type':'video/mp4'};stream.url=`/sample?name=${encodeURIComponent(smp[1])}`;
+   const asset=await receiveAsset({req:stream,db,user,projectId:p.id,dataDir,maxFileBytes:ent.maxFileBytes,maxUserBytes:ent.maxStorageBytes});hub.publish(user.id,'asset.created',{asset,projectId:p.id},p.id);
+   let task=null;try{task=analysisQueue.request(p,user,ownAsset(asset.id,p.id,user),'analyze')}catch{}return json(res,201,{asset,task})}
   const assetsList=pathname.match(new RegExp(`^/api/projects/(${idRegex})/assets$`));
   if(assetsList){const user=authorized(req),p=ownProject(assetsList[1],user);
    if(method==='GET')return json(res,200,{assets:db.prepare('SELECT * FROM assets WHERE project_id=? ORDER BY created_at').all(p.id).map(assetPublic)});

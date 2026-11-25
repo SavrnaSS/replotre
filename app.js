@@ -434,12 +434,17 @@ function queueDemoPosters(){if(demoPostersQueued)return;demoPostersQueued=true;c
  idle(()=>make(0))}
 /* Real sample footage (Mixkit free licence, see assets/demo/CREDITS.md). It goes through the normal import path, so
    it behaves exactly like the user's own upload: real frames, trimming, thumbnails, cloud sync and AI analysis. */
-const REAL_SAMPLES=[{file:'vlog.mp4',name:'Sample · Talking to camera.mp4'},{file:'friends.mp4',name:'Sample · Dance duo.mp4'},{file:'looks.mp4',name:'Sample · Creator setup.mp4'}];
+const REAL_SAMPLES=[{key:'vlog',file:'vlog.mp4',name:'Sample · Talking to camera.mp4'},{key:'friends',file:'friends.mp4',name:'Sample · Dance duo.mp4'},{key:'looks',file:'looks.mp4',name:'Sample · Creator setup.mp4'}];
 let sampleBusy=false;
 async function addSample(idx){if(sampleBusy)return;const smp=REAL_SAMPLES[idx]||REAL_SAMPLES[0];
  const existing=state.media.find(m=>m.name===smp.name);if(existing){addExistingMedia(existing.id);return}
  sampleBusy=true;document.querySelectorAll('[data-action="add-demo"]').forEach(b=>{b.disabled=true;b.dataset.label=b.innerHTML;b.innerHTML='<span>Loading sample…</span>'});
- try{const r=await fetch('/assets/demo/'+smp.file,{credentials:'same-origin'});if(!r.ok)throw new Error('Sample unavailable');
+ try{const C=window.ReplotreCloud;
+  if(C?.isConnected?.()){ // signed in: the server copies the sample into the project, nothing is uploaded from this device
+   const {asset}=await C.api(`/api/projects/${C.project().id}/assets/sample`,{method:'POST',body:{sample:smp.key}});
+   if(!state.media.some(m=>m.id===asset.id))state.media.push({id:asset.id,name:smp.name,kind:'video',url:asset.url,duration:Math.max(.2,asset.duration||9),width:asset.width||540,height:asset.height||960,cloud:true});
+   applyMutation(()=>{if(state.clips.length&&state.clips.every(c=>c.kind==='demo')){state.clips=[];state.texts=[];state.selectedTextId=null}const m=getMedia(asset.id),c={id:uid('clip'),name:smp.name,kind:'video',mediaId:asset.id,in:0,out:m.duration,speed:1,volume:1,brightness:100,saturation:100};state.clips.push(c);state.selectedClipId=c.id;state.playhead=0},`Added ${smp.name}`);refreshAll();return}
+  const r=await fetch('/assets/demo/'+smp.file,{credentials:'same-origin'});if(!r.ok)throw new Error('Sample unavailable');
   const blob=await r.blob();await importFiles([new File([blob],smp.name,{type:'video/mp4'})])}
  catch(e){toast(`Couldn’t load the sample: ${e.message}`)}
  finally{sampleBusy=false;document.querySelectorAll('[data-action="add-demo"]').forEach(b=>{b.disabled=false;if(b.dataset.label)b.innerHTML=b.dataset.label})}}
