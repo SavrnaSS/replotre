@@ -236,21 +236,24 @@ function shell(content) {
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#f7f4ee" />
 <meta name="color-scheme" content="light dark" />
-<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=3" />
-<link rel="apple-touch-icon" href="/assets/brand/apple-touch-icon.png" />
+<link rel="icon" href="/favicon.ico?v=4" sizes="32x32" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=4" />
+<link rel="apple-touch-icon" href="/assets/brand/apple-touch-icon.png?v=4" />
+<link rel="manifest" href="/site.webmanifest" />
+<meta name="theme-color" content="#0C0D0F" />
 <link rel="preload" href="/assets/fonts/inter-opsz.woff2" as="font" type="font/woff2" crossorigin />
-<link rel="stylesheet" href="/typography.css?v=1.0.0" />
+<link rel="stylesheet" href="/typography.css?v=1.1.1" />
 <link rel="stylesheet" href="/learn.css?v=1.1.0" />
 <script src="/landing-theme.js?v=2.21.0"></script>
 </head>
 <body>
 <a class="learn-skip" href="#main">Skip to content</a>
 <header class="learn-nav"><div class="learn-wrap learn-nav-in">
-<a class="learn-logo" href="/" aria-label="Replotre home"><em class="wm-r">R</em>eplotre<span>.</span></a>
+<a class="learn-logo" href="/" aria-label="Replotre home"><img class="rp-mark" src="/assets/brand/replotre-mark.svg" alt="" width="24" height="24" decoding="async" draggable="false" /><em class="wm-r">R</em>eplotre<span>.</span></a>
 <nav aria-label="Main navigation"><a href="/ai-video-editor">AI editor</a><a href="/auto-captions">Captions</a><a href="/guides">Guides</a><a class="learn-button" href="/studio">Open Studio</a></nav>
 </div></header>
 ${content}
-<footer class="learn-footer learn-wrap"><div><a class="learn-logo" href="/"><em class="wm-r">R</em>eplotre<span>.</span></a><p>Thoughtful edits. A real timeline. Right in your browser.</p></div><nav aria-label="Footer"><a href="/ai-video-editor">AI video editor</a><a href="/ai-video-editor-for-social-media">AI editor for Reels &amp; Shorts</a><a href="/guides/how-to-edit-videos-with-ai">Edit videos with AI</a><a href="/auto-captions">Automatic captions</a><a href="/video-templates">Video templates</a><a href="/remove-silence-from-video">Remove silence</a><a href="/guides">Editing guides</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></nav></footer>
+<footer class="learn-footer learn-wrap"><div><a class="learn-logo" href="/"><img class="rp-mark" src="/assets/brand/replotre-mark.svg" alt="" width="24" height="24" decoding="async" draggable="false" /><em class="wm-r">R</em>eplotre<span>.</span></a><p>Thoughtful edits. A real timeline. Right in your browser.</p></div><nav aria-label="Footer"><a href="/ai-video-editor">AI video editor</a><a href="/ai-video-editor-for-social-media">AI editor for Reels &amp; Shorts</a><a href="/guides/how-to-edit-videos-with-ai">Edit videos with AI</a><a href="/auto-captions">Automatic captions</a><a href="/video-templates">Video templates</a><a href="/remove-silence-from-video">Remove silence</a><a href="/guides">Editing guides</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></nav></footer>
 </body>
 </html>`;
 }

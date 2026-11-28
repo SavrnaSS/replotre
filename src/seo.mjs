@@ -37,7 +37,7 @@ function faqFromHtml(html) {
 const faqLd = (items, id) => ({'@type':'FAQPage', '@id':id, mainEntity:items.map(({q, a}) => ({'@type':'Question', name:q, acceptedAnswer:{'@type':'Answer', text:a}}))});
 const PLAN_OFFERS = [['Creator', '12.00', '115.00'], ['Pro', '29.00', '278.00']];
 function structuredData(page, origin, html = '') {
-  const organization = {'@type':'Organization', '@id':origin+'/#organization', name:'Replotre', url:origin+'/', description:'Replotre makes an AI video editor that runs in the browser.', email:'hello@replotre.com', logo:{'@type':'ImageObject', url:origin+'/assets/brand/apple-touch-icon.png', width:180, height:180}};
+  const organization = {'@type':'Organization', '@id':origin+'/#organization', name:'Replotre', url:origin+'/', description:'Replotre makes an AI video editor that runs in the browser.', email:'hello@replotre.com', logo:{'@type':'ImageObject', url:origin+'/assets/brand/replotre-icon-512.png', width:512, height:512}};
   const website = {'@type':'WebSite', '@id':origin+'/#website', url:origin+'/', name:'Replotre', inLanguage:'en', publisher:{'@id':organization['@id']}};
   const webpage = {'@type':page.kind === 'collection' ? 'CollectionPage' : 'WebPage', '@id':origin+page.path+'#webpage', url:origin+page.path, name:page.title, description:page.description, inLanguage:'en', isPartOf:{'@id':website['@id']}, publisher:{'@id':organization['@id']}};
   const graph = [organization, website, webpage];

@@ -64,3 +64,42 @@ html:not(:has(#app)) body{font-size:var(--fs-md)}
 /* Accessibility: respect users who need heavier strokes or system fonts */
 @media (prefers-contrast:more){html,body{-webkit-font-smoothing:auto;font-weight:500}}
 @media print{html,body{font-family:var(--font-ui);font-size:11pt}}
+
+/* ── Replotre logo: the tan spark mark + the "Replotre." wordmark ─────────────────────────
+   One <img class="rp-mark"> placed before the wordmark everywhere. Sized in em, so it follows
+   each spot's fluid type size from phone to desktop; flex parents supply their own gap.
+   The mark is four-fold symmetric, so the hover spin (90°) lands back on the same shape. */
+.rp-mark{display:inline-block;flex:none;width:1.08em;height:1.08em;margin:0 .24em 0 0;vertical-align:-.19em;object-fit:contain;border:0;user-select:none;-webkit-user-select:none;-webkit-user-drag:none;pointer-events:none;transform-origin:50% 50%;transition:transform .7s cubic-bezier(.22,1,.36,1)}
+a:hover>.rp-mark,a:focus-visible>.rp-mark,.rp-spin:hover>.rp-mark{transform:rotate(90deg)}
+@media (prefers-reduced-motion:reduce){.rp-mark{transition:none}a:hover>.rp-mark,a:focus-visible>.rp-mark,.rp-spin:hover>.rp-mark{transform:none}}
+
+/* Flex lockups: the gap does the spacing. */
+.logo>.rp-mark,.lg-logo>.rp-mark,.learn-logo>.rp-mark,.au-brand>.rp-mark,.ck-brand>.rp-mark,.brand-link>.rp-mark{margin:0}
+.logo{gap:.26em}
+.lg-logo,.au-brand,.ck-brand{gap:.28em}
+a.learn-logo{gap:0}
+a.learn-logo>.rp-mark{margin-right:.26em}
+a.learn-logo span{margin-left:0}
+
+/* Studio header (and the landing demo that mimics it). */
+.brand-link{display:inline-flex;align-items:center;gap:6px;text-decoration:none;color:inherit}
+.brand-link>.rp-mark{width:23px;height:23px}
+.studio-wordmark>.rp-mark{width:1.15em;height:1.15em;margin-right:.26em}
+/* Account, onboarding, checkout. */
+.au-brand>.rp-mark{width:23px;height:23px}
+.ob-word>.rp-mark{margin-right:.26em}
+.ck-brand>.rp-mark{width:21px;height:21px}
+/* Comparison card heading. */
+.cp-wm>.rp-mark{width:1.05em;height:1.05em;margin-right:.24em}
+/* Giant footer wordmark: the mark fades out with the letters. */
+.foot-mark>.rp-mark{width:.7em;height:.7em;margin-right:.06em;vertical-align:-.01em;opacity:.36;-webkit-mask-image:linear-gradient(180deg,#000 20%,transparent 92%);mask-image:linear-gradient(180deg,#000 20%,transparent 92%)}
+
+@media (max-width:640px){
+ .brand-link{gap:5px}
+ .brand-link>.rp-mark,.au-brand>.rp-mark{width:20px;height:20px}
+ .ck-brand>.rp-mark{width:19px;height:19px}
+}
+@media (max-width:360px){
+ .brand-link>.rp-mark{width:18px;height:18px}
+ .brand-link{gap:4px}
+}

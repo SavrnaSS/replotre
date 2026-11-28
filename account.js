@@ -13,7 +13,7 @@ const fmtBytes=b=>b>=1024**3?`${(b/1024**3).toFixed(b>=10*1024**3?0:1)} GB`:b>=1
 const fmtDate=t=>t?new Date(t).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'}):'';
 const money=(n,cur='usd')=>new Intl.NumberFormat(cur==='usd'?'en-US':undefined,{style:'currency',currency:cur.toUpperCase(),maximumFractionDigits:n%1?2:0}).format(n);
 
-const brandMark=()=>{const m=document.querySelector('svg.r-mark');return m?m.outerHTML:ico('sparkles')};
+const brandMark=()=>'<img class="rp-mark" src="/assets/brand/replotre-mark.svg" alt="" width="24" height="24" decoding="async" draggable="false" />';
 const S={authMode:'register',status:null,gated:false,account:null,plans:null,mode:'off',interval:'year',ob:null,center:null,tab:'overview'};
 const LABEL={
  role:{creator:'Creator',social:'Social media',agency:'Agency / team',freelance:'Freelance editor',business:'Business owner',hobbyist:'Hobbyist',student:'Student',other:'Other'},
@@ -181,7 +181,7 @@ function stageOf(el){let st=el.querySelector(':scope>.ob-stage');if(st)return st
 function renderAuth(el){const reg=S.authMode==='register';
  stageOf(el).innerHTML=`
  <main class="au-main" data-step="account" data-mode="${S.authMode}">
-  <a class="au-brand" href="/" aria-label="Replotre home"><span class="au-word"><em class="wm-r">R</em>eplotre<b>.</b></span></a>
+  <a class="au-brand" href="/" aria-label="Replotre home"><img class="rp-mark" src="/assets/brand/replotre-mark.svg" alt="" width="24" height="24" decoding="async" draggable="false" /><span class="au-word"><em class="wm-r">R</em>eplotre<b>.</b></span></a>
   <div class="au-center">
    <section class="au-card-wrap ob-content"><i class="fx-vf" aria-hidden="true"><b></b><b></b><b></b><b></b></i>
     <h1 id="obTitle" tabindex="-1">${isRecovery()?RECOVERY_COPY[S.authMode][0]:reg?'Create your account':'Welcome back'}</h1>
@@ -275,7 +275,7 @@ function renderOb(){const el=document.querySelector('.ob');if(!el||!S.ob)return;
  if(i===0)return renderAuth(el);
  const anim=S.ob.anim!==false;S.ob.anim=false;const side=false;// the live-preview card is gone: setup is one short screen now
  stageOf(el).innerHTML=`
- <header class="ob-top obx-top"><span class="au-word ob-word" aria-label="Replotre"><em class="wm-r">R</em>eplotre<b>.</b></span>
+ <header class="ob-top obx-top"><span class="au-word ob-word" aria-label="Replotre"><img class="rp-mark" src="/assets/brand/replotre-mark.svg" alt="" width="24" height="24" decoding="async" draggable="false" /><em class="wm-r">R</em>eplotre<b>.</b></span>
   <div class="obx-progress" role="progressbar" aria-valuemin="1" aria-valuemax="${total}" aria-valuenow="${i}" aria-label="Setup progress">
    <div class="obx-label"><span>Step ${i} of ${total}</span><b>${esc(st.label)}</b></div>
    <div class="obx-segs" style="--n:${total}">${STEPS.slice(1).map((s,k)=>`<i class="${k+1<i||last?'is-done':k+1===i?'is-current':''}" title="${esc(s.label)}"></i>`).join('')}</div></div>

@@ -6,6 +6,7 @@ node_modules
 *.zip
 *.png
 !assets/brand/apple-touch-icon.png
+!assets/brand/replotre-icon-*.png
 data
 previews
 *.log

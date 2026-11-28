@@ -3,7 +3,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg fonts-de
 WORKDIR /app
 COPY --chown=node:node package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
-COPY --chown=node:node *.html *.js *.css favicon.svg server.mjs robots.txt ./
+COPY --chown=node:node *.html *.js *.css favicon.svg favicon.ico site.webmanifest server.mjs robots.txt ./
 COPY --chown=node:node src ./src
 COPY --chown=node:node assets ./assets
 COPY --chown=node:node vendor ./vendor
