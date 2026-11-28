@@ -236,7 +236,9 @@ function shell(content) {
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#f7f4ee" />
 <meta name="color-scheme" content="light dark" />
-<link rel="icon" href="/favicon.ico?v=4" sizes="32x32" />
+<link rel="icon" href="/favicon.ico?v=4" sizes="16x16 32x32 48x48" />
+<link rel="icon" type="image/png" sizes="96x96" href="/assets/brand/replotre-icon-96.png?v=4" />
+<link rel="icon" type="image/png" sizes="192x192" href="/assets/brand/replotre-icon-192.png?v=4" />
 <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=4" />
 <link rel="apple-touch-icon" href="/assets/brand/apple-touch-icon.png?v=4" />
 <link rel="manifest" href="/site.webmanifest" />
